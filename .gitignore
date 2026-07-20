@@ -7,3 +7,6 @@ coverage
 .env
 .env.*
 !.env.example
+
+# Local AI development context; may contain private host topology.
+/AGENTS.md
