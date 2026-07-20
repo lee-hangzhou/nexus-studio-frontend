@@ -1,0 +1,206 @@
+.canvas-prompt-editor {
+  width: 100%;
+  min-height: 80px;
+  max-height: 200px;
+  padding: 8px 0;
+  flex-shrink: 0;
+
+  .ProseMirror,
+  .canvas-prompt-editor__prosemirror {
+    outline: none;
+    min-height: 65px;
+    max-height: 100px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    color: #eff4fb;
+    font-size: 14px;
+    line-height: 24px;
+    padding: 0 34px 8px 12px;
+
+    &:focus {
+      outline: none;
+    }
+
+    p {
+      margin: 0;
+    }
+  }
+
+  &[data-empty='true'] .ProseMirror[data-placeholder]::before,
+  &[data-empty='true'] .canvas-prompt-editor__prosemirror[data-placeholder]::before {
+    content: attr(data-placeholder);
+    color: rgba(223, 231, 242, 0.52);
+    pointer-events: none;
+    float: left;
+    height: 0;
+  }
+
+  .composer-asset-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 4px;
+    padding: 3px 6px;
+    margin: 0 2px;
+    user-select: none;
+    vertical-align: middle;
+    font-size: 14px;
+    color: #e0f5ff99;
+    cursor: default;
+    background: #333;
+
+    img {
+      width: 16px;
+      height: 16px;
+      object-fit: cover;
+      border-radius: 3px;
+      display: block;
+    }
+  }
+
+  .composer-asset-audio {
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+
+  .composer-asset-tag-text {
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    background: #ccddff24;
+    color: #e0f5ff99;
+    font-size: 10px;
+  }
+
+  .tag-label {
+    line-height: 1.2;
+    max-width: 100px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* @ 已连接节点弹层（挂到 body，须在入口 less 中打包） */
+.canvas-prompt-mention-popup-host {
+  .canvas-prompt-mention-popup {
+    border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+    overflow: visible;
+
+    .ant-menu {
+      border: 1px solid #ccddff14;
+      background: #1c1e22;
+      max-height: 400px;
+      overflow-y: auto;
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+
+    .ant-menu-item:hover,
+    .ant-menu-item-active {
+      background: #ccddff1f !important;
+    }
+
+    .ant-menu-item {
+      color: #dce6f2 !important;
+      min-height: 36px;
+      height: auto !important;
+      line-height: 1.4 !important;
+      padding: 6px 12px !important;
+    }
+
+    .ant-menu-item-disabled {
+      opacity: 0.65;
+    }
+
+    .ant-menu-item-group-title {
+      color: rgba(220, 230, 242, 0.45);
+      font-size: 11px;
+      padding: 4px 12px 2px;
+    }
+  }
+
+  .asset-menu-thumb--text {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #ccddff1a;
+    color: #e0f5ff99;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .asset-menu-thumb--audio {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: #3b4047;
+    color: #fff;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .asset-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 28px;
+    width: 100%;
+
+    .asset-menu-thumb-media {
+      position: relative;
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+      overflow: hidden;
+      border-radius: 6px;
+      background: #3b4047;
+    }
+
+    .asset-menu-thumb-media img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .asset-menu-thumb-media__video-badge {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      pointer-events: none;
+    }
+  }
+
+  .asset-menu-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

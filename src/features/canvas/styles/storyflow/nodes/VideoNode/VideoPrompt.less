@@ -1,0 +1,95 @@
+/* 视频节点复用 .workflow-image-node 的 position:relative，悬浮面板由 NodeFloatPromptPanel 定位 */
+
+.workflow-video-prompt-dual-frame-rail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &__slot-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__slot {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border: 1px solid #ccddff24;
+    border-radius: 8px;
+    background: #2f333a;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 8px;
+    }
+
+    &:hover .workflow-image-prompt-ref-rail__thumb-remove {
+      opacity: 1;
+    }
+  }
+
+  &__add {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: #e0f5ffcc;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  &__center {
+    width: 16px;
+    height: 38px;
+    color: #e0f5ff66;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+  }
+}
+
+.workflow-video-prompt-ref-play-badge {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.workflow-video-prompt-ref-audio-badge {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 1;
+}

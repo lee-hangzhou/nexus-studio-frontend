@@ -1,0 +1,122 @@
+/* 锚点中心落在节点左右边框；RF Handle 本体不可见，仅承担连线命中 */
+.workflow-canvas-handle.react-flow__handle {
+  width: 0 !important;
+  height: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  opacity: 1 !important;
+  overflow: visible;
+  z-index: 2;
+}
+
+.workflow-canvas-handle__orb {
+  position: absolute;
+  top: 50%;
+  width: 56px;
+  height: 56px;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform;
+  transition:
+    opacity 0.2s ease,
+    transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* 左侧：圆钮以锚点为右缘，向左展开 */
+.workflow-canvas-handle__orb--left {
+  right: 0;
+  transform: translateY(-50%) translateX(4px) scale(0.72);
+}
+
+/* 右侧：圆钮以锚点为左缘，向右展开 */
+.workflow-canvas-handle__orb--right {
+  left: 0;
+  transform: translateY(-50%) translateX(-4px) scale(0.72);
+}
+
+.workflow-canvas-handle__plus {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  line-height: 1;
+  border: 1px solid #7a7a7a;
+  color: #7a7a7a;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition:
+    transform 0.12s ease-out,
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    border: 2px solid #fff;
+    color: #fff;
+  }
+}
+
+/* 节点拖拽中强制隐藏（覆盖 hover / 选中） */
+.workflow-canvas-node--dragging .workflow-canvas-handle__orb,
+.workflow-canvas-handle__orb--hidden,
+.react-flow__node.dragging .workflow-canvas-handle__orb {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.workflow-canvas-node--dragging .workflow-canvas-handle__orb--left,
+.workflow-canvas-handle__orb--hidden.workflow-canvas-handle__orb--left,
+.react-flow__node.dragging .workflow-canvas-handle__orb--left {
+  transform: translateY(-50%) translateX(4px) scale(0.72) !important;
+}
+
+.workflow-canvas-node--dragging .workflow-canvas-handle__orb--right,
+.workflow-canvas-handle__orb--hidden.workflow-canvas-handle__orb--right,
+.react-flow__node.dragging .workflow-canvas-handle__orb--right {
+  transform: translateY(-50%) translateX(-4px) scale(0.72) !important;
+}
+
+/* 悬浮节点或选中时展示两个连接点 */
+.react-flow__node:hover .workflow-canvas-handle__orb:not(.workflow-canvas-handle__orb--hidden),
+.react-flow__node.selected .workflow-canvas-handle__orb:not(.workflow-canvas-handle__orb--hidden),
+.react-flow__node.connectingfrom .workflow-canvas-handle__orb:not(.workflow-canvas-handle__orb--hidden),
+.react-flow__node.connectingto .workflow-canvas-handle__orb:not(.workflow-canvas-handle__orb--hidden) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.react-flow__node:hover .workflow-canvas-handle__orb--left:not(.workflow-canvas-handle__orb--hidden),
+.react-flow__node.selected .workflow-canvas-handle__orb--left:not(.workflow-canvas-handle__orb--hidden),
+.react-flow__node.connectingfrom .workflow-canvas-handle__orb--left:not(.workflow-canvas-handle__orb--hidden),
+.react-flow__node.connectingto .workflow-canvas-handle__orb--left:not(.workflow-canvas-handle__orb--hidden) {
+  transform: translateY(-50%) translateX(0) scale(1);
+}
+
+.react-flow__node:hover .workflow-canvas-handle__orb--right:not(.workflow-canvas-handle__orb--hidden),
+.react-flow__node.selected .workflow-canvas-handle__orb--right:not(.workflow-canvas-handle__orb--hidden),
+.react-flow__node.connectingfrom .workflow-canvas-handle__orb--right:not(.workflow-canvas-handle__orb--hidden),
+.react-flow__node.connectingto .workflow-canvas-handle__orb--right:not(.workflow-canvas-handle__orb--hidden) {
+  transform: translateY(-50%) translateX(0) scale(1);
+}
+
+.workflow-canvas-handle__orb--left:hover {
+  transform: translateY(-50%) translateX(-6px) scale(1.04);
+}
+
+.workflow-canvas-handle__orb--right:hover {
+  transform: translateY(-50%) translateX(6px) scale(1.04);
+}
+
+/* 拖拽连线时保持圆钮可见 */
+.react-flow__node.connectingfrom .workflow-canvas-handle__orb,
+.react-flow__node.connectingto .workflow-canvas-handle__orb {
+  pointer-events: auto;
+}

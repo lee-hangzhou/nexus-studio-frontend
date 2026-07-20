@@ -1,0 +1,247 @@
+/* 缩放手柄：隐藏四边直线，四角改为贴合节点圆角的弧线 */
+@resize-arc-radius: 16px;
+@resize-arc-visual: 12px;
+@resize-arc-hit: 12px;
+@resize-arc-stroke: 1.5px;
+
+.workflow-canvas-flow {
+  width: 100vw;
+  height: 100vh;
+  background: var(--bg, #0f0f12);
+  outline: none;
+  display: flex;
+  flex-direction: column;
+
+  &__stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+  }
+
+  /* 节点下方悬浮输入条不被裁切 */
+  .react-flow__node {
+    overflow: visible;
+  }
+
+  .workflow-canvas-hints {
+    position: absolute;
+    top: 52px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 6;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px 14px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, #ccddff14);
+    background: rgba(28, 30, 34, 0.92);
+    color: var(--text-tertiary, #e0f5ff7a);
+    font-size: 12px;
+    line-height: 1.4;
+    pointer-events: none;
+    user-select: none;
+
+    &__count {
+      color: var(--text, #f5fbff);
+      font-weight: 500;
+    }
+  }
+
+  &__stage .react-flow {
+    width: 100%;
+    height: 100%;
+
+    /* 边标签层默认在节点下方，选中连线的删除钮改走 portal，此处仅保底 */
+    &__edge-labels {
+      z-index: 6;
+      pointer-events: none;
+    }
+
+    /* 连线落点菜单：占位节点不可见，预览边留在画布上 */
+    &__node.workflow-connect-preview-node {
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    &__node {
+      padding: 0;
+      border: none;
+      background: transparent;
+      overflow: visible;
+      outline: none;
+      box-shadow: none;
+
+      /* 去掉 React Flow 默认选中描边，改用节点卡片白框 */
+      &.selectable {
+        &.selected,
+        &:focus,
+        &:focus-visible {
+          outline: none;
+          box-shadow: none;
+        }
+      }
+
+      /*
+       * React Flow 拖线时自动给 Handle 加 connectingto / valid（见 isValidConnection）。
+       * 用 :has 把整卡置灰 + disabled 光标，无需 onNodeMouseEnter 状态。
+       */
+      &:has(.workflow-canvas-handle.connectingto:not(.valid)) {
+        cursor: not-allowed;
+
+        .workflow-canvas-node {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+      }
+
+      &:has(.workflow-canvas-handle.connectingto.valid),
+      &.workflow-canvas-connect-target {
+        cursor: crosshair;
+
+        .workflow-canvas-node {
+          cursor: crosshair;
+        }
+
+        .workflow-canvas-node::after {
+          content: '';
+          position: absolute;
+          inset: -1px;
+          padding: 1px;
+          border-radius: inherit;
+          background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.2),
+            rgba(255, 255, 255, 0.95),
+            rgba(255, 255, 255, 0.65),
+            rgba(255, 255, 255, 0.2)
+          );
+          background-size: 200% 50%;
+          animation: workflow-connect-border-glow 1.5s linear infinite;
+          -webkit-mask:
+            linear-gradient(#fff 0 0) content-box,
+            linear-gradient(#fff 0 0);
+          mask:
+            linear-gradient(#fff 0 0) content-box,
+            linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          pointer-events: none;
+          z-index: 10000;
+        }
+      }
+    }
+
+    &__resize-control.line {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    &__resize-control.handle {
+      width: @resize-arc-hit;
+      height: @resize-arc-hit;
+      background: transparent !important;
+      border: none !important;
+      border-radius: 0;
+      box-sizing: border-box;
+      z-index: 3;
+
+      &::after {
+        content: '';
+        position: absolute;
+        width: @resize-arc-visual;
+        height: @resize-arc-visual;
+        box-sizing: border-box;
+        border: @resize-arc-stroke solid rgba(255, 255, 255, 0.88);
+        pointer-events: none;
+        transition: border-color 0.15s ease;
+      }
+
+      &:hover::after {
+        border-color: #fff;
+      }
+    }
+
+    /* 左上：沿顶边与左边形成的 1/4 圆弧 */
+    &__resize-control.handle.top.left::after {
+      top: 0;
+      left: 0;
+      border-right: none;
+      border-bottom: none;
+      border-top-left-radius: @resize-arc-radius;
+    }
+
+    /* 右上 */
+    &__resize-control.handle.top.right::after {
+      top: 0;
+      right: 0;
+      border-left: none;
+      border-bottom: none;
+      border-top-right-radius: @resize-arc-radius;
+    }
+
+    /* 左下 */
+    &__resize-control.handle.bottom.left::after {
+      bottom: 0;
+      left: 0;
+      border-right: none;
+      border-top: none;
+      border-bottom-left-radius: @resize-arc-radius;
+    }
+
+    /* 右下 */
+    &__resize-control.handle.bottom.right::after {
+      bottom: 0;
+      right: 0;
+      border-left: none;
+      border-top: none;
+      border-bottom-right-radius: @resize-arc-radius;
+    }
+
+    /* 框选区域 */
+    &__selection,
+    &__nodesselection-rect {
+      background: #ffffff20;
+      border: 1px solid #ffffff60;
+      border-radius: 16px;
+    }
+
+    /* 自定义连接点：隐藏 React Flow 默认 handle 样式 */
+    &__handle.workflow-canvas-handle {
+      border: none;
+      background: transparent;
+    }
+
+    &__controls {
+      border: 1px solid var(--border-color, #ccddff14);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+
+      &-button {
+        background: var(--bg-dropdown-menu, #1c1e22);
+        border-bottom: 1px solid var(--border-color, #ccddff14);
+        fill: var(--text, #f5fbff);
+
+        &:hover {
+          background: var(--button-bg-hover-color, #ccddff1f);
+        }
+      }
+    }
+  }
+}
+
+@keyframes workflow-connect-border-glow {
+  0% {
+    background-position: 200% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}

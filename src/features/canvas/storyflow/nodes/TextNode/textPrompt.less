@@ -1,0 +1,52 @@
+.workflow-text-prompt-ref-rail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+
+  &__thumb {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #ccddff24;
+    background: #3b4047;
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+}
+
+.workflow-text-gen-bar {
+  &__model-chip.ant-btn {
+    padding: 4px 6px !important;
+    background-color: transparent !important;
+    border: 0 !important;
+    min-width: auto;
+  }
+
+  &__submit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #3d4556 0%, #2a2e38 100%);
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+
+    &:hover {
+      filter: brightness(1.08);
+    }
+  }
+}

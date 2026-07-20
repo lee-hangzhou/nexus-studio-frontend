@@ -1,0 +1,27 @@
+.workflow-canvas-task-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+  border-radius: 12px;
+  background: rgba(10, 12, 18, 0.65);
+  backdrop-filter: blur(6px);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 12px;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.workflow-canvas-task-overlay__text {
+  max-width: 260px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.workflow-canvas-task-overlay__detail {
+  opacity: 0.85;
+  margin-top: 6px;
+}

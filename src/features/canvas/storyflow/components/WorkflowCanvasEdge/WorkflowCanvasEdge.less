@@ -1,0 +1,35 @@
+/* 描边颜色由 getEdgeStrokeStyle + onEdgeMouseEnter 驱动；此处只做过渡 */
+.workflow-canvas-flow .react-flow__edge.workflow-canvas-edge {
+  .react-flow__edge-path {
+    transition:
+      stroke 0.15s ease,
+      stroke-width 0.15s ease;
+  }
+}
+
+.workflow-canvas-edge__hit {
+  pointer-events: stroke;
+}
+
+/* portal 到 body，需高于画布节点层（菜单 z-index 约 20） */
+.workflow-canvas-edge__delete-wrap {
+  z-index: 2000;
+  pointer-events: auto;
+}
+
+.workflow-canvas-edge__delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--border-color, #ccddff24);
+  border-radius: 50%;
+  background: var(--bg-dropdown-menu, #1c1e22);
+  color: var(--text, #f5fbff);
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  transition: background 0.15s ease;
+}

@@ -1,0 +1,100 @@
+.workflow-video-node {
+  &__preview {
+    .anticon-video-camera {
+      font-size: 36px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+  }
+
+  &__player {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 12px;
+    background: #121417;
+  }
+
+  .video-node-box {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 12px;
+
+    &__mute-btn {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 2;
+      width: 28px;
+      height: 28px;
+      border: none;
+      color: #fff;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.52);
+      backdrop-filter: blur(2px);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    &__controls {
+      position: absolute;
+      left: 0;
+      width: calc(100% - 0px);
+      bottom: 0;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 2;
+      padding: 6px 8px;
+      background: rgba(0, 0, 0, 0.56);
+      backdrop-filter: blur(2px);
+    }
+
+    &__control-btn {
+      border: none;
+      border-radius: 6px;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      font-size: 12px;
+      color: #fff;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    &__play-btn {
+      font-size: 14px;
+    }
+
+    &__time {
+      min-width: 28px;
+      font-size: 11px;
+      line-height: 1;
+      color: rgba(255, 255, 255, 0.95);
+      text-align: center;
+    }
+
+    &__seek {
+      flex: 1 1 auto;
+      min-width: 0;
+      height: 3px;
+      appearance: none;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.45);
+      cursor: pointer;
+    }
+
+    &__seek::-webkit-slider-thumb {
+      appearance: none;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #fff;
+    }
+  }
+}

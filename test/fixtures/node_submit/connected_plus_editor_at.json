@@ -1,0 +1,60 @@
+{
+  "name": "connected_plus_editor_at",
+  "target_node_id": "00000000-0000-4000-8000-0000000000v2",
+  "nodes": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000i3",
+      "data": {
+        "status": "success",
+        "output_asset_ids": [201]
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000v2",
+      "data": {
+        "status": "idle",
+        "input_prompt": "使用参考图"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "00000000-0000-4000-8000-0000000000i3",
+      "target": "00000000-0000-4000-8000-0000000000v2",
+      "data": { "source_port": "output_asset", "target_port": "reference_asset" }
+    }
+  ],
+  "submit": {
+    "content": [
+      {
+        "type": "image_url",
+        "assetId": 201,
+        "url": "https://example.com/201.png"
+      },
+      { "type": "text", "text": "使用参考图" }
+    ],
+    "storedPrompt": "使用参考图",
+    "connectedPromptTexts": [],
+    "manualRefs": [],
+    "previewMediaRefs": [
+      {
+        "id": "00000000-0000-4000-8000-0000000000i3",
+        "type": "image",
+        "source": "connected",
+        "label": "图片1",
+        "assetId": 201,
+        "previewUrl": "https://example.com/201.png"
+      }
+    ],
+    "referenceAssets": [
+      {
+        "id": "00000000-0000-4000-8000-0000000000i3",
+        "type": "image",
+        "source": "connected",
+        "label": "图片1",
+        "assetId": 201,
+        "previewUrl": "https://example.com/201.png"
+      }
+    ]
+  }
+}

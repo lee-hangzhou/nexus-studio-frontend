@@ -1,0 +1,105 @@
+{
+  "name": "two_images_one_video",
+  "target_node_id": "00000000-0000-4000-8000-0000000000v1",
+  "nodes": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000t1",
+      "data": {
+        "status": "idle",
+        "output_text": "上游剧本文案",
+        "output_asset_ids": null
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000i1",
+      "data": {
+        "status": "success",
+        "output_text": "",
+        "output_asset_ids": [101]
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000i2",
+      "data": {
+        "status": "success",
+        "output_text": "",
+        "output_asset_ids": [102]
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000v1",
+      "data": {
+        "status": "idle",
+        "input_prompt": "男主骑车带女主",
+        "output_text": "",
+        "output_asset_ids": null
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "00000000-0000-4000-8000-0000000000i1",
+      "target": "00000000-0000-4000-8000-0000000000v1",
+      "data": { "source_port": "output_asset", "target_port": "reference_asset" }
+    },
+    {
+      "source": "00000000-0000-4000-8000-0000000000i2",
+      "target": "00000000-0000-4000-8000-0000000000v1",
+      "data": { "source_port": "output_asset", "target_port": "reference_asset" }
+    },
+    {
+      "source": "00000000-0000-4000-8000-0000000000t1",
+      "target": "00000000-0000-4000-8000-0000000000v1",
+      "data": { "source_port": "output_text", "target_port": "prompt_input" }
+    }
+  ],
+  "submit": {
+    "content": [{ "type": "text", "text": "男主骑车带女主" }],
+    "storedPrompt": "男主骑车带女主",
+    "connectedPromptTexts": ["上游剧本文案"],
+    "manualRefs": [],
+    "previewMediaRefs": [
+      {
+        "id": "00000000-0000-4000-8000-0000000000i1",
+        "type": "image",
+        "source": "connected",
+        "label": "图片1",
+        "assetId": 101,
+        "previewUrl": "https://example.com/101.png"
+      },
+      {
+        "id": "00000000-0000-4000-8000-0000000000i2",
+        "type": "image",
+        "source": "connected",
+        "label": "图片2",
+        "assetId": 102,
+        "previewUrl": "https://example.com/102.png"
+      }
+    ],
+    "referenceAssets": [
+      {
+        "id": "00000000-0000-4000-8000-0000000000t1",
+        "type": "text",
+        "source": "connected",
+        "label": "文本1",
+        "textContent": "上游剧本文案"
+      },
+      {
+        "id": "00000000-0000-4000-8000-0000000000i1",
+        "type": "image",
+        "source": "connected",
+        "label": "图片1",
+        "assetId": 101,
+        "previewUrl": "https://example.com/101.png"
+      },
+      {
+        "id": "00000000-0000-4000-8000-0000000000i2",
+        "type": "image",
+        "source": "connected",
+        "label": "图片2",
+        "assetId": 102,
+        "previewUrl": "https://example.com/102.png"
+      }
+    ]
+  }
+}

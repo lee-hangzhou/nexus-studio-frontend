@@ -1,0 +1,38 @@
+.workflow-audio-node {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  color: #999;
+  font-size: 12px;
+  overflow: visible;
+
+  &__preview {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    opacity: 0.6;
+    overflow: hidden;
+
+    &--filled {
+      opacity: 1;
+    }
+  }
+
+  &__placeholder {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__placeholder-icon {
+    font-size: 40px;
+  }
+}

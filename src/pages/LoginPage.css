@@ -1,0 +1,23 @@
+/* hover / focus 只能通过 CSS 处理，其余背景由行内 style 控制 */
+
+.login-page-form .ant-input-affix-wrapper:hover {
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+.login-page-form .ant-input-affix-wrapper-focused,
+.login-page-form .ant-input-affix-wrapper:focus-within {
+  border-color: rgba(99, 179, 237, 0.7) !important;
+  box-shadow: 0 0 0 2px rgba(99, 179, 237, 0.12) !important;
+}
+
+/* autofill: WebKit 强制黄/白底，用 inset box-shadow 盖掉 */
+.login-page-form input:-webkit-autofill,
+.login-page-form input:-webkit-autofill:hover,
+.login-page-form input:-webkit-autofill:focus,
+.login-page-form input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px rgba(20, 30, 60, 0.85) inset !important;
+  box-shadow: 0 0 0 1000px rgba(20, 30, 60, 0.85) inset !important;
+  -webkit-text-fill-color: #fff !important;
+  caret-color: #fff;
+  transition: background-color 99999s ease-out 0s;
+}

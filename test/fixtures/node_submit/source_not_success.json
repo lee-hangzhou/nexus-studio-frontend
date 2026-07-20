@@ -1,0 +1,35 @@
+{
+  "name": "source_not_success",
+  "target_node_id": "00000000-0000-4000-8000-0000000000v4",
+  "nodes": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000i5",
+      "data": {
+        "status": "running",
+        "output_asset_ids": [401]
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000v4",
+      "data": {
+        "status": "idle",
+        "input_prompt": "等待上游"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "00000000-0000-4000-8000-0000000000i5",
+      "target": "00000000-0000-4000-8000-0000000000v4",
+      "data": { "source_port": "output_asset", "target_port": "reference_asset" }
+    }
+  ],
+  "submit": {
+    "content": [{ "type": "text", "text": "等待上游" }],
+    "storedPrompt": "等待上游",
+    "connectedPromptTexts": [],
+    "manualRefs": [],
+    "previewMediaRefs": [],
+    "referenceAssets": []
+  }
+}

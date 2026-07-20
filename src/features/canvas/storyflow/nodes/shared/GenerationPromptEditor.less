@@ -1,0 +1,33 @@
+/* 无 TipTap 时：对齐 storyflow CanvasPromptEditor + BottomComposer 输入区 */
+.node-float-prompt__body .canvas-prompt-editor.composer-input-area {
+  display: block;
+  width: 100%;
+  min-height: 65px;
+  max-height: 100px;
+  padding: 0 34px 8px 12px; /* 右侧留给展开钮；有 bodyLeading 时 left 由 NodeFloatPromptPanel 覆盖为 44px */
+  margin: 8px 0 4px;
+  box-sizing: border-box;
+  border: none;
+  background: transparent;
+  outline: none;
+  resize: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: #eff4fb;
+  font-size: 14px;
+  line-height: 24px;
+  font-family: inherit;
+
+  &::placeholder {
+    color: rgba(223, 231, 242, 0.52);
+  }
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.node-float-prompt--expanded .node-float-prompt__body .canvas-prompt-editor.composer-input-area {
+  max-height: 250px;
+}
+

@@ -1,0 +1,244 @@
+/* storyflow-web 画布主题变量（对齐 workflowCanvas） */
+.workflow-canvas-page {
+  --card: #1c1e22;
+  --bg: #0f0f12;
+  --bg-dropdown-menu: #1c1e22;
+  --border-color: #ccddff14;
+  --button-bg-color: #ccddff14;
+  --button-bg-hover-color: #ccddff1f;
+  --text: #f5fbff;
+  --text-secondary: #e0f5ffcc;
+  --text-tertiary: #e0f5ff7a;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+}
+
+@import '../storyflow/WorkflowCanvasFlow.less';
+@import '../styles/WorkflowCanvasPage.less';
+@import '../storyflow/components/BaseCanvasNode/BaseCanvasNode.less';
+@import '../storyflow/components/CanvasPlusHandle/CanvasPlusHandle.less';
+@import '../storyflow/components/NodeFloatPromptPanel/NodeFloatPromptPanel.less';
+@import '../storyflow/components/CanvasPromptEditor/CanvasPromptEditor.less';
+@import '../storyflow/components/CanvasNodeTaskOverlay/CanvasNodeTaskOverlay.less';
+@import '../storyflow/components/WorkflowCanvasEdge/WorkflowCanvasEdge.less';
+@import '../storyflow/components/CanvasEmptyState/CanvasEmptyState.less';
+@import '../storyflow/menus/CanvasAddNodeMenu/CanvasAddNodeMenu.less';
+@import '../storyflow/menus/ConnectionDropMenu/ConnectionDropMenu.less';
+@import '../storyflow/nodes/ImageNode/ImageNode.less';
+@import '../storyflow/nodes/VideoNode/VideoNode.less';
+@import '../storyflow/nodes/TextNode/TextNode.less';
+@import '../storyflow/nodes/TextNode/textPrompt.less';
+@import '../storyflow/components/WorkflowTextBody/WorkflowTextBody.less';
+@import '../storyflow/nodes/shared/ImagePrompt.less';
+@import '../storyflow/nodes/VideoNode/VideoPrompt.less';
+@import '../storyflow/nodes/shared/GenerationPromptEditor.less';
+@import '../storyflow/nodes/AudioNode/AudioNode.less';
+@import '../storyflow/styles/Header.less';
+
+/* 右侧 Agent 浮层（dream-drama 扩展，视觉对齐 storyflow 卡片） */
+.canvas-agent-float {
+  position: fixed;
+  top: 88px;
+  right: 16px;
+  bottom: 16px;
+  width: min(380px, calc(100vw - 32px));
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+}
+
+.canvas-agent-float .studio-canvas-v2-agent,
+.canvas-agent-float .workflow-canvas-agent-panel {
+  flex: 1;
+  min-height: 0;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background: var(--card);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.workflow-canvas-agent-panel__head {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.workflow-canvas-agent-panel__feed {
+  flex: 1;
+  overflow: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.workflow-canvas-agent-panel__bubble {
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  border: 1px solid var(--border-color);
+}
+
+.workflow-canvas-agent-panel__bubble.is-user {
+  background: #ccddff14;
+  margin-left: 20px;
+}
+
+.workflow-canvas-agent-panel__bubble.is-assistant {
+  background: #ffffff08;
+}
+
+.workflow-canvas-agent-panel .tool-run__summary,
+.workflow-canvas-agent-panel .tool-run__step-title,
+.workflow-canvas-agent-panel .tool-run__step-detail pre {
+  color: var(--text);
+}
+
+.workflow-canvas-agent-panel .tool-run__summary:hover,
+.workflow-canvas-agent-panel .tool-run__summary:focus-visible {
+  color: var(--text);
+  background: #ccddff14;
+}
+
+.workflow-canvas-agent-panel .tool-run__summary-text,
+.workflow-canvas-agent-panel .tool-run__chevron {
+  color: inherit;
+}
+
+.workflow-canvas-agent-panel .tool-run__step-tag,
+.workflow-canvas-agent-panel .tool-run__step-detail-label {
+  color: var(--text-tertiary);
+}
+
+.workflow-canvas-agent-panel .tool-run__step-detail {
+  border-color: var(--border-color);
+  background: #0f1116;
+}
+
+.workflow-canvas-agent-panel .tool-run__step-icon {
+  border-color: var(--border-color);
+  background: var(--card);
+}
+
+.workflow-canvas-agent-panel__composer {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.workflow-canvas-agent-panel__input {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: #ffffff08;
+  color: var(--text);
+  padding: 10px;
+  resize: none;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.workflow-canvas-agent-panel__composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.workflow-canvas-agent-panel__mode-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.workflow-canvas-agent-panel__mode-select:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--button-bg-color);
+}
+
+.workflow-canvas-agent-panel__mode-select:focus-visible {
+  color: var(--text);
+  background: var(--button-bg-color);
+  box-shadow: none;
+}
+
+.workflow-canvas-agent-panel__mode-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.workflow-canvas-agent-panel__mode-chevron {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+/* portal 到 body：画布内 ant Dropdown 统一暗色（节点参数条、侧栏 mode 等） */
+.workflow-canvas-dropdown {
+  .workflow-canvas-dropdown__menu.ant-dropdown-menu {
+    background: #1c1e22;
+    border: 1px solid #ccddff14;
+    border-radius: 10px;
+    padding: 4px;
+    min-width: 108px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  }
+
+  .workflow-canvas-dropdown__menu.ant-dropdown-menu .ant-dropdown-menu-item {
+    color: #e0f5ffcc;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 6px 10px;
+  }
+
+  .workflow-canvas-dropdown__menu.ant-dropdown-menu .ant-dropdown-menu-item:hover,
+  .workflow-canvas-dropdown__menu.ant-dropdown-menu .ant-dropdown-menu-item-active {
+    background: #ccddff1f;
+    color: #f5fbff;
+  }
+
+  .workflow-canvas-dropdown__menu.ant-dropdown-menu .ant-dropdown-menu-item-selected {
+    background: #ccddff14;
+    color: #f5fbff;
+    font-weight: 500;
+  }
+
+  .workflow-canvas-dropdown__menu.ant-dropdown-menu .ant-dropdown-menu-item-disabled {
+    color: #e0f5ff4d;
+  }
+}
+
+.workflow-canvas-agent-panel__send {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: linear-gradient(90deg, #0693f9, #744df4);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.workflow-canvas-agent-panel__send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

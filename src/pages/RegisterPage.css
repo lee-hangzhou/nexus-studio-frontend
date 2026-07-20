@@ -1,0 +1,39 @@
+/* 统一所有输入框字号和 placeholder 字号 */
+.register-page-form .ant-input,
+.register-page-form .ant-input::placeholder,
+.register-page-form .ant-input-affix-wrapper input,
+.register-page-form .ant-input-affix-wrapper input::placeholder {
+  font-size: 14px !important;
+}
+
+.register-page-form .ant-input-affix-wrapper:hover {
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+.register-page-form .ant-input-affix-wrapper-focused,
+.register-page-form .ant-input-affix-wrapper:focus-within {
+  border-color: rgba(99, 179, 237, 0.7) !important;
+  box-shadow: 0 0 0 2px rgba(99, 179, 237, 0.12) !important;
+}
+
+/* 无 prefix 的独立 input（验证码、用户名） */
+.register-page-form .ant-input:hover {
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+.register-page-form .ant-input:focus {
+  border-color: rgba(99, 179, 237, 0.7) !important;
+  box-shadow: 0 0 0 2px rgba(99, 179, 237, 0.12) !important;
+}
+
+/* autofill 覆盖 */
+.register-page-form input:-webkit-autofill,
+.register-page-form input:-webkit-autofill:hover,
+.register-page-form input:-webkit-autofill:focus,
+.register-page-form input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px rgba(20, 30, 60, 0.85) inset !important;
+  box-shadow: 0 0 0 1000px rgba(20, 30, 60, 0.85) inset !important;
+  -webkit-text-fill-color: #fff !important;
+  caret-color: #fff;
+  transition: background-color 99999s ease-out 0s;
+}

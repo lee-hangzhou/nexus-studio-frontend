@@ -1,0 +1,111 @@
+.workflow-add-node-menu__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+.workflow-add-node-menu {
+  position: fixed;
+  z-index: 21;
+  transform: translate(8px, 8px);
+  min-width: 220px;
+  padding: 8px;
+  background: var(--bg-dropdown-menu, #1c1e22);
+  border: 1px solid var(--border-color, #ccddff14);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.workflow-add-node-menu__title {
+  padding: 6px 10px 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-tertiary, #e0f5ff7a);
+}
+
+.workflow-add-node-menu__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workflow-add-node-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text, #f5fbff);
+  cursor: pointer;
+  text-align: left;
+}
+
+.workflow-add-node-menu__item:hover:not(:disabled) {
+  background: var(--button-bg-hover-color, #ccddff1f);
+}
+
+.workflow-add-node-menu__item:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.workflow-add-node-menu__icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--button-bg-color, #ccddff14);
+  font-size: 16px;
+  color: var(--text, #f5fbff);
+}
+
+.workflow-add-node-menu__icon--badge::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3b82f6;
+}
+
+.workflow-add-node-menu__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.workflow-add-node-menu__label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workflow-add-node-menu__label {
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.workflow-add-node-menu__desc {
+  font-size: 11px;
+  color: var(--text-tertiary, #e0f5ff7a);
+  line-height: 1.3;
+}
+
+.workflow-add-node-menu__beta {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--button-bg-color, #ccddff14);
+  font-size: 10px;
+  color: var(--text-tertiary, #e0f5ff7a);
+  line-height: 1.4;
+}

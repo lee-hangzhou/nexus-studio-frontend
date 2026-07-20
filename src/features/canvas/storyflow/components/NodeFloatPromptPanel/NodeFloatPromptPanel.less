@@ -1,0 +1,146 @@
+/* 悬浮在节点内容区正下方；父级 .workflow-image-node 需 position: relative + overflow: visible */
+.node-float-prompt {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 30px);
+  transform: translate(-50%, 0);
+  z-index: 20;
+  pointer-events: auto;
+
+  &__card {
+    background: var(--card);
+    border: 1px solid var(--border-color, #ccddff14);
+    border-radius: 16px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+  }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px 6px;
+    min-height: 40px;
+  }
+
+
+
+  &__top-slot {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: #ccddff14;
+    color: #e0f5ffcc;
+    cursor: pointer;
+    font-size: 14px;
+
+    &:hover {
+      background: #ccddff1f;
+      color: #fff;
+    }
+  }
+
+  &__expand-btn {
+    position: absolute;
+    right: 12px;
+    top: 10px;
+    margin-left: auto;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #e0f5ff66;
+    cursor: pointer;
+    font-size: 14px;
+    z-index: 20;
+
+    &:hover {
+      color: #e0f5ffcc;
+      background: #ccddff14;
+    }
+  }
+
+  &__body {
+    position: relative;
+    padding: 0 4px 0;
+    min-height: 72px;
+
+    &--with-leading .canvas-prompt-editor.composer-input-area {
+      padding-left: 44px;
+    }
+  }
+
+  &__body-leading {
+    position: absolute;
+    left: 12px;
+    top: 10px;
+    z-index: 2;
+    display: flex;
+    align-items: flex-start;
+  }
+
+  /* 展开后拉高 Prompt 编辑区（ProseMirror max-height 250px） */
+  &--expanded &__body {
+    .canvas-prompt-editor {
+      max-height: 290px;
+    }
+
+    .canvas-prompt-editor .ProseMirror {
+      max-height: 250px;
+    }
+  }
+
+  &__bottom {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px 10px;
+    border-top: 1px solid #ccddff14;
+    min-height: 44px;
+  }
+
+  &__bottom-start {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  &__bottom-center {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__bottom-end {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+}

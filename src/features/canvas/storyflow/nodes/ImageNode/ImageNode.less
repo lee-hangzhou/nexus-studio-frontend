@@ -1,0 +1,327 @@
+.workflow-image-node {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  color: #999;
+  font-size: 12px;
+  overflow: visible;
+  &__upload-input {
+    display: none;
+  }
+
+  &__upload-btn {
+    position: absolute;
+    top: -80px;
+    left: 50%;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: max-content;
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    background: var(--card);
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    transform: translateX(-50%);
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease,
+      opacity 0.15s ease;
+
+    &:hover:not(:disabled) {
+      border-color: rgba(255, 255, 255, 0.24);
+      background: rgba(40, 42, 50, 0.96);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  &__preview {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+    opacity: 0.6;
+    border-radius: 8px;
+    overflow: hidden;
+
+    &:has(.workflow-image-node__gallery-anchor) {
+      align-items: stretch;
+      align-self: stretch;
+    }
+
+    &:has(.workflow-image-node__gallery--collapsed) {
+      overflow: visible;
+    }
+
+    &:has(.workflow-image-node__gallery--expanded) {
+      overflow: visible;
+    }
+
+    .anticon-picture {
+      font-size: 40px;
+    }
+
+    &--filled {
+      opacity: 1;
+    }
+  }
+
+  &__replace-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    background: rgba(28, 30, 36, 0.72);
+    backdrop-filter: blur(6px);
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease,
+      opacity 0.15s ease;
+
+    &:hover:not(:disabled) {
+      border-color: rgba(255, 255, 255, 0.24);
+      background: rgba(40, 42, 50, 0.88);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  &__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 14px;
+  }
+
+  &__gallery-anchor {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+  }
+
+  &__gallery {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+
+    &--collapsed {
+      cursor: pointer;
+    }
+
+    &--expanded {
+      cursor: default;
+    }
+  }
+
+  &__grid {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    position: relative;
+  }
+
+  &__grid-tile {
+    flex-shrink: 0;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #1b1b1b;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: center center;
+    transition:
+      transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+      opacity 0.28s ease;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.28s ease;
+    }
+
+    &:hover .workflow-image-node__tile-actions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+
+      img {
+        transition: none;
+      }
+    }
+  }
+
+  &__tile-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 25;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
+
+  &__tile-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.92);
+    background: rgba(28, 30, 36, 0.85);
+    backdrop-filter: blur(6px);
+    line-height: 1;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease;
+
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.24);
+      background: rgba(40, 42, 50, 0.96);
+    }
+
+    &--set-main {
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    &--download {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: 14px;
+    }
+  }
+
+  /* 收起：主图（node.path）在最前，其余为扇形轮廓 */
+  &__gallery--collapsed &__grid-tile--active {
+    transform: translate(0, 0);
+    z-index: 10;
+    pointer-events: auto;
+  }
+
+  &__gallery--collapsed &__grid-tile--outline {
+    pointer-events: auto;
+  }
+
+  &__gallery--collapsed &__grid-tile--outline-0 {
+    transform: rotate(4deg) translate(6px, 3px);
+    z-index: 4;
+  }
+
+  &__gallery--collapsed &__grid-tile--outline-1 {
+    transform: rotate(8deg) translate(12px, 6px);
+    z-index: 3;
+  }
+
+  &__gallery--collapsed &__grid-tile--outline-2 {
+    transform: rotate(12deg) translate(18px, 9px);
+    z-index: 2;
+  }
+
+  /* 展开：按张数排布 */
+  &__gallery--expanded &__grid-tile {
+    z-index: 5;
+    pointer-events: auto;
+
+    img {
+      opacity: 1;
+    }
+
+    &:nth-child(1) {
+      transform: translate(0, 0);
+    }
+    &:nth-child(2) {
+      transform: translate(calc(100% + 10px), 0);
+    }
+    &:nth-child(3) {
+      transform: translate(0, calc(-100% - 10px));
+    }
+
+    &:nth-child(4) {
+      transform: translate(calc(100% + 10px), calc(-100% - 10px));
+    }
+
+  }
+
+
+  &__placeholder {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+  }
+
+  &__refs {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    overflow: auto;
+    min-height: 0;
+  }
+
+  &__ref-text,
+  &__ref-image {
+    margin: 0;
+    line-height: 1.4;
+    color: #ccc;
+    word-break: break-word;
+  }
+
+  &__ref-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
