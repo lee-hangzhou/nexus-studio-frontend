@@ -832,6 +832,10 @@ export function ChatPage() {
   const send = async () => {
     const text = input.trim();
     if (!text) return;
+    if (!selectedModel) {
+      antMessage.error('暂无可用模型，请稍后重试');
+      return;
+    }
     if (attachments.some((item) => isImageMime(item.mime_type)) && !supportsVision) {
       antMessage.error('当前模型不支持识图，无法发送图片');
       return;
@@ -1136,7 +1140,7 @@ export function ChatPage() {
         {
           conversation_id: conversationId,
           content: text,
-          model: selectedModel || undefined,
+          model: selectedModel,
           attachment_ids: sentAttachmentIds,
           enable_tools: true,
           client_turn_id: turnId,
@@ -1227,6 +1231,10 @@ export function ChatPage() {
 
   const submitUserGate = async (fields: Record<string, string>) => {
     if (!activeConversationId || !gatePending) return;
+    if (!selectedModel) {
+      antMessage.error('暂无可用模型，无法继续当前任务');
+      return;
+    }
     if (gateResumeInFlightRef.current) {
       antMessage.warning('正在处理上一次 gate 提交，请稍候');
       return;
@@ -1712,9 +1720,12 @@ export function ChatPage() {
                       type="button"
                       className={`studio-composer-box__send${conversationBusy ? ' studio-composer-box__send--stop' : ''}`}
                       onClick={() => (conversationBusy ? void cancelInFlightTurn() : void send())}
-                      disabled={!conversationBusy && !input.trim() && attachmentIdsForSend.length === 0}
+                      disabled={
+                        !conversationBusy
+                        && (!selectedModel || (!input.trim() && attachmentIdsForSend.length === 0))
+                      }
                       aria-label={conversationBusy ? '停止生成' : '发送'}
-                      title={conversationBusy ? '停止生成' : '发送'}
+                      title={conversationBusy ? '停止生成' : selectedModel ? '发送' : '暂无可用模型'}
                     >
                       {conversationBusy ? <StopOutlined /> : <ArrowUpOutlined />}
                     </button>

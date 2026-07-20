@@ -373,7 +373,7 @@ export async function streamMessage(
   body: {
     conversation_id: number;
     content: string;
-    model?: string;
+    model: string;
     attachment_ids?: number[];
     enable_tools?: boolean;
     client_turn_id?: string;
