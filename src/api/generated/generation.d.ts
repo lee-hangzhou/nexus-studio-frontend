@@ -5,7 +5,13 @@
  * and run json-schema-to-typescript to regenerate this file.
  */
 
-export type Generation = SubmitGenerateRequest | GenerateTaskView | GenerateModelItem | GenerateParamOptions;
+export type Generation =
+  | SubmitGenerateRequest
+  | GenerateTaskView
+  | GenerateTaskListRequest
+  | GenerateTaskListResponse
+  | GenerateModelItem
+  | GenerateParamOptions;
 export type Count = number;
 export type Duration = number | null;
 export type GenerationKind = "image" | "video" | "audio";
@@ -38,15 +44,45 @@ export type RefMaterials = GenerateRefMaterial[];
 export type Resolution1 = string | null;
 export type ResultAssetIds = number[];
 export type ResultCount = number;
+export type Duration2 = number | null;
+export type Framespersecond = number | null;
 export type Height = number | null;
+export type Ratio2 = string | null;
+export type Resolution2 = string | null;
 export type Type = number | null;
 export type Url1 = string;
 export type Width = number | null;
 export type ResultUrls = GatewayResultItem[];
-export type GenerationTaskStatus = "pending" | "running" | "success" | "failed";
+export type GenerationTaskStatus = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type TaskId = number;
-export type Label = string;
+export type CreatedAfter = string | null;
+export type CreatedAt1 = string;
+export type TaskId1 = number;
+export type FavoritesOnly = boolean;
+export type PageSize = number;
+export type Query = string;
+export type Statuses = GenerationTaskStatus[];
+export type HasMore = boolean;
+export type CreatedAt2 = string;
+export type Duration3 = number | null;
+export type ErrorMessage1 = string | null;
+export type EstimatedWaitSeconds1 = number | null;
+export type IsFavorited1 = boolean;
 export type ModelId2 = string;
+export type PreviewAssetId = number | null;
+export type PreviewMediaType = number | null;
+export type PreviewUrl = string | null;
+export type Prompt2 = string;
+export type QueuePosition1 = number | null;
+export type QueueStatus1 = number | null;
+export type QueueTotal1 = number | null;
+export type Ratio3 = string | null;
+export type Resolution3 = string | null;
+export type ResultCount1 = number;
+export type TaskId2 = number;
+export type Items = GenerateTaskListItem[];
+export type Label = string;
+export type ModelId3 = string;
 export type Counts = number[];
 export type Durations = number[];
 export type Ratios = string[];
@@ -102,16 +138,63 @@ export interface GenerateRefMaterial {
   [k: string]: unknown;
 }
 export interface GatewayResultItem {
+  duration?: Duration2;
+  framesPerSecond?: Framespersecond;
   height?: Height;
+  ratio?: Ratio2;
+  resolution?: Resolution2;
   type?: Type;
   url: Url1;
   width?: Width;
+}
+export interface GenerateTaskListRequest {
+  created_after?: CreatedAfter;
+  cursor?: GenerateTaskCursor | null;
+  favorites_only?: FavoritesOnly;
+  kind?: GenerationKind | null;
+  page_size?: PageSize;
+  query?: Query;
+  statuses?: Statuses;
+  [k: string]: unknown;
+}
+export interface GenerateTaskCursor {
+  created_at: CreatedAt1;
+  task_id: TaskId1;
+  [k: string]: unknown;
+}
+export interface GenerateTaskListResponse {
+  has_more?: HasMore;
+  items: Items;
+  next_cursor?: GenerateTaskCursor | null;
+  [k: string]: unknown;
+}
+export interface GenerateTaskListItem {
+  created_at: CreatedAt2;
+  duration?: Duration3;
+  error_message?: ErrorMessage1;
+  estimated_wait_seconds?: EstimatedWaitSeconds1;
+  is_favorited?: IsFavorited1;
+  kind: GenerationKind;
+  model_id: ModelId2;
+  preview_asset_id?: PreviewAssetId;
+  preview_media_type?: PreviewMediaType;
+  preview_url?: PreviewUrl;
+  prompt: Prompt2;
+  queue_position?: QueuePosition1;
+  queue_status?: QueueStatus1;
+  queue_total?: QueueTotal1;
+  ratio?: Ratio3;
+  reference_mode?: ReferenceMode | null;
+  resolution?: Resolution3;
+  result_count?: ResultCount1;
+  status: GenerationTaskStatus;
+  task_id: TaskId2;
   [k: string]: unknown;
 }
 export interface GenerateModelItem {
   kind: GenerationKind;
   label: Label;
-  model_id: ModelId2;
+  model_id: ModelId3;
   param_options?: GenerateParamOptions;
   supports_vision?: SupportsVision;
   [k: string]: unknown;

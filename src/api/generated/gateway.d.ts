@@ -13,13 +13,12 @@ export type Gateway =
   | GatewayTaskStatusResponse
   | GatewayQueueResponse
   | GatewayGenerateCallback;
-export type DisplayName = string | null;
 export type Id = string;
-export type Object = string | null;
+export type Object = string;
 export type SupportsVision = boolean;
 export type GatewayModelTaskType = 1 | 2 | 3 | 8 | 9;
 export type Data = GatewayModelItem[];
-export type Object1 = string | null;
+export type Object1 = string;
 export type Callbackurl = string;
 export type Materialrefindex = number | null;
 export type Text = string | null;
@@ -42,7 +41,7 @@ export type ReferenceMode = 1 | 2 | 3 | 4;
 export type Resolution1 = string | null;
 export type Code = number;
 export type Taskid = number;
-export type Message = string | null;
+export type Message = string;
 export type Code1 = number;
 export type Reason = string | null;
 /**
@@ -50,42 +49,43 @@ export type Reason = string | null;
  */
 export type GatewayTaskStatus = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type Taskid1 = number;
+export type Urls = GatewayResultItem[] | null;
+export type Duration1 = number | null;
+export type Framespersecond = number | null;
 export type Height = number | null;
+export type Ratio2 = string | null;
+export type Resolution2 = string | null;
 export type Type = number | null;
 export type Url = string;
 export type Width = number | null;
-export type Urls = GatewayResultItem[];
-export type Message1 = string | null;
+export type Message1 = string;
 export type Code2 = number;
 export type Estimatedwaitseconds = number | null;
 export type Position = number | null;
-export type Status = number | null;
+export type Status = number;
 export type Taskid2 = number;
 export type Total = number | null;
 export type Tasks = GatewayQueueItem[];
-export type Message2 = string | null;
+export type Message2 = string;
 export type Reason1 = string | null;
 export type Taskid3 = number;
-export type Urls1 = GatewayResultItem[];
+export type Urls1 = GatewayResultItem[] | null;
 
 /**
  * OpenAI /v1/models 兼容列表信封。
  */
 export interface GatewayModelsResponse {
   data: Data;
-  object?: Object1;
-  [k: string]: unknown;
+  object: Object1;
 }
 /**
- * OpenAI /v1/models 兼容目录项；忽略未建模字段（如 object、owned_by）。
+ * Strict OpenAI-compatible model catalog item.
  */
 export interface GatewayModelItem {
-  display_name?: DisplayName;
   id: Id;
-  object?: Object;
-  supports_vision?: SupportsVision;
+  object: Object;
+  supports_vision: SupportsVision;
   task_type: GatewayModelTaskType;
-  [k: string]: unknown;
 }
 export interface GatewayImageSubmitRequest {
   callbackUrl: Callbackurl;
@@ -116,63 +116,60 @@ export interface GatewayVideoSubmitRequest {
   resolution?: Resolution1;
 }
 export interface GatewayTaskSubmitResponse {
-  code?: Code;
+  code: Code;
   data: GatewayTaskSubmitData;
-  message?: Message;
-  [k: string]: unknown;
+  message: Message;
 }
 export interface GatewayTaskSubmitData {
   taskId: Taskid;
-  [k: string]: unknown;
 }
 export interface GatewayTaskStatusResponse {
-  code?: Code1;
+  code: Code1;
   data: GatewayTaskStatusData;
-  message?: Message1;
-  [k: string]: unknown;
+  message: Message1;
 }
 /**
  * 对齐 union_lm api.TaskResponse。
  */
 export interface GatewayTaskStatusData {
   reason?: Reason;
+  result?: unknown;
   status: GatewayTaskStatus;
   taskId: Taskid1;
   urls?: Urls;
-  [k: string]: unknown;
 }
 export interface GatewayResultItem {
+  duration?: Duration1;
+  framesPerSecond?: Framespersecond;
   height?: Height;
+  ratio?: Ratio2;
+  resolution?: Resolution2;
   type?: Type;
   url: Url;
   width?: Width;
-  [k: string]: unknown;
 }
 export interface GatewayQueueResponse {
-  code?: Code2;
+  code: Code2;
   data: GatewayQueueData;
-  message?: Message2;
-  [k: string]: unknown;
+  message: Message2;
 }
 export interface GatewayQueueData {
-  tasks?: Tasks;
-  [k: string]: unknown;
+  tasks: Tasks;
 }
 export interface GatewayQueueItem {
   estimatedWaitSeconds?: Estimatedwaitseconds;
   position?: Position;
-  status?: Status;
+  status: Status;
   taskId: Taskid2;
   total?: Total;
-  [k: string]: unknown;
 }
 /**
  * 对齐 union_lm api.TaskResponse（callback 直 POST，无外层信封）。
  */
 export interface GatewayGenerateCallback {
   reason?: Reason1;
+  result?: unknown;
   status: GatewayTaskStatus;
   taskId: Taskid3;
   urls?: Urls1;
-  [k: string]: unknown;
 }

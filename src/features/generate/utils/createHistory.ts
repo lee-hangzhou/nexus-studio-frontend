@@ -1,4 +1,5 @@
 import { matchesTimePreset } from '../../../shared/utils/timePreset';
+import { isTaskInProgress, TASK_STATUS } from '../../../domains/task/types';
 import {
   FILMSTRIP_DISPLAY_MAX,
   FILMSTRIP_PINNED_MAX,
@@ -63,9 +64,10 @@ export function buildFilmstripWorkset(
 
 function matchesStatus(status: GenerateFeedItem['status'], filter: GenerateStatusFilter): boolean {
   if (filter === 'all') return true;
-  if (filter === 'in_progress') return status === 'pending' || status === 'running';
-  if (filter === 'success') return status === 'success';
-  if (filter === 'failed') return status === 'failed';
+  if (filter === 'in_progress') return isTaskInProgress(status);
+  if (filter === 'success') return status === TASK_STATUS.SUCCEEDED;
+  if (filter === 'failed') return status === TASK_STATUS.FAILED;
+  if (filter === 'cancelled') return status === TASK_STATUS.CANCELLED;
   return true;
 }
 
@@ -138,15 +140,19 @@ export function measureHistoryList(rows: HistoryListRow[]): { offsets: number[];
 
 export function statusLabel(status: GenerateFeedItem['status']): string {
   switch (status) {
-    case 'pending':
+    case TASK_STATUS.CREATED:
+      return '已创建';
+    case TASK_STATUS.QUEUED:
       return '排队中';
-    case 'running':
+    case TASK_STATUS.WAITING:
+      return '等待中';
+    case TASK_STATUS.RUNNING:
       return '生成中';
-    case 'success':
+    case TASK_STATUS.SUCCEEDED:
       return '已完成';
-    case 'failed':
+    case TASK_STATUS.FAILED:
       return '失败';
-    default:
-      return status;
+    case TASK_STATUS.CANCELLED:
+      return '已取消';
   }
 }

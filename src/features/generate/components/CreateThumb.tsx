@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { isTaskInProgress, TASK_STATUS } from '../../../domains/task/types';
 import type { GenerateFeedItem } from '../types';
 
 interface CreateThumbProps {
@@ -9,8 +10,8 @@ interface CreateThumbProps {
 }
 
 export function CreateThumb({ item, active = false, compact = false, onClick }: CreateThumbProps) {
-  const pending = item.status === 'pending' || item.status === 'running';
-  const failed = item.status === 'failed';
+  const pending = isTaskInProgress(item.status);
+  const failed = item.status === TASK_STATUS.FAILED;
   const stateBg = pending
     ? 'url(/generate_pending_state.png)'
     : failed

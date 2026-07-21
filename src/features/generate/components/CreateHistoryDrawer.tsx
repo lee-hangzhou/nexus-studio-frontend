@@ -27,6 +27,7 @@ const statusOptions: { value: GenerateStatusFilter; label: string }[] = [
   { value: 'in_progress', label: '进行中' },
   { value: 'success', label: '已完成' },
   { value: 'failed', label: '失败' },
+  { value: 'cancelled', label: '已取消' },
 ];
 
 const timeOptions: { value: GenerateTimePreset; label: string }[] = [

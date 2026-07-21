@@ -1,21 +1,33 @@
-import type { GenerateHistoryItemView, GenerateTaskView } from '../../../api/generate';
-import type { GenerateFeedItem } from '../types';
+import type {
+  GenerateTaskListItem,
+  GenerateTaskKind,
+  GenerateTaskView,
+} from '../../../api/generate';
+import type { GenerateFeedItem, GenerateKind } from '../types';
+
+function toFeatureKind(kind: GenerateTaskKind): GenerateKind | null {
+  if (kind === 'image' || kind === 'video') return kind;
+  return null;
+}
 
 /** 历史列表轻量条目 → 侧栏展示（仅首图预览） */
-export function toFeedItemFromHistory(view: GenerateHistoryItemView): GenerateFeedItem {
+export function toFeedItemFromTaskList(view: GenerateTaskListItem): GenerateFeedItem | null {
+  const kind = toFeatureKind(view.kind);
+  if (kind === null) return null;
+
   return {
     id: String(view.task_id),
-    kind: view.kind,
+    kind,
     status: view.status,
     prompt: view.prompt,
     modelId: view.model_id,
     modelLabel: view.model_id.replace(/-/g, ' '),
     createdAt: view.created_at,
-    resultCount: view.result_count,
+    resultCount: view.result_count ?? 0,
     resultImages: view.preview_url
       ? [{ url: view.preview_url, type: view.preview_media_type ?? undefined }]
       : undefined,
-    favorite: view.is_favorited,
+    favorite: view.is_favorited ?? false,
     errorMessage: view.error_message ?? undefined,
     ratio: view.ratio ?? undefined,
     resolution: view.resolution ?? undefined,
@@ -29,10 +41,13 @@ export function toFeedItemFromHistory(view: GenerateHistoryItemView): GenerateFe
 }
 
 /** 任务详情 / 轮询 → 完整 FeedItem */
-export function toFeedItem(view: GenerateTaskView): GenerateFeedItem {
+export function toFeedItem(view: GenerateTaskView): GenerateFeedItem | null {
+  const kind = toFeatureKind(view.kind);
+  if (kind === null) return null;
+
   return {
     id: String(view.task_id),
-    kind: view.kind,
+    kind,
     status: view.status,
     prompt: view.prompt,
     modelId: view.model_id,

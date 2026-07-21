@@ -30,7 +30,7 @@ export function AppShell() {
         <div className="studio-topbar__left">
           <NavLink to="/projects" className="studio-brand">
             <img src="/logo.png" alt="" className="studio-brand__mark" />
-            <span className="studio-brand__text">Dream Drama</span>
+            <span className="studio-brand__text">Nexus Studio</span>
           </NavLink>
 
           <nav className="studio-nav" aria-label="主导航">

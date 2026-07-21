@@ -5,20 +5,22 @@ import {
   cancelTask,
   deleteTask,
   favoriteTask,
-  fetchHistory,
   getTaskStatus,
   getTasksStatus,
+  listGenerateTasks,
   submitGenerate,
 } from '../../../api/generate';
-import type { HistoryParams } from '../../../api/generate';
+import type { GenerateTaskCursor } from '../../../api/generate';
 import type { CreateComposerParams, CreateComposerSubmitPayload } from '../components/CreateComposer';
 import { CreateComposer } from '../components/CreateComposer';
 import { CreateHistoryPanel } from '../components/CreateHistoryPanel';
 import { CreateStage } from '../components/CreateStage';
 import type { GenerateFeedItem, GenerateKind, HistoryFilters } from '../types';
 import { DEFAULT_HISTORY_FILTERS } from '../types';
-import { toFeedItem, toFeedItemFromHistory, toHistoryListPatch } from '../utils/feedItemMappers';
+import { toFeedItem, toFeedItemFromTaskList, toHistoryListPatch } from '../utils/feedItemMappers';
 import { buildPreviewSlides } from '../utils/previewGallery';
+import { buildGenerateTaskListRequest } from '../utils/taskListRequest';
+import { isTaskQueued, isTaskTerminal, TASK_STATUS } from '../../../domains/task/types';
 
 export type LoadMoreHistoryResult = {
   appendedItems: GenerateFeedItem[];
@@ -35,26 +37,13 @@ const DEFAULT_PARAMS: CreateComposerParams = {
 };
 
 const POLL_INTERVAL_MS = 5000;
-const TERMINAL_STATUSES = new Set<string>(['success', 'failed']);
 const HISTORY_PAGE_SIZE = 15;
 const SEARCH_DEBOUNCE_MS = 350;
 
 function pickDefaultActiveId(items: GenerateFeedItem[]) {
-  const latestSuccess = items.find((i) => i.status === 'success');
+  const latestSuccess = items.find((i) => i.status === TASK_STATUS.SUCCEEDED);
   if (latestSuccess) return latestSuccess.id;
   return items[0]?.id ?? null;
-}
-
-function toHistoryRequest(filters: HistoryFilters, cursor: string | null): HistoryParams {
-  return {
-    kind: filters.kind,
-    status: filters.status,
-    time_range: filters.time,
-    query: filters.query.trim() || undefined,
-    favorites_only: filters.favoritesOnly,
-    page_size: HISTORY_PAGE_SIZE,
-    cursor,
-  };
 }
 
 function useDebouncedValue<T>(value: T, delayMs: number): T {
@@ -66,8 +55,6 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
   return debounced;
 }
 
-// ── 页面组件 ──────────────────────────────────────────────────────────────────
-
 export function GeneratePage() {
   const [historyItems, setHistoryItems] = useState<GenerateFeedItem[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -76,7 +63,7 @@ export function GeneratePage() {
   const [kind, setKind] = useState<GenerateKind>('image');
   const [params, setParams] = useState<CreateComposerParams>(DEFAULT_PARAMS);
   const [historyFilters, setHistoryFilters] = useState<HistoryFilters>(DEFAULT_HISTORY_FILTERS);
-  const [historyNextCursor, setHistoryNextCursor] = useState<string | null>(null);
+  const [historyNextCursor, setHistoryNextCursor] = useState<GenerateTaskCursor | null>(null);
   const [historyHasMore, setHistoryHasMore] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyInitialLoading, setHistoryInitialLoading] = useState(true);
@@ -94,7 +81,7 @@ export function GeneratePage() {
   const pollingTaskKey = Array.from(
     new Set(
       historyItems
-        .filter((item) => !TERMINAL_STATUSES.has(item.status))
+        .filter((item) => !isTaskTerminal(item.status))
         .map((item) => Number(item.id))
         .filter(Number.isFinite),
     ),
@@ -117,13 +104,19 @@ export function GeneratePage() {
         setHistoryInitialLoading(true);
       }
       try {
-        const resp = await fetchHistory(
-          toHistoryRequest(effectiveFilters, mode === 'more' ? historyNextCursor : null),
+        const resp = await listGenerateTasks(
+          buildGenerateTaskListRequest(
+            effectiveFilters,
+            mode === 'more' ? historyNextCursor : null,
+            HISTORY_PAGE_SIZE,
+          ),
         );
         if (mode === 'reset' && requestGen !== historyRequestGenRef.current) {
           return null;
         }
-        const feedItems = resp.items.map(toFeedItemFromHistory);
+        const feedItems = resp.items
+          .map(toFeedItemFromTaskList)
+          .filter((item): item is GenerateFeedItem => item !== null);
         let appendedItems: GenerateFeedItem[] = feedItems;
         setHistoryItems((prev) => {
           if (mode === 'reset') return feedItems;
@@ -131,16 +124,16 @@ export function GeneratePage() {
           appendedItems = feedItems.filter((i) => !existingIds.has(i.id));
           return [...prev, ...appendedItems];
         });
-        setHistoryNextCursor(resp.next_cursor);
-        setHistoryHasMore(resp.has_more);
+        setHistoryNextCursor(resp.next_cursor ?? null);
+        setHistoryHasMore(resp.has_more ?? false);
         if (mode === 'reset') {
           setActiveId((current) => {
             if (current && feedItems.some((i) => i.id === current)) return current;
             return pickDefaultActiveId(feedItems);
           });
-          return { appendedItems: feedItems, has_more: resp.has_more };
+          return { appendedItems: feedItems, has_more: resp.has_more ?? false };
         }
-        return { appendedItems, has_more: resp.has_more };
+        return { appendedItems, has_more: resp.has_more ?? false };
       } catch {
         if (mode === 'reset') {
           message.error('加载生成历史失败，请稍后重试');
@@ -192,19 +185,18 @@ export function GeneratePage() {
         const response = await getTasksStatus(taskIds);
         if (cancelled) return;
 
-        const details = new Map(
-          response.items.map((view) => {
-            const detail = toFeedItem(view);
-            return [String(view.task_id), detail] as const;
-          }),
-        );
+        const details = new Map<string, GenerateFeedItem>();
+        for (const view of response.items) {
+          const detail = toFeedItem(view);
+          if (detail !== null) details.set(String(view.task_id), detail);
+        }
         const missingIds = new Set(response.missing_task_ids.map(String));
         setHistoryItems((prev) =>
           prev.map((item) => {
             const detail = details.get(item.id);
             if (detail) return { ...item, ...toHistoryListPatch(detail) };
             if (missingIds.has(item.id)) {
-              return { ...item, status: 'failed', errorMessage: '任务不存在或已删除' };
+              return { ...item, status: TASK_STATUS.FAILED, errorMessage: '任务不存在或已删除' };
             }
             return item;
           }),
@@ -214,7 +206,7 @@ export function GeneratePage() {
           const detail = details.get(prev.id);
           if (detail) return detail;
           if (missingIds.has(prev.id)) {
-            return { ...prev, status: 'failed', errorMessage: '任务不存在或已删除' };
+            return { ...prev, status: TASK_STATUS.FAILED, errorMessage: '任务不存在或已删除' };
           }
           return prev;
         });
@@ -253,6 +245,7 @@ export function GeneratePage() {
       .then((view) => {
         if (cancelled) return;
         const detail = toFeedItem(view);
+        if (detail === null) return;
         setActiveDetail(detail);
         patchHistoryItem(activeId, toHistoryListPatch(detail));
       })
@@ -273,7 +266,7 @@ export function GeneratePage() {
       const optimisticItem: GenerateFeedItem = {
         id: optimisticId,
         kind: payload.kind,
-        status: 'pending',
+        status: TASK_STATUS.CREATED,
         prompt: payload.prompt,
         modelId: payload.params.model,
         modelLabel: payload.params.model.replace(/-/g, ' '),
@@ -310,13 +303,13 @@ export function GeneratePage() {
 
         const realId = String(resp.task_id);
         const promote = (item: GenerateFeedItem) =>
-          item.id === optimisticId ? { ...item, id: realId } : item;
+          item.id === optimisticId ? { ...item, id: realId, status: resp.status } : item;
         setHistoryItems((prev) => prev.map(promote));
         setActiveDetail((prev) => (prev?.id === optimisticId ? { ...prev, id: realId } : prev));
         setActiveId(realId);
       } catch (err) {
         const msg = err instanceof Error ? err.message : '提交失败，请重试';
-        patchHistoryItem(optimisticId, { status: 'failed', errorMessage: msg });
+        patchHistoryItem(optimisticId, { status: TASK_STATUS.FAILED, errorMessage: msg });
       }
     },
     [patchHistoryItem],
@@ -327,7 +320,7 @@ export function GeneratePage() {
     ratio: item.ratio ?? params.ratio,
     resolution: item.resolution ?? params.resolution,
     count:
-      item.kind === 'image' && item.status === 'success' && item.resultCount > 0
+      item.kind === 'image' && item.status === TASK_STATUS.SUCCEEDED && item.resultCount > 0
         ? item.resultCount
         : params.count,
     duration: item.kind === 'video' ? (item.duration ?? params.duration) : undefined,
@@ -383,7 +376,7 @@ export function GeneratePage() {
       if (!Number.isFinite(taskId)) return;
       try {
         await cancelTask(taskId);
-        patchHistoryItem(id, { status: 'failed', errorMessage: '已取消' });
+        patchHistoryItem(id, { status: TASK_STATUS.CANCELLED, errorMessage: '已取消' });
       } catch (err) {
         const msg = err instanceof Error ? err.message : '取消失败，请稍后重试';
         message.warning(msg);
@@ -457,7 +450,7 @@ export function GeneratePage() {
           onCancel={
             activeItem
             && activeItem.kind !== 'image'
-            && activeItem.status === 'pending'
+            && isTaskQueued(activeItem.status)
             && Number.isFinite(Number(activeItem.id))
               ? () => handleCancelTask(activeItem.id)
               : undefined

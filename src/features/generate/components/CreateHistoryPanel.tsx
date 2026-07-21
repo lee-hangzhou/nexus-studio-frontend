@@ -15,21 +15,27 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
 import type { GenerateFeedItem, GenerateFilterType, GenerateStatusFilter, GenerateTimePreset, HistoryFilters } from '../types';
 import { PromptWithMentions } from './PromptWithMentions';
+import { isTaskInProgress, isTaskQueued, TASK_STATUS } from '../../../domains/task/types';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
 
-function statusInfo(status: string): { label: string; cls: string } {
+function statusInfo(status: GenerateFeedItem['status']): { label: string; cls: string } {
   switch (status) {
-    case 'success':
+    case TASK_STATUS.SUCCEEDED:
       return { label: '已完成', cls: 'studio-create-history-panel__status--success' };
-    case 'running':
-    case 'in_progress':
+    case TASK_STATUS.RUNNING:
       return { label: '进行中', cls: 'studio-create-history-panel__status--running' };
-    case 'failed':
+    case TASK_STATUS.FAILED:
       return { label: '失败', cls: 'studio-create-history-panel__status--failed' };
-    default:
+    case TASK_STATUS.CANCELLED:
+      return { label: '已取消', cls: 'studio-create-history-panel__status--pending' };
+    case TASK_STATUS.CREATED:
+      return { label: '已创建', cls: 'studio-create-history-panel__status--pending' };
+    case TASK_STATUS.QUEUED:
       return { label: '排队中', cls: 'studio-create-history-panel__status--pending' };
+    case TASK_STATUS.WAITING:
+      return { label: '等待中', cls: 'studio-create-history-panel__status--pending' };
   }
 }
 
@@ -37,8 +43,8 @@ function HistoryThumb({ item }: { item: GenerateFeedItem }) {
   const media = item.resultImages?.[0];
   const thumbUrl = media?.url;
   const isVideo = item.kind === 'video' || media?.type === 3;
-  const isPending = item.status === 'pending' || item.status === 'running';
-  const isFailed = item.status === 'failed';
+  const isPending = isTaskInProgress(item.status);
+  const isFailed = item.status === TASK_STATUS.FAILED;
   return (
     <div className="studio-create-history-panel__thumb" aria-hidden>
       {!thumbUrl && (isPending || isFailed) ? (
@@ -122,7 +128,7 @@ function HistoryRow({
   if (item.resultCount > 0) {
     tags.push(item.kind === 'video' ? `${item.resultCount}个视频` : `${item.resultCount}张`);
   }
-  if (item.status === 'pending' && item.queuePosition && item.queueTotal) {
+  if (isTaskQueued(item.status) && item.queuePosition && item.queueTotal) {
     tags.push(`排队 ${item.queuePosition}/${item.queueTotal}`);
   }
 
@@ -180,7 +186,7 @@ function HistoryRow({
         >
           {item.favorite ? <HeartFilled /> : <HeartOutlined />}
         </button>
-        {item.status === 'success' && (
+        {item.status === TASK_STATUS.SUCCEEDED && (
           <button
             type="button"
             className="studio-create-history-panel__action-btn"
@@ -190,7 +196,7 @@ function HistoryRow({
             <DownloadOutlined />
           </button>
         )}
-        {item.kind !== 'image' && item.status === 'pending' && onCancel && Number.isFinite(Number(item.id)) && (
+        {item.kind !== 'image' && isTaskQueued(item.status) && onCancel && Number.isFinite(Number(item.id)) && (
           <button
             type="button"
             className="studio-create-history-panel__action-btn studio-create-history-panel__action-btn--danger"
@@ -226,6 +232,7 @@ const STATUS_OPTS: { value: GenerateStatusFilter; label: string }[] = [
   { value: 'in_progress', label: '进行中' },
   { value: 'success', label: '已完成' },
   { value: 'failed', label: '失败' },
+  { value: 'cancelled', label: '已取消' },
 ];
 
 const TIME_OPTS: { value: GenerateTimePreset; label: string }[] = [

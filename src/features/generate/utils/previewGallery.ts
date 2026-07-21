@@ -1,4 +1,5 @@
 import type { GenerateFeedItem, GenerateKind } from '../types';
+import { TASK_STATUS } from '../../../domains/task/types';
 
 export interface PreviewSlide {
   taskId: string;
@@ -22,7 +23,7 @@ function compareTasksNewestFirst(a: GenerateFeedItem, b: GenerateFeedItem): numb
 export function buildPreviewSlides(items: GenerateFeedItem[]): PreviewSlide[] {
   const slides: PreviewSlide[] = [];
   const successItems = items
-    .filter((item) => item.status === 'success' && (item.resultImages?.length ?? 0) > 0)
+    .filter((item) => item.status === TASK_STATUS.SUCCEEDED && (item.resultImages?.length ?? 0) > 0)
     .sort(compareTasksNewestFirst);
 
   for (const item of successItems) {

@@ -4,7 +4,7 @@ export type GenerateKind = 'image' | 'video';
 
 export type GenerateFilterType = 'all' | GenerateKind;
 
-export type GenerateStatusFilter = 'all' | 'in_progress' | 'success' | 'failed';
+export type GenerateStatusFilter = 'all' | 'in_progress' | 'success' | 'failed' | 'cancelled';
 
 export type GenerateTimePreset = 'all' | 'today' | 'week' | 'month';
 

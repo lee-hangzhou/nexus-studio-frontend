@@ -13,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GenerateFeedItem, GenerateResultMedia } from '../types';
+import { isTaskInProgress, TASK_STATUS } from '../../../domains/task/types';
 import { buildPreviewSlides, findPreviewIndex } from '../utils/previewGallery';
 import { CreateResultPreview } from './CreateResultPreview';
 import { PromptWithMentions } from './PromptWithMentions';
@@ -69,11 +70,12 @@ export function CreateStage({
     );
   }
 
-  const pending = item.status === 'pending' || item.status === 'running';
-  const failed = item.status === 'failed';
-  const success = item.status === 'success';
+  const pending = isTaskInProgress(item.status);
+  const failed = item.status === TASK_STATUS.FAILED;
+  const cancelled = item.status === TASK_STATUS.CANCELLED;
+  const success = item.status === TASK_STATUS.SUCCEEDED;
 
-  const showResultLayout = success || failed || pending;
+  const showResultLayout = success || failed || cancelled || pending;
 
   return (
     <div className={`studio-create__viewer${showResultLayout ? ' studio-create__viewer--result' : ''}`}>
@@ -92,6 +94,7 @@ export function CreateStage({
           onEdit={onEdit}
         />
       )}
+      {cancelled && <StageCancelled item={item} onRegenerate={onRegenerate} onEdit={onEdit} />}
       {success && (
         <StageResults
           item={item}
@@ -111,8 +114,6 @@ export function CreateStage({
   );
 }
 
-// ── 等待状态 ──────────────────────────────────────────────────────────────────
-
 function formatWait(seconds?: number | null) {
   if (!seconds || seconds <= 0) return null;
   if (seconds < 60) return `预计等待 ${seconds} 秒`;
@@ -131,7 +132,11 @@ function StagePending({
   onEdit?: () => void;
   onCancel?: () => void;
 }) {
-  const isRunning = item.status === 'running';
+  const isRunning = item.status === TASK_STATUS.RUNNING;
+  let statusTitle = '排队中';
+  if (item.status === TASK_STATUS.CREATED) statusTitle = '已创建';
+  if (item.status === TASK_STATUS.WAITING) statusTitle = '等待中';
+  if (isRunning) statusTitle = '正在生成';
   const queueText = item.queuePosition && item.queueTotal
     ? `队列第 ${item.queuePosition}/${item.queueTotal} 位`
     : null;
@@ -147,7 +152,7 @@ function StagePending({
           <span className="studio-create__status-dot" aria-hidden />
           <div>
             <p className="studio-create__status-title">
-              {isRunning ? '正在生成' : '排队中'}
+              {statusTitle}
             </p>
             <p className="studio-create__status-sub">{statusSub}</p>
           </div>
@@ -164,11 +169,9 @@ function StagePending({
   );
 }
 
-// ── 提示词 / 配置 / 操作（成功与失败共用） ────────────────────────────────────
-
 function buildConfigParts(item: GenerateFeedItem): string[] {
   const countPart =
-    item.status === 'success' && item.resultCount > 0
+    item.status === TASK_STATUS.SUCCEEDED && item.resultCount > 0
       ? item.kind === 'video'
         ? `${item.resultCount}个视频`
         : `${item.resultCount}张`
@@ -250,8 +253,6 @@ function StageResultInfo({
   );
 }
 
-// ── 失败状态 ──────────────────────────────────────────────────────────────────
-
 function StageFailed({
   item,
   onRegenerate,
@@ -279,7 +280,31 @@ function StageFailed({
   );
 }
 
-// ── 成功 — 主图 + 批次缩略图导航 ─────────────────────────────────────────────
+function StageCancelled({
+  item,
+  onRegenerate,
+  onEdit,
+}: {
+  item: GenerateFeedItem;
+  onRegenerate?: () => void;
+  onEdit?: () => void;
+}) {
+  return (
+    <div className="studio-create__result-stack studio-create__result-stack--state">
+      <div className="studio-create__viewer-frame studio-create__state-frame studio-create__viewer-frame--pending">
+        <div className="studio-create__status studio-create__status--overlay">
+          <p className="studio-create__status-title">任务已取消</p>
+        </div>
+      </div>
+      <StageResultInfo
+        item={item}
+        onRegenerate={onRegenerate}
+        onEdit={onEdit}
+        errorMessage={item.errorMessage ?? '任务已取消'}
+      />
+    </div>
+  );
+}
 
 function StageResults({
   item,

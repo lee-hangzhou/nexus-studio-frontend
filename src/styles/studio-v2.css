@@ -1,4 +1,4 @@
-/* Dream Drama studio layer. This file owns the product surface without changing API behavior. */
+/* Nexus Studio layer. This file owns the product surface without changing API behavior. */
 
 :root {
   --studio-primary: #f0b35b;
@@ -135,20 +135,24 @@ body {
   overflow-y: auto;
 }
 
-/* Projects: a gallery wall rather than a CRUD dashboard. */
+/* Projects */
 .studio-projects-gallery {
   min-height: 100%;
-  padding: 56px 5vw 80px;
+  padding: 32px clamp(24px, 4vw, 56px) 56px;
   background: var(--studio-bg);
 }
 
-.studio-projects-gallery__intro {
+.studio-projects-gallery__header {
   width: min(100%, 1280px);
-  margin: 0 auto 42px;
+  margin: 0 auto 24px;
+  padding-bottom: 20px;
+  display: flex;
   align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.studio-projects-gallery__eyebrow,
 .studio-assets__eyebrow {
   display: block;
   margin-bottom: 12px;
@@ -158,22 +162,31 @@ body {
   letter-spacing: 0;
 }
 
-.studio-projects-gallery__intro h1 {
+.studio-projects-gallery__heading h1 {
+  margin: 0;
   color: var(--studio-text);
-  font-size: 40px;
+  font-size: 24px;
   font-weight: 620;
-  line-height: 1.14;
+  line-height: 1.2;
   letter-spacing: 0;
 }
 
-.studio-projects-gallery__intro p {
-  margin-top: 12px;
+.studio-projects-gallery__heading p {
+  margin: 6px 0 0;
   color: var(--studio-text-secondary);
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.studio-projects-gallery__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .studio-projects-gallery__search {
-  width: 220px;
+  width: 240px;
 }
 
 .studio-projects-gallery__search.ant-input-affix-wrapper,
@@ -204,14 +217,42 @@ body {
   color: var(--studio-text-muted);
 }
 
+.studio-projects-gallery__new-button {
+  height: 36px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--studio-primary);
+  border-radius: 4px;
+  background: var(--studio-primary);
+  color: #1a140c;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.studio-projects-gallery__new-button:hover {
+  border-color: var(--studio-primary-hover);
+  background: var(--studio-primary-hover);
+}
+
+.studio-projects-gallery__new-button:focus-visible {
+  outline: 2px solid var(--studio-secondary);
+  outline-offset: 2px;
+}
+
 .studio-projects-gallery__grid {
   width: min(100%, 1280px);
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 32px 18px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 24px 16px;
 }
 
 .studio-projects-gallery__card {
-  min-height: 248px;
+  min-height: 0;
   padding: 0;
   border: 0;
   border-radius: 4px;
@@ -228,8 +269,8 @@ body {
 
 .studio-projects-gallery__thumb {
   position: relative;
-  aspect-ratio: 16 / 10;
-  margin-bottom: 14px;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 11px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 4px;
   box-shadow: inset 0 1px rgba(255, 255, 255, 0.08);
@@ -245,41 +286,11 @@ body {
 }
 
 .studio-projects-gallery__card:hover .studio-projects-gallery__thumb {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
   border-color: rgba(240, 179, 91, 0.6);
   filter: saturate(1.15);
 }
 
-.studio-projects-gallery__card--create {
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: 0;
-}
-
-.studio-projects-gallery__card--create::before {
-  content: '+';
-  display: grid;
-  place-items: center;
-  aspect-ratio: 16 / 10;
-  margin-bottom: 14px;
-  border: 1px dashed rgba(240, 179, 91, 0.42);
-  border-radius: 4px;
-  color: var(--studio-primary);
-  font-size: 28px;
-  font-weight: 300;
-  transition: background 180ms ease, border-color 180ms ease;
-}
-
-.studio-projects-gallery__card--create:hover::before {
-  border-color: var(--studio-primary);
-  background: rgba(240, 179, 91, 0.06);
-}
-
-.studio-projects-gallery__create-icon {
-  display: none;
-}
-
-.studio-projects-gallery__create-label,
 .studio-projects-gallery__title {
   padding: 0;
   color: var(--studio-text);
@@ -469,8 +480,9 @@ body {
 /* Generate: the canvas is the page; history appears only when requested. */
 .studio-create {
   position: relative;
-  display: flex;
-  grid-template-columns: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   background: var(--studio-bg);
 }
 
@@ -880,22 +892,27 @@ body {
   }
 
   .studio-projects-gallery {
-    padding: 36px 20px 56px;
+    padding: 24px 20px 48px;
   }
 
-  .studio-projects-gallery__intro {
+  .studio-projects-gallery__header {
     align-items: stretch;
     flex-direction: column;
-    gap: 20px;
-    margin-bottom: 28px;
+    gap: 16px;
+    margin-bottom: 22px;
   }
 
-  .studio-projects-gallery__intro h1 {
-    font-size: 32px;
+  .studio-projects-gallery__heading h1 {
+    font-size: 22px;
+  }
+
+  .studio-projects-gallery__actions {
+    justify-content: flex-start;
   }
 
   .studio-projects-gallery__search {
-    width: 100%;
+    flex: 1;
+    width: auto;
   }
 
   .studio-chat,
@@ -973,8 +990,8 @@ body {
   }
 
   .studio-projects-gallery__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 24px 12px;
+    grid-template-columns: 1fr;
+    gap: 20px;
   }
 
   .studio-projects-gallery__card {

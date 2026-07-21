@@ -83,23 +83,32 @@ export function ProjectsPage() {
 
   return (
     <div className="studio-projects-gallery">
-      <div className="studio-projects-gallery__intro">
-        <div>
-          <span className="studio-projects-gallery__eyebrow">DREAM DRAMA</span>
-          <h1>你的故事，从这里继续</h1>
-          <p>回到最近的画布，或为下一个故事建立新的创作空间。</p>
+      <div className="studio-projects-gallery__header">
+        <div className="studio-projects-gallery__heading">
+          <h1>项目</h1>
+          <p>继续最近的画布，或创建新的工作空间。</p>
         </div>
-        <Input
-          className="studio-projects-gallery__search"
-          prefix={<SearchOutlined />}
-          placeholder="搜索项目"
-          value={query}
-          allowClear
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setPage(1);
-          }}
-        />
+        <div className="studio-projects-gallery__actions">
+          <Input
+            className="studio-projects-gallery__search"
+            prefix={<SearchOutlined />}
+            placeholder="搜索项目"
+            value={query}
+            allowClear
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setPage(1);
+            }}
+          />
+          <button
+            type="button"
+            className="studio-projects-gallery__new-button"
+            onClick={() => setCreateOpen(true)}
+          >
+            <PlusOutlined />
+            <span>新建项目</span>
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -118,17 +127,6 @@ export function ProjectsPage() {
         </Empty>
       ) : (
         <div className="studio-projects-gallery__grid">
-          <button
-            type="button"
-            className="studio-projects-gallery__card studio-projects-gallery__card--create"
-            onClick={() => setCreateOpen(true)}
-          >
-            <span className="studio-projects-gallery__create-icon">
-              <PlusOutlined />
-            </span>
-            <span className="studio-projects-gallery__create-label">开始新故事</span>
-          </button>
-
           {items.map((project) => (
             <button
               key={project.id}

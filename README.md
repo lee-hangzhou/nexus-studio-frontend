@@ -1,19 +1,19 @@
-# Dream Drama Frontend
+# Nexus Studio Frontend
 
-Nexus Studio is the React/Vite frontend for Dream Drama. It is deployed as a static Nginx application and communicates with the API under `/api/v1`.
+Nexus Studio is the React/Vite frontend. It is deployed as a static Nginx application and communicates with the API under `/api/v1`.
 
 ## Requirements
 
 - Node.js 22
-- npm 10 or newer
-- A running Dream Drama backend for interactive development
+- pnpm 10 or newer
+- A running Nexus Studio backend for interactive development
 
 ## Local Development
 
 ```bash
 cp .env.example .env.local
-npm ci
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 The application is available at `http://localhost:5173`. By default, Vite proxies `/api` to `http://localhost:8000`. Set `DEV_API_PROXY_TARGET` in `.env.local` when the local backend uses another address.
@@ -23,10 +23,10 @@ The application is available at `http://localhost:5173`. By default, Vite proxie
 ## Commands
 
 ```bash
-npm test
-npm run contracts:check
-npm run build
-npm run preview
+pnpm test
+pnpm run contracts:check
+pnpm run build
+pnpm run preview
 ```
 
 ## API Contracts
@@ -36,14 +36,14 @@ The backend owns the Pydantic contracts. This repository vendors released JSON S
 To regenerate declarations from the vendored schemas:
 
 ```bash
-npm run contracts:generate
+pnpm run contracts:generate
 ```
 
 To sync from a local backend checkout or its `contracts/schema` directory:
 
 ```bash
-CONTRACTS_SOURCE=../dream-drama-backend npm run contracts:sync
-npm run contracts:check
+CONTRACTS_SOURCE=../nexus-studio-backend pnpm run contracts:sync
+pnpm run contracts:check
 ```
 
 Contract changes should be delivered as a dedicated frontend change tied to a backend tag or commit. Breaking changes require a two-phase backend/frontend rollout so either side can be rolled back independently.

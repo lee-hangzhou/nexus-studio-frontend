@@ -1,11 +1,24 @@
 import { apiUrl, fetchWithAuth, request } from './base';
+import type {
+  GenerateTaskListRequest,
+  GenerateTaskListResponse,
+  GenerationKind,
+  GenerationTaskStatus,
+} from './generated/generation';
 
-// ── 后端返回的原始视图类型 ───────────────────────────────────────────────────
+export type {
+  GenerateTaskCursor,
+  GenerateTaskListItem,
+  GenerateTaskListRequest,
+  GenerateTaskListResponse,
+} from './generated/generation';
+
+export type GenerateTaskKind = GenerationKind;
 
 export interface GenerateTaskView {
   task_id: number;
-  kind: 'image' | 'video';
-  status: 'pending' | 'running' | 'success' | 'failed';
+  kind: GenerateTaskKind;
+  status: GenerationTaskStatus;
   prompt: string;
   model_id: string;
   ratio?: string;
@@ -32,35 +45,11 @@ export interface GenerateTaskView {
   created_at: string;
 }
 
-export interface GenerateHistoryItemView {
-  task_id: number;
-  kind: 'image' | 'video';
-  status: 'pending' | 'running' | 'success' | 'failed';
-  prompt: string;
-  model_id: string;
-  ratio?: string;
-  resolution?: string;
-  duration?: number | null;
-  reference_mode?: number | null;
-  result_count: number;
-  preview_asset_id?: number | null;
-  preview_url?: string | null;
-  preview_media_type?: number | null;
-  error_message?: string | null;
-  is_favorited: boolean;
-  queue_status?: number | null;
-  queue_position?: number | null;
-  queue_total?: number | null;
-  estimated_wait_seconds?: number | null;
-  created_at: string;
-}
-
-// ── 请求参数类型 ──────────────────────────────────────────────────────────────
-
 export interface SubmitGenerateParams {
-  kind: 'image' | 'video';
+  kind: GenerateTaskKind;
   prompt: string;
   model_id: string;
+  voice_id?: string;
   ratio?: string;
   resolution?: string;
   count?: number;
@@ -78,16 +67,6 @@ export interface GenerateMaterialUploadResult {
   url: string;
 }
 
-export interface HistoryParams {
-  kind?: 'all' | 'image' | 'video';
-  status?: 'all' | 'in_progress' | 'success' | 'failed';
-  time_range?: 'all' | 'today' | 'week' | 'month';
-  query?: string;
-  favorites_only?: boolean;
-  page_size?: number;
-  cursor?: string | null;
-}
-
 export interface GenerateModelItem {
   model_id: string;
   label: string;
@@ -103,10 +82,8 @@ export interface GenerateModelItem {
   };
 }
 
-// ── API 调用 ──────────────────────────────────────────────────────────────────
-
 export function submitGenerate(params: SubmitGenerateParams) {
-  return request<{ task_id: number; status: string }>('/generate/submit', {
+  return request<{ task_id: number; status: GenerationTaskStatus }>('/generate/submit', {
     method: 'POST',
     body: JSON.stringify(params),
   });
@@ -153,9 +130,9 @@ export async function getTasksStatus(taskIds: number[]) {
   };
 }
 
-export function fetchHistory(params: HistoryParams) {
-  return request<{ items: GenerateHistoryItemView[]; next_cursor: string | null; has_more: boolean }>(
-    '/generate/history',
+export function listGenerateTasks(params: GenerateTaskListRequest) {
+  return request<GenerateTaskListResponse>(
+    '/generate/tasks/list',
     { method: 'POST', body: JSON.stringify(params) },
   );
 }

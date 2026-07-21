@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { getTasksStatus } from '../../../api/generate';
 import type { CanvasNodeStatus } from '../api/canvasTypes';
 import type { CanvasFlowNode } from '../schema/canvasSchema';
+import { isTaskInProgress, TASK_STATUS } from '../../../domains/task/types';
 
 const POLL_MS = 5000;
 
@@ -38,8 +39,8 @@ export function useCanvasGenerationWatch(
         const views = new Map(response.items.map((view) => [view.task_id, view]));
         const missingIds = new Set(response.missing_task_ids);
         const hasTerminal =
-          response.items.some((view) => view.status !== 'pending' && view.status !== 'running') ||
-          missingIds.size > 0;
+          response.items.some((view) => !isTaskInProgress(view.status))
+          || missingIds.size > 0;
         if (!hasTerminal) return;
 
         setNodes((currentNodes) =>
@@ -58,9 +59,12 @@ export function useCanvasGenerationWatch(
             }
 
             const view = views.get(taskId);
-            if (!view || view.status === 'pending' || view.status === 'running') return node;
-            const status: CanvasNodeStatus =
-              view.status === 'success' ? 'success' : view.status === 'failed' ? 'failed' : 'idle';
+            if (!view || isTaskInProgress(view.status)) return node;
+            let status: CanvasNodeStatus = 'cancelled';
+            if (view.status === TASK_STATUS.SUCCEEDED) status = 'success';
+            if (view.status === TASK_STATUS.FAILED) status = 'failed';
+            let errorMessage = view.error_message ?? node.data.error_message;
+            if (view.status === TASK_STATUS.CANCELLED) errorMessage = '任务已取消';
             const previewUrls = view.result_urls?.map((result) => result.url).filter(Boolean) ?? [];
             return {
               ...node,
@@ -72,7 +76,7 @@ export function useCanvasGenerationWatch(
                   previewUrls.length > 0 ? previewUrls : node.data.output_asset_urls,
                 output_asset_ids:
                   view.result_asset_ids.length > 0 ? view.result_asset_ids : node.data.output_asset_ids,
-                error_message: view.error_message ?? node.data.error_message,
+                error_message: errorMessage,
               },
             };
           }),
