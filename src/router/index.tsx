@@ -26,7 +26,7 @@ export function AppRouter() {
           </RequireAuth>
         }
       >
-        <Route index element={<Navigate to="/chat" replace />} />
+        <Route index element={<Navigate to="/projects" replace />} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="generate" element={<GeneratePage />} />
         <Route path="assets" element={<AssetsPage />} />

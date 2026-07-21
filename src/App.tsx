@@ -6,28 +6,36 @@ export default function App() {
   return (
     <ConfigProvider
       theme={{
-        algorithm: theme.defaultAlgorithm,
+        algorithm: theme.darkAlgorithm,
         token: {
-          colorPrimary: '#1D4EDB',
-          borderRadius: 12,
+          colorPrimary: '#F0B35B',
+          colorInfo: '#75A7FF',
+          colorSuccess: '#48C78E',
+          colorWarning: '#F2B84B',
+          colorError: '#FF6B72',
+          borderRadius: 8,
           fontFamily:
             "'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif",
-          colorBgContainer: '#ffffff',
-          colorText: '#0f172a',
-          colorTextSecondary: '#64748b',
-          controlHeight: 40,
+          colorBgBase: '#0B0D10',
+          colorBgContainer: '#15181D',
+          colorBgElevated: '#1C2026',
+          colorBorder: '#2A2E35',
+          colorBorderSecondary: '#20242A',
+          colorText: '#F2F3F5',
+          colorTextSecondary: '#949BA6',
+          controlHeight: 36,
         },
         components: {
           Card: {
-            borderRadiusLG: 16,
-            paddingLG: 20,
+            borderRadiusLG: 8,
+            paddingLG: 16,
           },
           Button: {
-            borderRadius: 999,
-            controlHeight: 40,
+            borderRadius: 8,
+            controlHeight: 36,
           },
           Input: {
-            borderRadius: 12,
+            borderRadius: 8,
           },
           Checkbox: {
             borderRadiusSM: 4,

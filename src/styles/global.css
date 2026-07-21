@@ -3,28 +3,29 @@
 }
 
 :root {
-  --studio-primary: #0693F9;
-  --studio-primary-hover: #0584e0;
-  --studio-secondary: #744DF4;
-  --studio-accent: #744DF4;
-  --studio-gradient: linear-gradient(90deg, #0693F9, #744DF4);
-  --studio-bg: #FBFCFE;
+  --studio-primary: #5B8CFF;
+  --studio-primary-hover: #7AA4FF;
+  --studio-secondary: #5B8CFF;
+  --studio-accent: #5B8CFF;
+  --studio-gradient: #5B8CFF;
+  --studio-bg: #0E1014;
   --studio-bg-accent: none;
-  --studio-surface: #ffffff;
-  --studio-surface-solid: #ffffff;
-  --studio-border: #E8EAEF;
-  --studio-shadow: 0 2px 10px rgba(31, 36, 51, 0.045);
-  --studio-shadow-lg: 0 10px 30px rgba(31, 36, 51, 0.07);
-  --studio-text: #1F2433;
-  --studio-text-secondary: #8A8F9C;
-  --studio-radius: 12px;
-  --studio-radius-sm: 8px;
-  --studio-topbar-h: 56px;
+  --studio-surface: #191C22;
+  --studio-surface-solid: #191C22;
+  --studio-border: #2A2F38;
+  --studio-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+  --studio-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.32);
+  --studio-text: #F3F5F7;
+  --studio-text-secondary: #9CA3AF;
+  --studio-text-muted: #697180;
+  --studio-radius: 8px;
+  --studio-radius-sm: 6px;
+  --studio-topbar-h: 52px;
   /* Chat-specific */
-  --chat-sidebar-bg: #FBFCFE;
-  --chat-main-bg: #F9FAFD;
-  --chat-panel-bg: #F7F8FD;
-  --chat-selected-bg: #EBF2FC;
+  --chat-sidebar-bg: #12151A;
+  --chat-main-bg: #0E1014;
+  --chat-panel-bg: #151920;
+  --chat-selected-bg: rgba(91, 140, 255, 0.16);
   --studio-create-page: 100vw;
   --studio-create-history-w: clamp(320px, 24vw, 420px);
   --studio-create-workspace-w: 960px;
@@ -470,11 +471,11 @@ a:hover {
 }
 
 .studio-shell--canvas {
-  padding-top: 0;
+  padding-top: var(--studio-topbar-h);
 }
 
 .studio-shell--canvas .studio-topbar {
-  display: none;
+  display: flex;
 }
 
 .studio-topbar {
@@ -489,8 +490,8 @@ a:hover {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(16px);
+  background: rgba(14, 16, 20, 0.94);
+  backdrop-filter: blur(18px);
   border-bottom: 1px solid var(--studio-border);
 }
 
@@ -569,15 +570,16 @@ a:hover {
 .studio-nav {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px;
-  background: rgba(15, 23, 42, 0.04);
-  border-radius: 999px;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
 }
 
 .studio-nav__item {
-  padding: 8px 18px;
-  border-radius: 999px;
+  position: relative;
+  padding: 8px 10px;
+  border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
   color: var(--studio-text-secondary);
@@ -587,14 +589,24 @@ a:hover {
 
 .studio-nav__item:hover {
   color: var(--studio-text);
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .studio-nav__item--active {
-  color: var(--studio-primary);
-  background: var(--studio-surface-solid);
-  box-shadow: 0 2px 8px rgba(6, 147, 249, 0.12);
+  color: #F3F5F7;
+  background: rgba(91, 140, 255, 0.12);
   font-weight: 600;
+}
+
+.studio-nav__item--active::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -7px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--studio-primary);
 }
 
 .studio-nav__item--disabled {
@@ -609,17 +621,17 @@ a:hover {
 .studio-user {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 4px 12px 4px 4px;
+  gap: 0;
+  padding: 2px;
   border: none;
   border-radius: 999px;
-  background: rgba(15, 23, 42, 0.04);
+  background: transparent;
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .studio-user:hover {
-  background: rgba(15, 23, 42, 0.07);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .studio-user__name {
@@ -770,7 +782,7 @@ a:hover {
   max-width: none;
   margin: 0;
   overflow: hidden;
-  background: #101112;
+  background: var(--studio-bg);
 }
 
 .studio-projects-gallery {

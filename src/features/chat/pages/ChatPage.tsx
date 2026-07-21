@@ -2,6 +2,7 @@ import {
   ArrowUpOutlined,
   CopyOutlined,
   DeleteOutlined,
+  FolderOpenOutlined,
   PictureOutlined,
   PlusOutlined,
   SearchOutlined,
@@ -291,6 +292,7 @@ export function ChatPage() {
   const [gatePending, setGatePending] = useState<UserGateState | null>(null);
   const [gateCancelling, setGateCancelling] = useState(false);
   const [modelVisionHint, setModelVisionHint] = useState<string | null>(null);
+  const [resourcesOpen, setResourcesOpen] = useState(false);
   const [loadingConversationIds, setLoadingConversationIds] = useState<Set<number>>(() => new Set());
   const [booting, setBooting] = useState(true);
   const uiByConversationRef = useRef<Map<number, ConversationUiState>>(new Map());
@@ -1491,7 +1493,7 @@ export function ChatPage() {
 
   return (
     <PageScaffold immersive>
-      <div className="studio-chat">
+      <div className={`studio-chat${resourcesOpen ? ' studio-chat--resources-open' : ''}`}>
 
         {/* ── 左侧栏 ── */}
         <aside className="studio-chat__sidebar">
@@ -1570,12 +1572,17 @@ export function ChatPage() {
 
         {/* ── 中间内容区 ── */}
         <section className="studio-chat__main">
-          {/* 标题栏 */}
-          {activeSession && (
-            <div className="studio-chat__title-bar">
-              <span className="studio-chat__title">{activeSession.title}</span>
-            </div>
-          )}
+          <div className="studio-chat__title-bar">
+            <span className="studio-chat__title">{activeSession?.title || '新对话'}</span>
+            <button
+              type="button"
+              className={`studio-workspace-action${resourcesOpen ? ' is-active' : ''}`}
+              onClick={() => setResourcesOpen((value) => !value)}
+            >
+              <FolderOpenOutlined />
+              <span>会话素材</span>
+            </button>
+          </div>
 
           <div className="studio-chat__content">
             {/* 消息列表 */}
@@ -1740,18 +1747,20 @@ export function ChatPage() {
         </section>
 
         {/* ── 右侧资源面板 ── */}
-        <ChatRightPanel
-          messages={messages}
-          onAddRef={() => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.onchange = async (e) => {
-              const file = (e.target as HTMLInputElement).files?.[0];
-              if (file) await onUpload(file, false);
-            };
-            input.click();
-          }}
-        />
+        {resourcesOpen ? (
+          <ChatRightPanel
+            messages={messages}
+            onAddRef={() => {
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.onchange = async (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file) await onUpload(file, false);
+              };
+              input.click();
+            }}
+          />
+        ) : null}
       </div>
       {gatePending && (
         <UserGatePanel

@@ -12,13 +12,20 @@ dayjs.locale('zh-cn');
 
 const PAGE_SIZE = 11;
 
+const PROJECT_PALETTES = [
+  { base: '#26302c', accent: '#485d4f' },
+  { base: '#30282d', accent: '#5d4650' },
+  { base: '#2b2c35', accent: '#4e5268' },
+  { base: '#332d25', accent: '#62513d' },
+] as const;
+
 function projectAccent(project: ProjectView) {
-  const hue = (project.id * 37) % 360;
+  const palette = PROJECT_PALETTES[project.id % PROJECT_PALETTES.length];
   return {
-    background:
-      `radial-gradient(circle at 28% 22%, hsl(${hue} 68% 56% / 0.72), transparent 34%), ` +
-      `radial-gradient(circle at 78% 36%, hsl(${(hue + 52) % 360} 72% 48% / 0.68), transparent 38%), ` +
-      'linear-gradient(135deg, #30343c 0%, #1f232a 100%)',
+    backgroundColor: palette.base,
+    backgroundImage:
+      `linear-gradient(135deg, transparent 0 46%, ${palette.accent} 46% 58%, transparent 58%), ` +
+      'repeating-linear-gradient(90deg, transparent 0 28px, rgba(255,255,255,0.035) 28px 29px)',
   };
 }
 
@@ -76,11 +83,16 @@ export function ProjectsPage() {
 
   return (
     <div className="studio-projects-gallery">
-      <div className="studio-projects-gallery__toolbar">
+      <div className="studio-projects-gallery__intro">
+        <div>
+          <span className="studio-projects-gallery__eyebrow">DREAM DRAMA</span>
+          <h1>你的故事，从这里继续</h1>
+          <p>回到最近的画布，或为下一个故事建立新的创作空间。</p>
+        </div>
         <Input
           className="studio-projects-gallery__search"
           prefix={<SearchOutlined />}
-          placeholder="搜索"
+          placeholder="搜索项目"
           value={query}
           allowClear
           onChange={(event) => {
@@ -114,7 +126,7 @@ export function ProjectsPage() {
             <span className="studio-projects-gallery__create-icon">
               <PlusOutlined />
             </span>
-            <span className="studio-projects-gallery__create-label">新建项目</span>
+            <span className="studio-projects-gallery__create-label">开始新故事</span>
           </button>
 
           {items.map((project) => (

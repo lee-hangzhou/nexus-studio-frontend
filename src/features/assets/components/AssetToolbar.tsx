@@ -46,7 +46,10 @@ export function AssetToolbar({
     <header className="studio-assets__toolbar">
       <div className="studio-assets__toolbar-row">
         <div className="studio-assets__toolbar-title">
-          <h1 className="studio-assets__title">资产库</h1>
+          <div>
+            <span className="studio-assets__eyebrow">MEDIA LIBRARY</span>
+            <h1 className="studio-assets__title">视觉素材</h1>
+          </div>
           <span className="studio-assets__count">
             {filteredCount === total ? `${total} 项` : `${filteredCount} / ${total}`}
           </span>
@@ -56,7 +59,7 @@ export function AssetToolbar({
           <Input
             className="studio-assets__search"
             prefix={<SearchOutlined />}
-            placeholder="搜索名称"
+            placeholder="搜索素材"
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
             allowClear

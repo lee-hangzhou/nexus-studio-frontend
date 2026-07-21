@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { message } from 'antd';
+import { HistoryOutlined } from '@ant-design/icons';
 import {
   cancelTask,
   deleteTask,
@@ -79,6 +80,7 @@ export function GeneratePage() {
   const [historyHasMore, setHistoryHasMore] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyInitialLoading, setHistoryInitialLoading] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [composerDraft, setComposerDraft] = useState<
     { key: string; prompt: string; refImages?: GenerateFeedItem['refImages'] } | null
   >(null);
@@ -430,7 +432,15 @@ export function GeneratePage() {
   };
 
   return (
-    <div className="studio-create">
+    <div className={`studio-create${historyOpen ? ' studio-create--history-open' : ''}`}>
+      <button
+        type="button"
+        className={`studio-create__history-toggle${historyOpen ? ' is-active' : ''}`}
+        onClick={() => setHistoryOpen((value) => !value)}
+      >
+        <HistoryOutlined />
+        <span>最近生成</span>
+      </button>
       <div className="studio-create__center">
         <CreateStage
           item={activeItem}
@@ -463,25 +473,27 @@ export function GeneratePage() {
         />
       </div>
 
-      <aside className="studio-create__history-panel">
-        <CreateHistoryPanel
-          items={historyItems}
-          filters={historyFilters}
-          onFiltersChange={setHistoryFilters}
-          activeId={activeId}
-          onSelect={(id) => {
-            setActiveId(id);
-            setActiveMediaIndex(0);
-          }}
-          onToggleFavorite={toggleFavorite}
-          onCancel={handleCancelTask}
-          onDelete={handleDeleteTask}
-          hasMore={historyHasMore}
-          onLoadMore={loadMoreHistory}
-          loadingMore={historyLoading}
-          initialLoading={historyInitialLoading}
-        />
-      </aside>
+      {historyOpen ? (
+        <aside className="studio-create__history-panel">
+          <CreateHistoryPanel
+            items={historyItems}
+            filters={historyFilters}
+            onFiltersChange={setHistoryFilters}
+            activeId={activeId}
+            onSelect={(id) => {
+              setActiveId(id);
+              setActiveMediaIndex(0);
+            }}
+            onToggleFavorite={toggleFavorite}
+            onCancel={handleCancelTask}
+            onDelete={handleDeleteTask}
+            hasMore={historyHasMore}
+            onLoadMore={loadMoreHistory}
+            loadingMore={historyLoading}
+            initialLoading={historyInitialLoading}
+          />
+        </aside>
+      ) : null}
     </div>
   );
 }
