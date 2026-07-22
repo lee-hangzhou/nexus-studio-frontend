@@ -6,31 +6,35 @@ export const authInputTheme = {
       colorBgContainer: 'transparent',
       hoverBg: 'transparent',
       activeBg: 'transparent',
-      colorBorder: 'rgba(255,255,255,0.15)',
-      colorText: '#ffffff',
-      colorTextPlaceholder: 'rgba(255,255,255,0.4)',
-      colorIcon: 'rgba(255,255,255,0.5)',
-      colorIconHover: 'rgba(255,255,255,0.8)',
-      activeBorderColor: 'rgba(99,179,237,0.7)',
+      colorBorder: 'rgba(255,255,255,0.12)',
+      colorText: 'var(--studio-text)',
+      colorTextPlaceholder: 'var(--studio-text-muted)',
+      colorIcon: 'var(--studio-text-secondary)',
+      colorIconHover: 'var(--studio-text)',
+      activeBorderColor: 'rgba(240,179,91,0.7)',
       hoverBorderColor: 'rgba(255,255,255,0.28)',
-      activeShadow: '0 0 0 2px rgba(99,179,237,0.12)',
+      activeShadow: '0 0 0 2px rgba(240,179,91,0.14)',
+    },
+    Checkbox: {
+      colorPrimary: 'var(--studio-primary)',
+      colorPrimaryHover: 'var(--studio-primary-hover)',
     },
   },
 };
 
 /** affix wrapper（或独立 input）的行内样式 */
 export const inputWrapperStyle: CSSProperties = {
-  background: 'rgba(255, 255, 255, 0.08)',
-  border: '1px solid rgba(255, 255, 255, 0.15)',
-  borderRadius: 12,
-  height: 44,
+  background: 'var(--studio-bg)',
+  border: '1px solid rgba(255, 255, 255, 0.1)',
+  borderRadius: 11,
+  height: 46,
   boxShadow: 'none',
-  color: '#fff',
+  color: 'var(--studio-text)',
 };
 
 /** 内层原生 <input> 的行内样式 */
 export const inputInnerStyle: CSSProperties = {
   background: 'transparent',
   backgroundColor: 'transparent',
-  color: '#fff',
+  color: 'var(--studio-text)',
 };

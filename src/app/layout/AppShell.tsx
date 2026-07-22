@@ -1,14 +1,24 @@
-import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
+import {
+  AppstoreOutlined,
+  CommentOutlined,
+  FolderOpenOutlined,
+  HomeOutlined,
+  LogoutOutlined,
+  PictureOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import { Avatar, Dropdown } from 'antd';
+import type { ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { logout } from '../../api/auth';
 import { useUser } from '../../contexts/UserContext';
 
-const navItems: { key: string; to: string; label: string; disabled?: boolean }[] = [
-  { key: 'projects', to: '/projects', label: '项目' },
-  { key: 'generate', to: '/generate', label: '创作' },
-  { key: 'chat', to: '/chat', label: 'Agent' },
-  { key: 'assets', to: '/assets', label: '素材' },
+const workspaceNav: { key: string; to: string; label: string; end?: boolean; icon: ReactNode }[] = [
+  { key: 'home', to: '/', label: 'Home', end: true, icon: <HomeOutlined /> },
+  { key: 'generate', to: '/generate', label: '创作', icon: <PictureOutlined /> },
+  { key: 'projects', to: '/projects', label: '画布', icon: <AppstoreOutlined /> },
+  { key: 'chat', to: '/chat', label: '对话', icon: <CommentOutlined /> },
+  { key: 'assets', to: '/assets', label: '素材', icon: <FolderOpenOutlined /> },
 ];
 
 export function AppShell() {
@@ -22,72 +32,94 @@ export function AppShell() {
   };
 
   const isCanvasEditorRoute = /\/projects\/\d+\/canvas/.test(location.pathname);
-  const mainRouteKey = isCanvasEditorRoute ? 'canvas' : (location.pathname.split('/')[1] ?? 'projects');
+  const isFoyerRoute = location.pathname === '/';
+  const mainRouteKey = isCanvasEditorRoute
+    ? 'canvas'
+    : isFoyerRoute
+      ? 'home'
+      : (location.pathname.split('/')[1] ?? 'home');
+
+  const shellMode = isFoyerRoute ? 'foyer' : isCanvasEditorRoute ? 'canvas' : 'workspace';
+
+  const userMenu = (
+    <Dropdown
+      menu={{
+        items: [
+          {
+            key: 'account',
+            icon: <UserOutlined />,
+            label: user?.username || '当前用户',
+            disabled: true,
+          },
+          { type: 'divider' },
+          {
+            key: 'logout',
+            icon: <LogoutOutlined />,
+            label: '退出登录',
+            onClick: () => void handleLogout(),
+          },
+        ],
+      }}
+      trigger={['click']}
+    >
+      <button type="button" className="studio-user" aria-label="用户菜单">
+        <Avatar size={28} className="studio-user__avatar">
+          {user?.username?.[0]?.toUpperCase()}
+        </Avatar>
+      </button>
+    </Dropdown>
+  );
 
   return (
-    <div className={`studio-shell${isCanvasEditorRoute ? ' studio-shell--canvas' : ''}`}>
-      <header className="studio-topbar">
-        <div className="studio-topbar__left">
-          <NavLink to="/projects" className="studio-brand">
+    <div className={`studio-shell studio-shell--${shellMode}`}>
+      {isFoyerRoute ? (
+        <header className="studio-topbar studio-topbar--foyer">
+          <div className="studio-topbar__left">
+            <NavLink to="/" className="studio-brand" end>
+              <img src="/logo.png" alt="" className="studio-brand__mark" />
+              <span className="studio-brand__text">Nexus Studio</span>
+            </NavLink>
+          </div>
+          <div className="studio-topbar__right">
+            <NavLink to="/assets" className="studio-topbar__link">
+              素材库
+            </NavLink>
+            <NavLink to="/projects" className="studio-topbar__link">
+              全部工作
+            </NavLink>
+            {userMenu}
+          </div>
+        </header>
+      ) : null}
+
+      {!isFoyerRoute && !isCanvasEditorRoute ? (
+        <aside className="studio-rail" aria-label="工作导航">
+          <NavLink to="/" className="studio-rail__brand" title="Nexus Studio" end>
             <img src="/logo.png" alt="" className="studio-brand__mark" />
-            <span className="studio-brand__text">Nexus Studio</span>
           </NavLink>
 
-          <nav className="studio-nav" aria-label="主导航">
-            {navItems.map((item) =>
-              item.disabled ? (
-                <span
-                  key={item.key}
-                  className="studio-nav__item studio-nav__item--disabled"
-                  aria-disabled="true"
-                  title={`${item.label} 暂不可用`}
-                >
-                  {item.label}
+          <nav className="studio-rail__nav">
+            {workspaceNav.map((item) => (
+              <NavLink
+                key={item.key}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                  `studio-rail__item${isActive ? ' studio-rail__item--active' : ''}`
+                }
+                title={item.label}
+              >
+                <span className="studio-rail__icon" aria-hidden>
+                  {item.icon}
                 </span>
-              ) : (
-                <NavLink
-                  key={item.key}
-                  to={item.to}
-                  className={({ isActive }) =>
-                    `studio-nav__item${isActive ? ' studio-nav__item--active' : ''}`
-                  }
-                >
-                  {item.label}
-                </NavLink>
-              ),
-            )}
+                <span className="studio-rail__label">{item.label}</span>
+              </NavLink>
+            ))}
           </nav>
-        </div>
 
-        <div className="studio-topbar__right">
-          <Dropdown
-            menu={{
-              items: [
-                {
-                  key: 'account',
-                  icon: <UserOutlined />,
-                  label: user?.username || '当前用户',
-                  disabled: true,
-                },
-                { type: 'divider' },
-                {
-                  key: 'logout',
-                  icon: <LogoutOutlined />,
-                  label: '退出登录',
-                  onClick: () => void handleLogout(),
-                },
-              ],
-            }}
-            trigger={['click']}
-          >
-            <button type="button" className="studio-user">
-              <Avatar size={28} style={{ background: '#F0B35B', color: '#1A140C' }}>
-                {user?.username?.[0]?.toUpperCase()}
-              </Avatar>
-            </button>
-          </Dropdown>
-        </div>
-      </header>
+          <div className="studio-rail__footer">{userMenu}</div>
+        </aside>
+      ) : null}
 
       <main
         className={`studio-main studio-main--${mainRouteKey}`}

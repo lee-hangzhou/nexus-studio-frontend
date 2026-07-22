@@ -9,6 +9,7 @@ import { AssetsPage } from '../features/assets/pages/AssetsPage';
 import { ChatPage } from '../features/chat/pages/ChatPage';
 import { GeneratePage } from '../features/generate/pages/GeneratePage';
 import { CanvasPage } from '../features/canvas/pages/CanvasPage';
+import { FoyerPage } from '../features/home/pages/FoyerPage';
 import { ProjectsPage } from '../features/projects/pages/ProjectsPage';
 
 export function AppRouter() {
@@ -26,7 +27,7 @@ export function AppRouter() {
           </RequireAuth>
         }
       >
-        <Route index element={<Navigate to="/projects" replace />} />
+        <Route index element={<FoyerPage />} />
         <Route path="chat" element={<ChatPage />} />
         <Route path="generate" element={<GeneratePage />} />
         <Route path="assets" element={<AssetsPage />} />

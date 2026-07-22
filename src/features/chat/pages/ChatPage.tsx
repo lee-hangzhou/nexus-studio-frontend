@@ -33,6 +33,7 @@ import {
   type UploadedAttachment,
 } from '../../../api/chat';
 import { PageScaffold } from '../../../shared/ui/PageScaffold';
+import { StudioChip } from '../../../shared/ui/StudioChip';
 import { ChatRightPanel } from '../components/ChatRightPanel';
 import { UserGatePanel, type UserGateState } from '../components/UserGatePanel';
 import { TurnWorkingStatus } from '../components/TurnWorkingStatus';
@@ -188,7 +189,19 @@ function parsePublishPreview(preview: string): MessageAttachment | null {
   const filename = match[2].trim();
   const lower = filename.toLowerCase();
   let mimeType = 'application/octet-stream';
-  if (lower.endsWith('.docx')) {
+  if (lower.endsWith('.png')) {
+    mimeType = 'image/png';
+  } else if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+    mimeType = 'image/jpeg';
+  } else if (lower.endsWith('.gif')) {
+    mimeType = 'image/gif';
+  } else if (lower.endsWith('.webp')) {
+    mimeType = 'image/webp';
+  } else if (lower.endsWith('.bmp')) {
+    mimeType = 'image/bmp';
+  } else if (lower.endsWith('.svg')) {
+    mimeType = 'image/svg+xml';
+  } else if (lower.endsWith('.docx')) {
     mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
   } else if (lower.endsWith('.pdf')) {
     mimeType = 'application/pdf';
@@ -1574,14 +1587,15 @@ export function ChatPage() {
         <section className="studio-chat__main">
           <div className="studio-chat__title-bar">
             <span className="studio-chat__title">{activeSession?.title || '新对话'}</span>
-            <button
-              type="button"
-              className={`studio-workspace-action${resourcesOpen ? ' is-active' : ''}`}
-              onClick={() => setResourcesOpen((value) => !value)}
-            >
-              <FolderOpenOutlined />
-              <span>会话素材</span>
-            </button>
+            {!resourcesOpen ? (
+              <StudioChip
+                icon={<FolderOpenOutlined aria-hidden />}
+                aria-controls="studio-chat-resources-panel"
+                onClick={() => setResourcesOpen(true)}
+              >
+                会话素材
+              </StudioChip>
+            ) : null}
           </div>
 
           <div className="studio-chat__content">
@@ -1750,6 +1764,7 @@ export function ChatPage() {
         {resourcesOpen ? (
           <ChatRightPanel
             messages={messages}
+            onCollapse={() => setResourcesOpen(false)}
             onAddRef={() => {
               const input = document.createElement('input');
               input.type = 'file';

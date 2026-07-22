@@ -1,8 +1,8 @@
-import { CloudDownloadOutlined, DownloadOutlined, LoadingOutlined } from '@ant-design/icons';
-import { Image } from 'antd';
+import { DownloadOutlined, LoadingOutlined } from '@ant-design/icons';
 
 import type { MessageAttachment } from '../../../api/chat';
-import { isImageMime, useAttachmentUrl } from '../hooks/useAttachmentUrl';
+import { isImageAttachment, useAttachmentUrl } from '../hooks/useAttachmentUrl';
+import { AttachmentImagePreview } from './AttachmentImagePreview';
 import { FileTypeIcon } from './FileTypeIcon';
 
 function AttachmentImage({ attachment }: { attachment: MessageAttachment }) {
@@ -21,26 +21,13 @@ function AttachmentImage({ attachment }: { attachment: MessageAttachment }) {
   }
 
   return (
-    <div className="studio-bubble__attachment studio-bubble__attachment--image">
-      <Image
-        src={url}
-        alt={attachment.filename}
-        preview={{ mask: false }}
-        rootClassName="studio-bubble__attachment-image"
-      />
-      <div className="studio-bubble__attachment-toolbar">
-        <a
-          className="studio-bubble__attachment-toolbar-btn"
-          href={url}
-          download={attachment.filename}
-          title={`下载 ${attachment.filename}`}
-          aria-label={`下载 ${attachment.filename}`}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <CloudDownloadOutlined />
-        </a>
-      </div>
-    </div>
+    <AttachmentImagePreview
+      url={url}
+      filename={attachment.filename}
+      className="studio-bubble__attachment studio-bubble__attachment--image"
+      imageClassName="studio-bubble__attachment-image"
+      showDownload
+    />
   );
 }
 
@@ -89,7 +76,7 @@ export function MessageAttachmentList({ attachments }: { attachments: MessageAtt
   return (
     <div className="studio-bubble__attachments">
       {attachments.map((attachment) =>
-        isImageMime(attachment.mime_type) ? (
+        isImageAttachment(attachment) ? (
           <AttachmentImage key={attachment.attachment_id} attachment={attachment} />
         ) : (
           <AttachmentFile key={attachment.attachment_id} attachment={attachment} />

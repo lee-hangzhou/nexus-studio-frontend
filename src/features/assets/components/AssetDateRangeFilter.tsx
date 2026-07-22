@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 import locale from 'antd/es/date-picker/locale/zh_CN';
 import { useState } from 'react';
+import { StudioChip } from '../../../shared/ui/StudioChip';
 
 const { RangePicker } = DatePicker;
 
@@ -52,14 +53,14 @@ export function AssetDateRangeFilter({ value, onChange }: AssetDateRangeFilterPr
   return (
     <div className="studio-assets__date-filter" role="group" aria-label="时间范围">
       {QUICK_OPTIONS.map((opt) => (
-        <button
+        <StudioChip
           key={opt.key}
-          type="button"
-          className={`studio-assets__pill${quick === opt.key ? ' studio-assets__pill--active' : ''}`}
+          size="sm"
+          active={quick === opt.key}
           onClick={() => pickQuick(opt.key)}
         >
           {opt.label}
-        </button>
+        </StudioChip>
       ))}
       <RangePicker
         className="studio-assets__range"

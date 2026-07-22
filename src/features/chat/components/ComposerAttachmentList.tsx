@@ -1,7 +1,7 @@
 import { CloseOutlined, FileOutlined } from '@ant-design/icons';
 
 import type { UploadedAttachment } from '../../../api/chat';
-import { isImageMime } from '../hooks/useAttachmentUrl';
+import { isImageAttachment } from '../hooks/useAttachmentUrl';
 
 type Props = {
   attachments: UploadedAttachment[];
@@ -17,7 +17,7 @@ export function ComposerAttachmentList({ attachments, onRemove }: Props) {
     <div className="studio-composer-box__attachments">
       {attachments.map((item) => (
         <div key={item.attachment_id} className="studio-composer-chip">
-          {isImageMime(item.mime_type) && item.preview_url ? (
+          {isImageAttachment(item) && item.preview_url ? (
             <img className="studio-composer-chip__thumb" src={item.preview_url} alt={item.filename} />
           ) : (
             <span className="studio-composer-chip__icon">

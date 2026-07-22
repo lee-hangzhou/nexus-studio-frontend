@@ -15,6 +15,7 @@ import type { CreateComposerParams, CreateComposerSubmitPayload } from '../compo
 import { CreateComposer } from '../components/CreateComposer';
 import { CreateHistoryPanel } from '../components/CreateHistoryPanel';
 import { CreateStage } from '../components/CreateStage';
+import { StudioChip } from '../../../shared/ui/StudioChip';
 import type { GenerateFeedItem, GenerateKind, HistoryFilters } from '../types';
 import { DEFAULT_HISTORY_FILTERS } from '../types';
 import { toFeedItem, toFeedItemFromTaskList, toHistoryListPatch } from '../utils/feedItemMappers';
@@ -67,7 +68,7 @@ export function GeneratePage() {
   const [historyHasMore, setHistoryHasMore] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyInitialLoading, setHistoryInitialLoading] = useState(true);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(true);
   const [composerDraft, setComposerDraft] = useState<
     { key: string; prompt: string; refImages?: GenerateFeedItem['refImages'] } | null
   >(null);
@@ -428,14 +429,14 @@ export function GeneratePage() {
 
   return (
     <div className={`studio-create${historyOpen ? ' studio-create--history-open' : ''}`}>
-      <button
-        type="button"
-        className={`studio-create__history-toggle${historyOpen ? ' is-active' : ''}`}
+      <StudioChip
+        className="studio-create__history-toggle"
+        active={historyOpen}
+        icon={<HistoryOutlined aria-hidden />}
         onClick={() => setHistoryOpen((value) => !value)}
       >
-        <HistoryOutlined />
-        <span>最近生成</span>
-      </button>
+        最近生成
+      </StudioChip>
       <div className="studio-create__center">
         <CreateStage
           item={activeItem}

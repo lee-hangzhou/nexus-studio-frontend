@@ -2,6 +2,19 @@ import { useEffect, useState } from 'react';
 
 import { getAttachmentPreviewUrl, type MessageAttachment } from '../../../api/chat';
 
+const IMAGE_EXTENSIONS = new Set([
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'webp',
+  'bmp',
+  'svg',
+  'avif',
+  'heic',
+  'heif',
+]);
+
 export function useAttachmentUrl(attachment: MessageAttachment): { url: string; loading: boolean } {
   const [url, setUrl] = useState(attachment.preview_url ?? '');
   const [loading, setLoading] = useState(!attachment.preview_url);
@@ -39,5 +52,14 @@ export function useAttachmentUrl(attachment: MessageAttachment): { url: string; 
 }
 
 export function isImageMime(mimeType: string): boolean {
-  return mimeType.startsWith('image/');
+  return mimeType.toLowerCase().startsWith('image/');
+}
+
+/** mime 或扩展名任一判定为图片即可（publish_file 等路径常落成 octet-stream）。 */
+export function isImageAttachment(attachment: Pick<MessageAttachment, 'mime_type' | 'filename'>): boolean {
+  if (isImageMime(attachment.mime_type)) return true;
+  const filename = attachment.filename ?? '';
+  const dot = filename.lastIndexOf('.');
+  if (dot < 0) return false;
+  return IMAGE_EXTENSIONS.has(filename.slice(dot + 1).toLowerCase());
 }

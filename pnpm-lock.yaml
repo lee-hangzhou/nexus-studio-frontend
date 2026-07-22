@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@ant-design/icons':
+        specifier: ^5.6.1
+        version: 5.6.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@tiptap/extension-document':
         specifier: ^2.27.2
         version: 2.27.2(@tiptap/core@2.27.2(@tiptap/pm@2.27.2))
@@ -38,6 +41,9 @@ importers:
       antd:
         specifier: ^5.29.3
         version: 5.29.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      dayjs:
+        specifier: ^1.11.21
+        version: 1.11.21
       react:
         specifier: ^18.3.1
         version: 18.3.1

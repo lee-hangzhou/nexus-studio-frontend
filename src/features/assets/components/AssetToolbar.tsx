@@ -1,6 +1,7 @@
 import { SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import { Input } from 'antd';
 import type { Dayjs } from 'dayjs';
+import { StudioChip } from '../../../shared/ui/StudioChip';
 import type { AssetKindFilter, AssetSourceFilter } from '../constants';
 import { ASSET_KIND_OPTIONS, ASSET_SOURCE_OPTIONS } from '../constants';
 import { AssetDateRangeFilter } from './AssetDateRangeFilter';
@@ -85,33 +86,33 @@ export function AssetToolbar({
 
       <div className="studio-assets__filter-scroll" role="toolbar" aria-label="筛选">
         {ASSET_KIND_OPTIONS.map((opt) => (
-          <button
+          <StudioChip
             key={`k-${opt.value}`}
-            type="button"
-            className={`studio-assets__pill${kind === opt.value ? ' studio-assets__pill--active' : ''}`}
+            size="sm"
+            active={kind === opt.value}
             onClick={() => onKindChange(opt.value)}
           >
             {opt.label}
-          </button>
+          </StudioChip>
         ))}
         <span className="studio-assets__filter-sep" aria-hidden />
         {ASSET_SOURCE_OPTIONS.map((opt) => (
-          <button
+          <StudioChip
             key={`s-${opt.value}`}
-            type="button"
-            className={`studio-assets__pill${source === opt.value ? ' studio-assets__pill--active' : ''}`}
+            size="sm"
+            active={source === opt.value}
             onClick={() => onSourceChange(opt.value)}
           >
             {opt.label}
-          </button>
+          </StudioChip>
         ))}
-        <button
-          type="button"
-          className={`studio-assets__pill${favoritesOnly ? ' studio-assets__pill--active' : ''}`}
+        <StudioChip
+          size="sm"
+          active={favoritesOnly}
           onClick={() => onFavoritesOnlyChange(!favoritesOnly)}
         >
           收藏
-        </button>
+        </StudioChip>
       </div>
 
       <AssetDateRangeFilter value={dateRange} onChange={onDateRangeChange} />

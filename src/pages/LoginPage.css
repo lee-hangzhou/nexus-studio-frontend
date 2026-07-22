@@ -6,8 +6,8 @@
 
 .login-page-form .ant-input-affix-wrapper-focused,
 .login-page-form .ant-input-affix-wrapper:focus-within {
-  border-color: rgba(99, 179, 237, 0.7) !important;
-  box-shadow: 0 0 0 2px rgba(99, 179, 237, 0.12) !important;
+  border-color: rgba(240, 179, 91, 0.7) !important;
+  box-shadow: 0 0 0 2px rgba(240, 179, 91, 0.14) !important;
 }
 
 /* autofill: WebKit 强制黄/白底，用 inset box-shadow 盖掉 */
@@ -15,8 +15,8 @@
 .login-page-form input:-webkit-autofill:hover,
 .login-page-form input:-webkit-autofill:focus,
 .login-page-form input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px rgba(20, 30, 60, 0.85) inset !important;
-  box-shadow: 0 0 0 1000px rgba(20, 30, 60, 0.85) inset !important;
+  -webkit-box-shadow: 0 0 0 1000px rgba(21, 24, 29, 0.92) inset !important;
+  box-shadow: 0 0 0 1000px rgba(21, 24, 29, 0.92) inset !important;
   -webkit-text-fill-color: #fff !important;
   caret-color: #fff;
   transition: background-color 99999s ease-out 0s;

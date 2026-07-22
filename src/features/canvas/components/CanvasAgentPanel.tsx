@@ -1,14 +1,18 @@
 import { DownOutlined } from '@ant-design/icons';
 import { Button, Dropdown, Spin } from 'antd';
 import type { MenuProps } from 'antd';
-import { canvasDropdownProps } from '../storyflow/constants/canvasDropdown';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { ToolStepView } from '../../../api/chat';
 import { ToolRunTimeline } from '../../chat/components/ToolRunTimeline';
+import { useChatModelCatalog } from '../context/ChatModelCatalogContext';
 import type { CanvasFeedMessage } from '../hooks/useCanvasMessages';
+import { canvasDropdownProps } from '../storyflow/constants/canvasDropdown';
 import { stripPseudoToolMarkup } from '../utils/stripPseudoToolMarkup';
+import { StudioChip } from '../../../shared/ui/StudioChip';
+import { StudioSegment } from '../../../shared/ui/StudioSegment';
+import { StudioButton } from '../../../shared/ui/StudioButton';
 
 function toolStepsFromMetadata(metadata: Record<string, unknown>): ToolStepView[] {
   const raw = metadata.tool_steps;
@@ -36,12 +40,13 @@ function toolStepsFromMetadata(metadata: Record<string, unknown>): ToolStepView[
 export type CanvasAgentMode = 'auto' | 'manual';
 
 export function CanvasAgentPanel({
-  projectTitle,
   messages,
   loading,
   busy,
   mode,
   onModeChange,
+  modelKey,
+  onModelChange,
   composer,
   onComposerChange,
   onSend,
@@ -51,12 +56,13 @@ export function CanvasAgentPanel({
   onRejectTool,
   resumeLoading,
 }: {
-  projectTitle: string;
   messages: CanvasFeedMessage[];
   loading: boolean;
   busy: boolean;
   mode: CanvasAgentMode;
   onModeChange: (mode: CanvasAgentMode) => void;
+  modelKey: string | undefined;
+  onModelChange: (modelKey: string) => void;
   composer: string;
   onComposerChange: (v: string) => void;
   onSend: () => void;
@@ -67,30 +73,54 @@ export function CanvasAgentPanel({
   resumeLoading: boolean;
 }) {
   const feedRef = useRef<HTMLDivElement>(null);
+  const chatModels = useChatModelCatalog();
 
   useEffect(() => {
     feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, liveToolSteps]);
 
   const handleSend = useCallback(() => {
-    if (!composer.trim() || busy) return;
+    if (!composer.trim() || busy || !modelKey) return;
     onSend();
-  }, [composer, busy, onSend]);
+  }, [composer, busy, modelKey, onSend]);
 
-  const modeMenuItems: MenuProps['items'] = [
-    { key: 'auto', label: 'auto' },
-    { key: 'manual', label: 'manual' },
-  ];
+  const modelMenuItems: MenuProps['items'] = useMemo(
+    () =>
+      chatModels.items.map((item) => ({
+        key: item.key,
+        label: item.display_name || item.key,
+      })),
+    [chatModels.items],
+  );
+
+  const selectedModelLabel =
+    chatModels.items.find((item) => item.key === modelKey)?.display_name ||
+    modelKey ||
+    (chatModels.loading ? '加载模型…' : chatModels.failed ? '模型不可用' : '选择模型');
+
+  const canSend = Boolean(composer.trim()) && !busy && Boolean(modelKey);
 
   return (
-    <aside className="canvas-agent-float">
+    <aside className="canvas-agent-float" aria-label="画布 Agent">
       <div className="workflow-canvas-agent-panel">
         <header className="workflow-canvas-agent-panel__head">
-          <strong>{projectTitle}</strong>
-          <span style={{ opacity: 0.65 }}>Agent</span>
+          <strong>画布 Agent</strong>
+          <span>消息可上滚查看历史</span>
         </header>
+
         <div className="workflow-canvas-agent-panel__feed" ref={feedRef}>
-          {loading ? <Spin /> : null}
+          {loading ? (
+            <div className="workflow-canvas-agent-panel__feed-state">
+              <Spin />
+            </div>
+          ) : null}
+
+          {!loading && messages.length === 0 ? (
+            <div className="workflow-canvas-agent-panel__feed-empty">
+              描述节点或镜头，Agent 会在这里保留完整会话。
+            </div>
+          ) : null}
+
           {messages.map((m) => {
             const steps =
               m.role === 'assistant'
@@ -103,39 +133,50 @@ export function CanvasAgentPanel({
             if (m.role === 'user') {
               return (
                 <article key={m.id} className="workflow-canvas-agent-panel__bubble is-user">
-                  <p style={{ margin: 0 }}>{m.content}</p>
+                  <span className="workflow-canvas-agent-panel__who">你</span>
+                  <p className="workflow-canvas-agent-panel__text">{m.content}</p>
                 </article>
               );
             }
             return (
               <article key={m.id} className="workflow-canvas-agent-panel__bubble is-assistant">
+                <span className="workflow-canvas-agent-panel__who">
+                  Agent{m.streaming ? ' · 进行中' : ''}
+                </span>
                 {steps.length > 0 ? <ToolRunTimeline steps={steps} /> : null}
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {stripPseudoToolMarkup(m.content || '') || (m.streaming ? '…' : '')}
-                </ReactMarkdown>
+                <div className="workflow-canvas-agent-panel__markdown">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {stripPseudoToolMarkup(m.content || '') || (m.streaming ? '…' : '')}
+                  </ReactMarkdown>
+                </div>
               </article>
             );
           })}
+
           {toolPending ? (
             <div className="workflow-canvas-agent-panel__bubble is-assistant">
-              <p style={{ margin: '0 0 8px' }}>{toolPending.summary}</p>
-              <Button size="small" type="primary" loading={resumeLoading} onClick={onConfirmTool}>
-                确认
-              </Button>{' '}
-              <Button size="small" disabled={resumeLoading} onClick={onRejectTool}>
-                拒绝
-              </Button>
+              <p className="workflow-canvas-agent-panel__text">{toolPending.summary}</p>
+              <div className="workflow-canvas-agent-panel__gate">
+                <Button size="small" type="primary" loading={resumeLoading} onClick={onConfirmTool}>
+                  确认
+                </Button>
+                <Button size="small" disabled={resumeLoading} onClick={onRejectTool}>
+                  拒绝
+                </Button>
+              </div>
             </div>
           ) : null}
         </div>
+
         <footer className="workflow-canvas-agent-panel__composer">
           <textarea
             className="workflow-canvas-agent-panel__input"
             value={composer}
             onChange={(e) => onComposerChange(e.target.value)}
-            placeholder="描述创意或画布修改…"
+            placeholder="继续描述你想改的节点或镜头…"
             rows={3}
             disabled={busy}
+            aria-label="画布 Agent 输入"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -144,29 +185,48 @@ export function CanvasAgentPanel({
             }}
           />
           <div className="workflow-canvas-agent-panel__composer-actions">
-            <Dropdown
-              {...canvasDropdownProps({
-                items: modeMenuItems,
-                selectedKeys: [mode],
-                onClick: ({ key }) => onModeChange(key as CanvasAgentMode),
-              })}
-              trigger={['click']}
-              placement="topLeft"
-              disabled={busy}
-            >
-              <button type="button" className="workflow-canvas-agent-panel__mode-select">
-                <span>{mode}</span>
-                <DownOutlined className="workflow-canvas-agent-panel__mode-chevron" />
-              </button>
-            </Dropdown>
-            <button
-              type="button"
-              className="workflow-canvas-agent-panel__send"
+            <div className="workflow-canvas-agent-panel__composer-left">
+              <StudioSegment
+                aria-label="运行模式"
+                value={mode}
+                disabled={busy}
+                onChange={onModeChange}
+                options={[
+                  { value: 'auto', label: '自动' },
+                  { value: 'manual', label: '手动' },
+                ]}
+              />
+
+              <Dropdown
+                {...canvasDropdownProps({
+                  items: modelMenuItems,
+                  selectedKeys: modelKey ? [modelKey] : [],
+                  onClick: ({ key }) => onModelChange(key),
+                })}
+                trigger={['click']}
+                placement="topLeft"
+                disabled={busy || chatModels.loading || modelMenuItems.length === 0}
+              >
+                <StudioChip
+                  size="sm"
+                  aria-label="对话模型"
+                  title={selectedModelLabel}
+                  disabled={busy || chatModels.loading || modelMenuItems.length === 0}
+                >
+                  <span className="workflow-canvas-agent-panel__chip-label">{selectedModelLabel}</span>
+                  <DownOutlined className="workflow-canvas-agent-panel__chip-chevron" />
+                </StudioChip>
+              </Dropdown>
+            </div>
+
+            <StudioButton
+              variant="primary"
+              size="sm"
               onClick={handleSend}
-              disabled={busy || !composer.trim()}
+              disabled={!canSend}
             >
               发送
-            </button>
+            </StudioButton>
           </div>
         </footer>
       </div>

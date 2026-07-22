@@ -1,4 +1,3 @@
-import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import '../../styles/Header.less';
 
@@ -14,34 +13,50 @@ export function CanvasHeader({
   onStop: () => void;
 }) {
   const navigate = useNavigate();
+  const title = projectName?.trim() || `项目 #${projectId}`;
 
   return (
-    <div className="workflow-canvas-header">
+    <header className="workflow-canvas-header">
       <div className="workflow-canvas-header__content">
-        <button
-          type="button"
-          className="workflow-canvas-header__back-button"
-          aria-label="返回"
-          onClick={() => navigate('/projects')}
-        >
-          <ArrowLeftOutlined />
-          <span>项目列表</span>
-        </button>
-        <span className="workflow-canvas-header__slash">/</span>
-        <span className="workflow-canvas-header__episode-name">
-          {projectName?.trim() || `项目 #${projectId}`}
-        </span>
-        {busy ? (
-          <button
-            type="button"
-            className="workflow-canvas-header__back-button"
-            style={{ marginLeft: 'auto' }}
-            onClick={onStop}
-          >
-            停止
-          </button>
-        ) : null}
+        <div className="workflow-canvas-header__left">
+          <nav className="workflow-canvas-header__crumb" aria-label="画布路径">
+            <button
+              type="button"
+              className="workflow-canvas-header__back-button"
+              onClick={() => navigate('/')}
+            >
+              ← Home
+            </button>
+            <span className="workflow-canvas-header__sep" aria-hidden>
+              /
+            </span>
+            <strong className="workflow-canvas-header__title" title={title}>
+              {title}
+            </strong>
+            <span className="workflow-canvas-header__sep" aria-hidden>
+              ·
+            </span>
+            <span className="workflow-canvas-header__surface">画布</span>
+          </nav>
+          {busy ? (
+            <span className="workflow-canvas-header__live" aria-live="polite">
+              <i aria-hidden />
+              Agent 工作中
+            </span>
+          ) : null}
+        </div>
+        <div className="workflow-canvas-header__right">
+          {busy ? (
+            <button
+              type="button"
+              className="workflow-canvas-header__stop"
+              onClick={onStop}
+            >
+              停止
+            </button>
+          ) : null}
+        </div>
       </div>
-    </div>
+    </header>
   );
 }

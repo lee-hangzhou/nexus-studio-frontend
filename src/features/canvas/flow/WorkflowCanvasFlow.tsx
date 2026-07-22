@@ -181,7 +181,7 @@ export function WorkflowCanvasFlow({
               proOptions={{ hideAttribution: true }}
             >
               <Background gap={16} size={1} color="#3a3a42" />
-              <Controls showInteractive={false} position="bottom-right" />
+              <Controls showInteractive={false} position="bottom-left" />
               <CanvasEmptyStateHost nodes={nodes} loaded={loaded} onQuickAdd={onQuickAdd} />
             </ReactFlow>
           </div>

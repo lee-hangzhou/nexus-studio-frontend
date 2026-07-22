@@ -63,6 +63,7 @@ function CanvasPageInner() {
   const chatModelCatalog = useChatModelCatalog();
   const [projectName, setProjectName] = useState<string | undefined>();
   const [mode, setMode] = useState<'auto' | 'manual'>('auto');
+  const [agentModelKey, setAgentModelKey] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [composer, setComposer] = useState('');
   const [loaded, setLoaded] = useState(false);
@@ -130,6 +131,12 @@ function CanvasPageInner() {
   useEffect(() => {
     void loadMessages();
   }, [loadMessages]);
+
+  useEffect(() => {
+    if (agentModelKey) return;
+    const resolved = chatModelCatalog.resolveModelKey(undefined);
+    if (resolved) setAgentModelKey(resolved);
+  }, [agentModelKey, chatModelCatalog]);
 
   const applyPatchEvent = useCallback(
     (event: CanvasPatchEvent) => {
@@ -286,17 +293,20 @@ function CanvasPageInner() {
   const sendTurn = useCallback(async () => {
     const content = composer.trim();
     if (!content || busy) return;
+    const modelKey = chatModelCatalog.resolveModelKey(agentModelKey);
+    if (!hasResolvedChatModelKey(modelKey)) {
+      message.warning('对话模型不可用，请稍后重试');
+      return;
+    }
+    if (modelKey !== agentModelKey) {
+      setAgentModelKey(modelKey);
+    }
     const clientTurnId = buildTurnId();
     activeTurnRef.current = clientTurnId;
     setComposer('');
     appendUser(content, clientTurnId);
     appendAssistantStream(clientTurnId);
     setLiveToolSteps([]);
-    const modelKey = chatModelCatalog.resolveModelKey(undefined);
-    if (!hasResolvedChatModelKey(modelKey)) {
-      message.warning('对话模型不可用，请稍后重试');
-      return;
-    }
     await runStream((onFrame, signal) =>
       streamCanvasTurn(
         projectId,
@@ -305,7 +315,17 @@ function CanvasPageInner() {
         signal,
       ),
     );
-  }, [composer, busy, projectId, mode, chatModelCatalog, appendUser, appendAssistantStream, runStream]);
+  }, [
+    composer,
+    busy,
+    projectId,
+    mode,
+    agentModelKey,
+    chatModelCatalog,
+    appendUser,
+    appendAssistantStream,
+    runStream,
+  ]);
 
   const onNodeGenerate = useCallback(
     async (nodeId: string, extra?: import('../context/CanvasGenerateContext').NodeGenerateExtra) => {
@@ -465,6 +485,12 @@ function CanvasPageInner() {
 
   return (
     <div className="workflow-canvas-page">
+      <div className="workflow-canvas-page__mobile-gate" role="status">
+        <p>画布需要更大的屏幕完成节点编排。</p>
+        <button type="button" onClick={() => navigate('/')}>
+          返回 Home
+        </button>
+      </div>
       <CanvasGenerateProvider onNodeGenerate={onNodeGenerate}>
         <WorkflowCanvasFlow
           projectId={projectId}
@@ -482,12 +508,13 @@ function CanvasPageInner() {
           onQuickAdd={onQuickAdd}
         />
         <CanvasAgentPanel
-          projectTitle={projectName?.trim() || `项目 #${projectId}`}
           messages={messages}
           loading={messagesLoading}
           busy={busy}
           mode={mode}
           onModeChange={setMode}
+          modelKey={agentModelKey}
+          onModelChange={setAgentModelKey}
           composer={composer}
           onComposerChange={setComposer}
           onSend={() => void sendTurn()}
@@ -549,12 +576,9 @@ export function CanvasPage() {
   const projectId = Number(raw);
   if (!Number.isFinite(projectId) || projectId <= 0) {
     return (
-      <div className="workflow-canvas-page" style={{ padding: 24 }}>
-        无效的项目 ID，请从
-        <a href="/projects" style={{ marginLeft: 6 }}>
-          项目列表
-        </a>
-        进入。
+      <div className="workflow-canvas-page workflow-canvas-page--invalid">
+        <p>无效的项目 ID，请从项目列表进入。</p>
+        <a href="/projects">全部工作</a>
       </div>
     );
   }

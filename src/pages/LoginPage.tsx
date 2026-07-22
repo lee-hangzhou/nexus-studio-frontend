@@ -28,10 +28,10 @@ export function LoginPage() {
     <ConfigProvider theme={authInputTheme}>
       <AuthLayout
         title="登录"
-        subtitle="使用注册邮箱登录 Nexus Studio"
+        subtitle="使用注册邮箱登录后进入 Home"
         links={
           <>
-            还没有账号？<Link to="/register">注册账号</Link>
+            还没有账号？<Link to="/register">注册</Link>
           </>
         }
       >

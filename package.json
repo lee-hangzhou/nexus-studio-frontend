@@ -19,6 +19,7 @@
     "test:node-submit:update": "UPDATE_NODE_SUBMIT_EXPECTED=1 vitest run src/features/canvas/storyflow/utils/buildPromptSubmit.test.ts"
   },
   "dependencies": {
+    "@ant-design/icons": "^5.6.1",
     "@tiptap/extension-document": "^2.27.2",
     "@tiptap/extension-hard-break": "^2.27.2",
     "@tiptap/extension-mention": "^2.27.2",
@@ -29,6 +30,7 @@
     "@tiptap/suggestion": "^2.27.2",
     "@xyflow/react": "^12.10.2",
     "antd": "^5.29.3",
+    "dayjs": "^1.11.21",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",

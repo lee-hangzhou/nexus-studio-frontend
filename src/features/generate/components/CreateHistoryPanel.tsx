@@ -14,6 +14,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
 import type { GenerateFeedItem, GenerateFilterType, GenerateStatusFilter, GenerateTimePreset, HistoryFilters } from '../types';
+import { StudioChip } from '../../../shared/ui/StudioChip';
 import { PromptWithMentions } from './PromptWithMentions';
 import { isTaskInProgress, isTaskQueued, TASK_STATUS } from '../../../domains/task/types';
 
@@ -89,16 +90,16 @@ function FilterPills<T extends string>({
   return (
     <div className="studio-create-history-panel__filter-group">
       <span className="studio-create-history-panel__filter-label">{label}</span>
-      <div className="studio-create-history__pill-row" style={{ flex: 1 }}>
+      <div className="studio-create-history__pill-row studio-create-history__pill-row--grow">
         {options.map((opt) => (
-          <button
+          <StudioChip
             key={opt.value}
-            type="button"
-            className={`studio-create-history__pill${value === opt.value ? ' studio-create-history__pill--active' : ''}`}
+            size="sm"
+            active={value === opt.value}
             onClick={() => onChange(opt.value)}
           >
             {opt.label}
-          </button>
+          </StudioChip>
         ))}
       </div>
     </div>
@@ -296,14 +297,14 @@ export function CreateHistoryPanel({
         <FilterPills label="时间" options={TIME_OPTS} value={filters.time} onChange={(v) => patchFilters({ time: v })} />
         <div className="studio-create-history-panel__filter-group">
           <span className="studio-create-history-panel__filter-label">收藏</span>
-          <div className="studio-create-history__pill-row" style={{ flex: 1 }}>
-            <button
-              type="button"
-              className={`studio-create-history__pill${filters.favoritesOnly ? ' studio-create-history__pill--active' : ''}`}
+          <div className="studio-create-history__pill-row studio-create-history__pill-row--grow">
+            <StudioChip
+              size="sm"
+              active={filters.favoritesOnly}
               onClick={() => patchFilters({ favoritesOnly: !filters.favoritesOnly })}
             >
               仅收藏
-            </button>
+            </StudioChip>
           </div>
         </div>
       </div>

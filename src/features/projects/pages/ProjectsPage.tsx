@@ -85,8 +85,8 @@ export function ProjectsPage() {
     <div className="studio-projects-gallery">
       <div className="studio-projects-gallery__header">
         <div className="studio-projects-gallery__heading">
-          <h1>项目</h1>
-          <p>继续最近的画布，或创建新的工作空间。</p>
+          <h1>全部工作</h1>
+          <p>打开已有画布项目，或新建一个工作空间。</p>
         </div>
         <div className="studio-projects-gallery__actions">
           <Input

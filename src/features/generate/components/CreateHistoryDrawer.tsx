@@ -2,6 +2,7 @@ import { SearchOutlined } from '@ant-design/icons';
 import { Drawer, Input } from 'antd';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { StudioChip } from '../../../shared/ui/StudioChip';
 import type { GenerateFeedItem, GenerateFilterType, GenerateStatusFilter, GenerateTimePreset } from '../types';
 import { buildHistoryListRows, filterGenerateHistory } from '../utils/createHistory';
 import { CreateHistoryVirtualList } from './CreateHistoryVirtualList';
@@ -98,13 +99,13 @@ export function CreateHistoryDrawer({
           <FilterPills options={kindOptions} value={kind} onChange={setKind} />
           <FilterPills options={statusOptions} value={status} onChange={setStatus} />
           <FilterPills options={timeOptions} value={time} onChange={setTime} />
-          <button
-            type="button"
-            className={`studio-create-history__pill${favoritesOnly ? ' studio-create-history__pill--active' : ''}`}
+          <StudioChip
+            size="sm"
+            active={favoritesOnly}
             onClick={() => setFavoritesOnly((v) => !v)}
           >
             仅置顶
-          </button>
+          </StudioChip>
         </div>
 
         <CreateHistoryVirtualList
@@ -130,14 +131,14 @@ function FilterPills<T extends string>({
   return (
     <div className="studio-create-history__pill-row">
       {options.map((opt) => (
-        <button
+        <StudioChip
           key={opt.value}
-          type="button"
-          className={`studio-create-history__pill${value === opt.value ? ' studio-create-history__pill--active' : ''}`}
+          size="sm"
+          active={value === opt.value}
           onClick={() => onChange(opt.value)}
         >
           {opt.label}
-        </button>
+        </StudioChip>
       ))}
     </div>
   );
