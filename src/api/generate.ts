@@ -38,7 +38,6 @@ export interface GenerateTaskView {
   result_urls: { url: string; type?: number; width?: number; height?: number }[];
   error_message?: string | null;
   is_favorited: boolean;
-  queue_status?: number | null;
   queue_position?: number | null;
   queue_total?: number | null;
   estimated_wait_seconds?: number | null;

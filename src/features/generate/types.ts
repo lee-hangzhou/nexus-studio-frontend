@@ -61,7 +61,6 @@ export interface GenerateFeedItem {
   duration?: number;
   referenceMode?: number;
   refImages?: GenerateRefImage[];
-  queueStatus?: number | null;
   queuePosition?: number | null;
   queueTotal?: number | null;
   estimatedWaitSeconds?: number | null;

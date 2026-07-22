@@ -305,7 +305,9 @@ export function GeneratePage() {
         const promote = (item: GenerateFeedItem) =>
           item.id === optimisticId ? { ...item, id: realId, status: resp.status } : item;
         setHistoryItems((prev) => prev.map(promote));
-        setActiveDetail((prev) => (prev?.id === optimisticId ? { ...prev, id: realId } : prev));
+        setActiveDetail((prev) =>
+          prev?.id === optimisticId ? { ...prev, id: realId, status: resp.status } : prev,
+        );
         setActiveId(realId);
       } catch (err) {
         const msg = err instanceof Error ? err.message : '提交失败，请重试';
