@@ -371,6 +371,7 @@ async function consumeChatSSE(
 
 export async function streamMessage(
   body: {
+    request_id: string;
     conversation_id: number;
     content: string;
     model: string;
@@ -386,6 +387,7 @@ export async function streamMessage(
 
 export async function streamResume(
   body: {
+    request_id: string;
     conversation_id: number;
     turn_id: string;
     gate_id: string;

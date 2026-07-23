@@ -73,6 +73,7 @@ function CanvasPageInner() {
   const agentAbortRef = useRef<AbortController | null>(null);
   const nodeAbortRef = useRef<Map<string, AbortController>>(new Map());
   const activeTurnRef = useRef<string | null>(null);
+  const streamRequestIdRef = useRef<string | null>(null);
   const graphRef = useRef<{ nodes: CanvasFlowNode[]; edges: CanvasFlowEdge[] }>({ nodes: [], edges: [] });
   const commitOpsRef = useRef<(ops: CanvasPatchOp[]) => Promise<import('../api/canvasTypes').CanvasPatchResult | null>>(
     async () => null,
@@ -302,7 +303,9 @@ function CanvasPageInner() {
       setAgentModelKey(modelKey);
     }
     const clientTurnId = buildTurnId();
+    const requestId = crypto.randomUUID();
     activeTurnRef.current = clientTurnId;
+    streamRequestIdRef.current = requestId;
     setComposer('');
     appendUser(content, clientTurnId);
     appendAssistantStream(clientTurnId);
@@ -310,7 +313,14 @@ function CanvasPageInner() {
     await runStream((onFrame, signal) =>
       streamCanvasTurn(
         projectId,
-        { content, model_key: modelKey, client_turn_id: clientTurnId, mode, enable_tools: true },
+        {
+          request_id: requestId,
+          content,
+          model_key: modelKey,
+          client_turn_id: clientTurnId,
+          mode,
+          enable_tools: true,
+        },
         onFrame,
         signal,
       ),
@@ -523,15 +533,19 @@ function CanvasPageInner() {
           onConfirmTool={() =>
             void (async () => {
               if (!toolPending || !activeTurnRef.current) return;
+              const requestId = crypto.randomUUID();
+              streamRequestIdRef.current = requestId;
               setResumeLoading(true);
               try {
                 await runStream((onFrame, signal) =>
                   resumeCanvasTurn(
                     projectId,
                     {
+                      request_id: requestId,
                       tool_call_id: toolPending.call_id,
                       action: 'confirm',
                       client_turn_id: activeTurnRef.current!,
+                      model_key: agentModelKey,
                     },
                     onFrame,
                     signal,
@@ -545,15 +559,19 @@ function CanvasPageInner() {
           onRejectTool={() =>
             void (async () => {
               if (!toolPending || !activeTurnRef.current) return;
+              const requestId = crypto.randomUUID();
+              streamRequestIdRef.current = requestId;
               setResumeLoading(true);
               try {
                 await runStream((onFrame, signal) =>
                   resumeCanvasTurn(
                     projectId,
                     {
+                      request_id: requestId,
                       tool_call_id: toolPending.call_id,
                       action: 'reject',
                       client_turn_id: activeTurnRef.current!,
+                      model_key: agentModelKey,
                     },
                     onFrame,
                     signal,

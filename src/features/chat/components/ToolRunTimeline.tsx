@@ -10,8 +10,7 @@ import {
 } from '@ant-design/icons';
 import { useMemo, useState } from 'react';
 import type { ToolStepView } from '../../../api/chat';
-import { isBrowserTool, visibleToolSteps } from '../toolStepVisibility';
-import { isMemoryTool, sanitizeToolResultPreview } from '../toolResultPreview';
+import { visibleToolSteps } from '../toolStepVisibility';
 import type { TurnTimelineItem } from '../turnTimeline';
 import { toolStepsFromTimeline, visibleTurnTimeline } from '../turnTimeline';
 
@@ -148,16 +147,6 @@ function StepIcon({ name, status }: { name: string; status: StepStatus }) {
   return <ToolOutlined />;
 }
 
-function formatArgs(step: ToolStepView): string | null {
-  const entries = Object.entries(step.args).filter(([, value]) => value !== undefined && value !== null);
-  if (entries.length === 0) return null;
-  try {
-    return JSON.stringify(Object.fromEntries(entries), null, 2);
-  } catch {
-    return null;
-  }
-}
-
 function NarrationRow({ text }: { text: string }) {
   return (
     <div className="tool-run__step tool-run__step--narration">
@@ -173,56 +162,17 @@ function NarrationRow({ text }: { text: string }) {
 
 function ToolRunStep({ step }: { step: ToolStepView }) {
   const status = stepStatus(step);
-  const memoryTool = isMemoryTool(step.name);
-  const browserTool = isBrowserTool(step.name);
-  const safePreview = sanitizeToolResultPreview(step.name, step.result_preview, status !== 'failed');
-  const argsText = memoryTool || browserTool ? null : formatArgs(step);
-  const hasDetail = Boolean(argsText || (!memoryTool && safePreview));
-
-  if (memoryTool) {
-    return (
-      <div className="tool-run__step tool-run__step--compact">
-        <span className={`tool-run__step-icon tool-run__step-icon--${status}`} aria-hidden>
-          <StepIcon name={step.name} status={status} />
-        </span>
-        <div className="tool-run__step-body">
-          <div className="tool-run__step-title">{toolLabel(step.name)}</div>
-          {status !== 'pending' ? (
-            <div className="tool-run__step-meta">{safePreview}</div>
-          ) : null}
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <details className="tool-run__step" open={status === 'pending'}>
-      <summary className="tool-run__step-head">
-        <span className={`tool-run__step-icon tool-run__step-icon--${status}`} aria-hidden>
-          <StepIcon name={step.name} status={status} />
-        </span>
-        <div className="tool-run__step-body">
-          <div className="tool-run__step-title">{stepTitle(step)}</div>
-          <span className="tool-run__step-tag">{toolTag(step.name)}</span>
-        </div>
-      </summary>
-      {hasDetail ? (
-        <div className="tool-run__step-detail">
-          {argsText ? (
-            <>
-              <div className="tool-run__step-detail-label">参数</div>
-              <pre>{argsText}</pre>
-            </>
-          ) : null}
-          {safePreview && safePreview !== '执行中…' ? (
-            <>
-              <div className="tool-run__step-detail-label">{status === 'failed' ? '错误' : '结果'}</div>
-              <pre>{safePreview}</pre>
-            </>
-          ) : null}
-        </div>
-      ) : null}
-    </details>
+    <div className="tool-run__step tool-run__step--compact">
+      <span className={`tool-run__step-icon tool-run__step-icon--${status}`} aria-hidden>
+        <StepIcon name={step.name} status={status} />
+      </span>
+      <div className="tool-run__step-body">
+        <div className="tool-run__step-title">{stepTitle(step)}</div>
+        <span className="tool-run__step-tag">{toolTag(step.name)}</span>
+      </div>
+    </div>
   );
 }
 

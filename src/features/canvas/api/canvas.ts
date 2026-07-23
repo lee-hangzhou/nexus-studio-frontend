@@ -47,6 +47,7 @@ export async function streamCanvasTurn(
   await consumeSSE(
     `/canvas/${projectId}/turn`,
     {
+      request_id: body.request_id,
       content: body.content,
       model_key: body.model_key,
       client_turn_id: body.client_turn_id,
@@ -69,9 +70,20 @@ export async function resumeCanvasTurn(
   onFrame: (frame: CanvasStreamFrame) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  await consumeSSE(`/canvas/${projectId}/turn/resume`, body, {
-    onFrame: (f) => onFrame(f as CanvasStreamFrame),
-  }, signal);
+  await consumeSSE(
+    `/canvas/${projectId}/turn/resume`,
+    {
+      request_id: body.request_id,
+      tool_call_id: body.tool_call_id,
+      action: body.action,
+      client_turn_id: body.client_turn_id,
+      model_key: body.model_key,
+    },
+    {
+      onFrame: (f) => onFrame(f as CanvasStreamFrame),
+    },
+    signal,
+  );
 }
 
 export async function submitCanvasNodeGenerate(

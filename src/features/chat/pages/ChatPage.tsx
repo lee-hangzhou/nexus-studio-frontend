@@ -1153,6 +1153,7 @@ export function ChatPage() {
     try {
       await streamMessage(
         {
+          request_id: crypto.randomUUID(),
           conversation_id: conversationId,
           content: text,
           model: selectedModel,
@@ -1273,6 +1274,7 @@ export function ChatPage() {
     try {
       await streamResume(
         {
+          request_id: crypto.randomUUID(),
           conversation_id: conversationId,
           turn_id: pending.turnId,
           gate_id: pending.gateId,

@@ -56,6 +56,7 @@ export interface CanvasMessageRecord {
 }
 
 export interface CanvasTurnBody {
+  request_id: string;
   content: string;
   model_key?: string;
   client_turn_id?: string;
@@ -64,9 +65,11 @@ export interface CanvasTurnBody {
 }
 
 export interface CanvasResumeBody {
+  request_id: string;
   tool_call_id: string;
   action: 'confirm' | 'reject';
   client_turn_id?: string;
+  model_key?: string;
 }
 
 export type CanvasPatchEvent = Omit<CanvasPatchResponse, 'nodes' | 'edges'> & {

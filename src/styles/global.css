@@ -1901,7 +1901,8 @@ a:hover {
 }
 
 .tool-run__step-icon--done {
-  color: var(--studio-text-secondary);
+  color: #16a34a;
+  border-color: rgba(22, 163, 74, 0.28);
 }
 
 .tool-run__step-title {
