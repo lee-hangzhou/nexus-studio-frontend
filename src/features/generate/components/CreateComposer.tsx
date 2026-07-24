@@ -1,4 +1,4 @@
-import { ArrowUpOutlined, BulbOutlined, CloseOutlined, PlusOutlined } from '@ant-design/icons';
+import { CloseOutlined, PlusOutlined } from '@ant-design/icons';
 import { message, Select } from 'antd';
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -6,7 +6,10 @@ import { createPortal } from 'react-dom';
 import { listAssets } from '../../../api/assets';
 import { listGenerateModels, uploadGenerateMaterial } from '../../../api/generate';
 import type { GenerateModelItem } from '../../../api/generate';
+import { ComposerSendButton } from '../../../shared/ui/ComposerSendButton';
+import { ComposerShell } from '../../../shared/ui/ComposerShell';
 import type { GenerateKind, GenerateRatio, GenerateRefImage, GenerateResolution } from '../types';
+import { DEFAULT_GENERATE_MAX_REFERENCE_IMAGES } from '../constants';
 import { MentionEditor, type MentionEditorHandle } from './MentionEditor';
 
 // ── 常量 / 静态选项 ──────────────────────────────────────────────────────────
@@ -297,6 +300,11 @@ export function CreateComposer({
   const ratiosByResolution = paramOptions?.ratios_by_resolution ?? {};
   const ratioValues = ratiosByResolution[params.resolution] ?? paramOptions?.ratios;
   const ratioOptions = normalizeRatioOptions(ratioValues);
+  const capsRefImages = paramOptions?.material_limits?.images;
+  const maxReferenceImages =
+    typeof capsRefImages === 'number' && capsRefImages > 0
+      ? capsRefImages
+      : DEFAULT_GENERATE_MAX_REFERENCE_IMAGES;
   const paramsReady = Boolean(
     currentModelSpec
     && (
@@ -489,9 +497,19 @@ export function CreateComposer({
     e.target.value = '';
     if (files.length === 0) return;
 
+    const remaining = maxReferenceImages - refImages.length;
+    if (remaining <= 0) {
+      message.warning(`最多添加 ${maxReferenceImages} 张参考图`);
+      return;
+    }
+    const selected = files.slice(0, remaining);
+    if (selected.length < files.length) {
+      message.warning(`最多添加 ${maxReferenceImages} 张参考图`);
+    }
+
     setMaterialsUploading(true);
     try {
-      const uploaded = await Promise.all(files.map(async (file) => {
+      const uploaded = await Promise.all(selected.map(async (file) => {
         const material = await uploadGenerateMaterial(file);
         return {
           id: `ref-${material.material_id}`,
@@ -502,7 +520,7 @@ export function CreateComposer({
           mimeType: material.mime_type || file.type,
         };
       }));
-      setRefImages((prev) => [...prev, ...uploaded]);
+      setRefImages((prev) => [...prev, ...uploaded].slice(0, maxReferenceImages));
     } catch (err) {
       const msg = err instanceof Error ? err.message : '素材上传失败';
       message.error(msg);
@@ -541,33 +559,34 @@ export function CreateComposer({
 
   return (
     <footer className="studio-create__composer-v2 studio-create__composer">
-      <div className="studio-composer-box" ref={composerRef} style={{ position: 'relative' }}>
-        {/* 参考图行 — 始终在输入框内部顶部；无图时只显示 + 按钮 */}
-        <div className="studio-create__refs">
-          {refImages.map((img) => (
-            <RefImageThumb
-              key={img.id}
-              img={img}
-              onRemove={() => setRefImages((prev) => prev.filter((x) => x.id !== img.id))}
-            />
-          ))}
-          <button
-            type="button"
-            className="studio-create__ref-add"
-            onClick={handleAddRef}
-            title="添加参考素材（可选）"
-          >
-            <PlusOutlined />
-          </button>
-          {refImages.length === 0 && (
-            <span style={{ fontSize: 12, color: 'var(--studio-text-secondary)', alignSelf: 'center' }}>
-              {materialsUploading ? '素材上传中...' : '参考素材（可选）'}
-            </span>
-          )}
-        </div>
-
-        {/* 提示词输入 */}
-        <div className="studio-composer-box__input" style={{ padding: '0 14px' }}>
+      <ComposerShell
+        boxRef={composerRef}
+        className="studio-create__composer-box"
+        top={
+          <div className="studio-create__refs">
+            {refImages.map((img) => (
+              <RefImageThumb
+                key={img.id}
+                img={img}
+                onRemove={() => setRefImages((prev) => prev.filter((x) => x.id !== img.id))}
+              />
+            ))}
+            <button
+              type="button"
+              className="studio-create__ref-add"
+              onClick={handleAddRef}
+              title="添加参考素材（可选）"
+            >
+              <PlusOutlined />
+            </button>
+            {refImages.length === 0 ? (
+              <span className="studio-create__ref-hint">
+                {materialsUploading ? '素材上传中...' : '参考素材（可选）'}
+              </span>
+            ) : null}
+          </div>
+        }
+        input={
           <MentionEditor
             ref={editorRef}
             className="studio-composer-box__textarea"
@@ -577,18 +596,9 @@ export function CreateComposer({
             onEnterSubmit={submit}
             onMaterialSelect={handleMentionMaterialSelect}
           />
-        </div>
-
-        {/* 提示词助手 */}
-        <button type="button" className="studio-create__prompt-assistant">
-          <BulbOutlined />
-          提示词助手
-        </button>
-
-        {/* 底部胶囊行 */}
-        <div className="studio-create__capsule-row">
-          <div className="studio-create__capsule-row-left">
-            {/* 任务类型下拉 */}
+        }
+        footerLeft={
+          <>
             <Select
               className="studio-create__task-select"
               value={kind}
@@ -600,8 +610,6 @@ export function CreateComposer({
               variant="outlined"
               style={{ minWidth: 108 }}
             />
-
-            {/* 模型下拉 */}
             <Select
               className="studio-create__model-select"
               value={currentModel || undefined}
@@ -612,8 +620,6 @@ export function CreateComposer({
               variant="outlined"
               style={{ minWidth: 130 }}
             />
-
-            {/* 参数胶囊 */}
             <button
               ref={paramsCapsuleRef}
               type="button"
@@ -624,23 +630,9 @@ export function CreateComposer({
               }}
               title="展开参数配置"
             >
-              <span
-                style={{
-                  display: 'inline-block',
-                  width: 12,
-                  height: 9,
-                  border: '1.5px solid currentColor',
-                  borderRadius: 2,
-                  marginRight: 4,
-                  verticalAlign: 'middle',
-                  flexShrink: 0,
-                }}
-                aria-hidden
-              />
+              <span className="studio-create__params-ratio-ico" aria-hidden />
               {capLabel}
             </button>
-
-            {/* @ 按钮 — 引用已上传的参考素材 */}
             <button
               type="button"
               className="studio-create__at-btn"
@@ -649,20 +641,16 @@ export function CreateComposer({
             >
               @
             </button>
-          </div>
-
-          {/* 发送按钮 — 向上箭头，与对话页一致 */}
-          <button
-            type="button"
-            className="studio-create__send-btn"
+          </>
+        }
+        footerRight={
+          <ComposerSendButton
             disabled={!prompt.trim() || materialsUploading || !paramsReady || modelsLoading}
-            onClick={submit}
+            onSend={submit}
             title="生成 (Enter)"
-          >
-            <ArrowUpOutlined />
-          </button>
-        </div>
-      </div>
+          />
+        }
+      />
 
       {showParams && paramsPopupStyle
         ? createPortal(
@@ -700,10 +688,9 @@ export function CreateComposer({
         type="file"
         accept="image/*,video/*,audio/*"
         multiple
-        style={{ display: 'none' }}
+        className="studio-create__file-input"
         onChange={handleRefFileChange}
       />
-      {/* 问题 6：已移除"Enter 生成"快捷键提示 */}
     </footer>
   );
 }

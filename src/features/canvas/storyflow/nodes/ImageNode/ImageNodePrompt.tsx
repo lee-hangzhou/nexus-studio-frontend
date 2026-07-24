@@ -45,7 +45,7 @@ export function ImageNodePrompt({
   const nodeWidth = useStore((s) => s.nodeLookup.get(nodeId)?.width);
   const panelWidth = resolveFloatPromptWidth(nodeWidth, 'image');
 
-  const { modelLabel, modelMenuItems, modelReady, ratioOptions, resolutionOptions } =
+  const { modelLabel, modelMenuItems, modelReady, ratioOptions, resolutionOptions, maxReferenceImages } =
     useCanvasGenerateModels(nodeId, 'image');
   const {
     mentionProvider,
@@ -55,7 +55,7 @@ export function ImageNodePrompt({
     connectedPromptTexts,
   } = useConnectedPredecessorRefs(nodeId, visible, {
     allowedTypes: ['image'],
-    maxReferenceCount: IMAGE_PROMPT_MAX_REFERENCE_IMAGES,
+    maxReferenceCount: maxReferenceImages ?? IMAGE_PROMPT_MAX_REFERENCE_IMAGES,
   });
   const handleRemoveConnectedRef = useDisconnectConnectedRef(nodeId);
   const promptContentRef = useRef<WorkflowPromptContent>([]);

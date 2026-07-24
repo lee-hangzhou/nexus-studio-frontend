@@ -1,0 +1,450 @@
+.page {
+  min-height: 100%;
+  padding: 28px 32px 48px;
+  background:
+    radial-gradient(
+      ellipse 80% 50% at 12% -10%,
+      color-mix(in srgb, var(--studio-primary) 12%, transparent),
+      transparent 55%
+    ),
+    var(--studio-bg);
+}
+
+.head {
+  width: 100%;
+  max-width: min(100%, var(--studio-create-workspace-w));
+  margin: 0 auto 16px;
+}
+
+.title {
+  margin: 0 0 6px;
+  color: var(--studio-text);
+  font-size: 28px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.lead {
+  margin: 0;
+  color: var(--studio-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+  max-width: min(100%, var(--studio-create-workspace-w));
+  margin-inline: auto;
+}
+
+.composerBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* 对齐预览稿 mode-switch：深底轨道 + 选中主色浅底/描边 */
+.modeSwitch {
+  align-self: flex-start;
+  padding: 4px;
+  gap: 2px;
+  border: 1px solid color-mix(in srgb, var(--studio-text) 8%, transparent);
+  border-radius: 999px;
+  background: var(--chat-sidebar-bg);
+}
+
+.modeSwitch :global(.studio-chip) {
+  min-height: 34px;
+  padding: 0 16px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--studio-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.modeSwitch :global(.studio-chip--active),
+.modeSwitch :global(.studio-chip[aria-pressed='true']) {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--studio-primary) 14%, transparent);
+  color: var(--studio-primary);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--studio-primary) 28%, transparent);
+}
+
+.composerMount {
+  display: grid;
+  min-width: 0;
+}
+
+.composerBanner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--studio-text-secondary);
+  font-size: 13px;
+}
+
+.composerSlot {
+  grid-area: 1 / 1;
+  min-width: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.composerSlotActive {
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+/* 首页外壳对齐：去掉创作页顶距，两套 composer 叠在同一槽位按较大者定高 */
+.composerMount :global(.studio-create__composer) {
+  padding-top: 0;
+}
+
+.composerMount :global(.studio-chat__composer),
+.composerMount :global(.studio-create__composer-v2) {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.composerMount :global(.studio-chat__composer .studio-composer-box) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+}
+
+.composerMount :global(.studio-chat__composer .studio-composer-box__input) {
+  flex: 1;
+  padding: 0 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.composerMount :global(.studio-composer-box__textarea--fixed) {
+  height: var(--studio-create-composer-textarea-h);
+  min-height: var(--studio-create-composer-textarea-h);
+  max-height: var(--studio-create-composer-textarea-h);
+}
+
+.composerMount :global(.studio-composer-box__top-spacer) {
+  flex-shrink: 0;
+  min-height: calc(var(--studio-create-ref-size, 40px) + 14px);
+}
+
+.createCanvasBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  align-self: flex-start;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--studio-border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--studio-bg) 40%, var(--studio-surface));
+  color: var(--studio-text);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.createCanvasBtn:hover,
+.createCanvasBtn:focus-visible {
+  border-color: color-mix(in srgb, var(--studio-primary) 45%, var(--studio-border));
+  color: var(--studio-primary);
+  outline: none;
+}
+
+.createCanvasBtn:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--studio-primary) 35%, transparent);
+}
+
+.section {
+  min-width: 0;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--studio-text);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.sectionMore {
+  color: var(--studio-primary);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sectionMore:hover,
+.sectionMore:focus-visible {
+  color: var(--studio-primary-hover);
+  outline: none;
+}
+
+.sectionLoading,
+.sectionError {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  color: var(--studio-text-secondary);
+  font-size: 13px;
+}
+
+.sectionError {
+  flex-wrap: wrap;
+}
+
+.textAction,
+.primaryAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--studio-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--studio-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.primaryAction {
+  background: var(--studio-primary);
+  border-color: transparent;
+  color: var(--studio-on-primary);
+  font-weight: 650;
+}
+
+.textAction:hover,
+.textAction:focus-visible,
+.primaryAction:hover,
+.primaryAction:focus-visible {
+  outline: none;
+  filter: brightness(1.05);
+}
+
+.canvasGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.canvasCard {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--studio-text) 7%, transparent);
+  border-radius: 16px;
+  background: var(--studio-surface);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.canvasCard:hover,
+.canvasCard:focus-visible {
+  border-color: color-mix(in srgb, var(--studio-primary) 40%, var(--studio-border));
+  outline: none;
+}
+
+.canvasThumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+}
+
+.canvasMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px 14px;
+  min-width: 0;
+}
+
+.canvasName {
+  overflow: hidden;
+  color: var(--studio-text);
+  font-size: 14px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.canvasTime {
+  color: var(--studio-text-muted);
+  font-size: 12px;
+}
+
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.taskRow {
+  margin: 0;
+}
+
+.taskLink {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--studio-text) 7%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--studio-surface) 92%, transparent);
+  color: inherit;
+  text-decoration: none;
+}
+
+.taskLink:hover,
+.taskLink:focus-visible {
+  border-color: color-mix(in srgb, var(--studio-primary) 40%, var(--studio-border));
+  outline: none;
+}
+
+.taskThumb,
+.taskThumbFallback {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  object-fit: cover;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--studio-secondary) 20%, transparent),
+      color-mix(in srgb, var(--studio-primary) 12%, transparent)
+    ),
+    var(--studio-surface-solid);
+}
+
+.taskBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.taskTitle {
+  overflow: hidden;
+  color: var(--studio-text);
+  font-size: 13px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskTags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid var(--studio-border);
+  border-radius: 999px;
+  color: var(--studio-text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.tagCreate {
+  border-color: color-mix(in srgb, var(--studio-primary) 28%, transparent);
+  background: color-mix(in srgb, var(--studio-primary) 8%, transparent);
+  color: var(--studio-primary);
+}
+
+.taskEta {
+  color: var(--studio-text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.createInput {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-sm);
+  background: var(--studio-bg);
+  color: var(--studio-text);
+  font: inherit;
+}
+
+.createInput:focus {
+  border-color: color-mix(in srgb, var(--studio-primary) 55%, var(--studio-border));
+  outline: none;
+}
+
+@media (max-width: 1023px) {
+  .page {
+    padding: 20px 16px 40px;
+  }
+
+  .canvasGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 599px) {
+  .page {
+    padding: 16px 12px 32px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
+
+  .taskLink {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .taskEta {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .body {
+    gap: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvasCard,
+  .taskLink,
+  .createCanvasBtn {
+    transition: none;
+  }
+}

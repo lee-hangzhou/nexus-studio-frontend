@@ -81,6 +81,11 @@ export function useCanvasGenerateModels(nodeId: string, kind: 'image' | 'video')
     [currentSpec],
   );
 
+  const maxReferenceImages = useMemo(() => {
+    const fromCaps = currentSpec?.param_options?.material_limits?.images;
+    return typeof fromCaps === 'number' && fromCaps > 0 ? fromCaps : undefined;
+  }, [currentSpec]);
+
   const modelReady = !loading && !loadFailed && models.length > 0 && !!resolvedModelId
     && (
       kind === 'image'
@@ -101,6 +106,7 @@ export function useCanvasGenerateModels(nodeId: string, kind: 'image' | 'video')
     resolutionOptions,
     durationOptions,
     referenceModeOptions,
+    maxReferenceImages,
   };
 }
 

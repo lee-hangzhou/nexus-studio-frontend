@@ -14,11 +14,11 @@ import { logout } from '../../api/auth';
 import { useUser } from '../../contexts/UserContext';
 
 const workspaceNav: { key: string; to: string; label: string; end?: boolean; icon: ReactNode }[] = [
-  { key: 'home', to: '/', label: 'Home', end: true, icon: <HomeOutlined /> },
+  { key: 'home', to: '/', label: '首页', end: true, icon: <HomeOutlined /> },
   { key: 'generate', to: '/generate', label: '创作', icon: <PictureOutlined /> },
   { key: 'projects', to: '/projects', label: '画布', icon: <AppstoreOutlined /> },
-  { key: 'chat', to: '/chat', label: '对话', icon: <CommentOutlined /> },
-  { key: 'assets', to: '/assets', label: '素材', icon: <FolderOpenOutlined /> },
+  { key: 'chat', to: '/chat', label: '超级工坊', icon: <CommentOutlined /> },
+  { key: 'assets', to: '/assets', label: '资源', icon: <FolderOpenOutlined /> },
 ];
 
 export function AppShell() {
@@ -39,7 +39,7 @@ export function AppShell() {
       ? 'home'
       : (location.pathname.split('/')[1] ?? 'home');
 
-  const shellMode = isFoyerRoute ? 'foyer' : isCanvasEditorRoute ? 'canvas' : 'workspace';
+  const shellMode = isCanvasEditorRoute ? 'canvas' : 'workspace';
 
   const userMenu = (
     <Dropdown
@@ -72,27 +72,7 @@ export function AppShell() {
 
   return (
     <div className={`studio-shell studio-shell--${shellMode}`}>
-      {isFoyerRoute ? (
-        <header className="studio-topbar studio-topbar--foyer">
-          <div className="studio-topbar__left">
-            <NavLink to="/" className="studio-brand" end>
-              <img src="/logo.png" alt="" className="studio-brand__mark" />
-              <span className="studio-brand__text">Nexus Studio</span>
-            </NavLink>
-          </div>
-          <div className="studio-topbar__right">
-            <NavLink to="/assets" className="studio-topbar__link">
-              素材库
-            </NavLink>
-            <NavLink to="/projects" className="studio-topbar__link">
-              全部工作
-            </NavLink>
-            {userMenu}
-          </div>
-        </header>
-      ) : null}
-
-      {!isFoyerRoute && !isCanvasEditorRoute ? (
+      {!isCanvasEditorRoute ? (
         <aside className="studio-rail" aria-label="工作导航">
           <NavLink to="/" className="studio-rail__brand" title="Nexus Studio" end>
             <img src="/logo.png" alt="" className="studio-brand__mark" />

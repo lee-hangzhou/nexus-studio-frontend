@@ -80,7 +80,7 @@ export function CreateHistoryDrawer({
             共 {totalCount} 条 · 当前筛选 {filtered.length} 条
           </span>
           <Link to="/assets?source=generate" className="studio-create-history__assets-link" onClick={onClose}>
-            在资产库查看成稿
+            在资源库查看成稿
           </Link>
         </div>
       }

@@ -112,7 +112,7 @@ function CanvasPageInner() {
     void getProject(projectId)
       .then((p) => setProjectName(p.name))
       .catch(() => {
-        message.error('项目不存在或无权访问');
+        message.error('画布不存在或无权访问');
         navigate('/projects', { replace: true });
       });
   }, [projectId, navigate]);
@@ -224,7 +224,7 @@ function CanvasPageInner() {
         await runner((f) => handleStreamFrame(f, activeTurnRef.current ?? ''), ac.signal);
       } catch (err) {
         if (err instanceof Error && err.message === 'canvas_project_busy') {
-          message.warning('项目正在执行 Agent，请稍后再试');
+          message.warning('画布正在执行 Agent，请稍后再试');
         } else if (err instanceof Error && err.message !== 'http_409') {
           message.error(err.message || '请求失败');
         }
@@ -598,8 +598,8 @@ export function CanvasPage() {
   if (!Number.isFinite(projectId) || projectId <= 0) {
     return (
       <div className="workflow-canvas-page workflow-canvas-page--invalid">
-        <p>无效的项目 ID，请从项目列表进入。</p>
-        <a href="/projects">全部工作</a>
+        <p>无效的画布，请从画布列表进入。</p>
+        <a href="/projects">全部画布</a>
       </div>
     );
   }

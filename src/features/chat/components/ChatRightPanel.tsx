@@ -124,12 +124,12 @@ export function ChatRightPanel({ messages, onAddRef, onCollapse }: ChatRightPane
       <div className="studio-panel__section">
         <div className="studio-panel__section-header">
           <span className="studio-panel__section-title">
-            参考素材{refMaterials.length > 0 ? ` (${refMaterials.length})` : ''}
+            参考{refMaterials.length > 0 ? ` (${refMaterials.length})` : ''}
           </span>
         </div>
 
         {refMaterials.length === 0 ? (
-          <div className="studio-panel__placeholder">暂无参考素材</div>
+          <div className="studio-panel__placeholder">暂无参考</div>
         ) : (
           refMaterials.map((attachment) => (
             <PanelAttachmentRow key={attachment.attachment_id} attachment={attachment} />
@@ -138,7 +138,7 @@ export function ChatRightPanel({ messages, onAddRef, onCollapse }: ChatRightPane
 
         <button type="button" className="studio-panel__add-btn" onClick={onAddRef}>
           <PlusOutlined />
-          添加参考素材
+          添加参考
         </button>
       </div>
     </aside>

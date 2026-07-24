@@ -14,6 +14,7 @@ import type { CanvasFlowEdge, CanvasFlowNode } from '../../schema/canvasSchema';
 import { useDirectPredecessors } from './useDirectPredecessors';
 import { useStore } from '@xyflow/react';
 import { useCallback } from 'react';
+import { IMAGE_PROMPT_MAX_REFERENCE_IMAGES } from '../constants';
 
 type Options = {
   allowedTypes?: WorkflowMentionMediaType[];
@@ -23,7 +24,7 @@ type Options = {
 /** 连线前置节点：顶栏预览 + @ 数据源 + 提交 asset id */
 export function useConnectedPredecessorRefs(nodeId: string, active: boolean, options?: Options) {
   const allowedTypes = options?.allowedTypes ?? ['image', 'video', 'audio'];
-  const maxReferenceCount = options?.maxReferenceCount ?? 12;
+  const maxReferenceCount = options?.maxReferenceCount ?? IMAGE_PROMPT_MAX_REFERENCE_IMAGES;
   const predecessors = useDirectPredecessors(nodeId, active);
   const graphNodes = useStore(useCallback((s) => (active ? s.nodes : []), [active]));
   const graphEdges = useStore(useCallback((s) => (active ? s.edges : []), [active]));

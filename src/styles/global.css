@@ -38,9 +38,6 @@
   --studio-create-result-info-font: 14px;
   --studio-create-result-prompt-font: 14px;
   --studio-create-result-error-font: 14px;
-  --studio-create-result-action-font: 14px;
-  --studio-create-result-action-h: 32px;
-  --studio-create-result-action-x: 12px;
   --studio-create-result-info-gap: 10px;
   --studio-create-result-footer-gap: 16px;
   --studio-create-result-meta-x: 18px;
@@ -479,11 +476,6 @@ a:hover {
 .studio-shell--canvas {
   flex-direction: row;
   padding-top: 0;
-}
-
-.studio-shell--foyer {
-  flex-direction: column;
-  padding-top: var(--studio-topbar-h);
 }
 
 .studio-shell--canvas .studio-topbar {
@@ -2128,16 +2120,11 @@ a:hover {
   color: var(--studio-text-secondary);
 }
 
-.studio-composer-box__model.ant-select:hover .ant-select-selector,
-.studio-composer-box__model.ant-select-focused .ant-select-selector {
-  color: var(--studio-text) !important;
-  background: rgba(15, 23, 42, 0.04) !important;
-}
-
 .studio-composer-box__model .ant-select-selection-item {
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* hover / open 字色权威在 studio-v2.css（--studio-control-*） */
 }
 
 .studio-composer-box__send {
@@ -3271,7 +3258,6 @@ a:hover {
   max-width: none;
 }
 
-/* 创作历史侧栏 */
 /* ── 创作 Composer 新设计 ─────────────────────────────────────────────────── */
 
 .studio-create__composer-v2 {
@@ -3281,8 +3267,10 @@ a:hover {
   padding-bottom: 4px;
 }
 
-.studio-create__composer-v2 .studio-composer-box {
-  border-radius: 16px;
+.studio-create__composer .studio-composer-box__footer-left {
+  flex: 1;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .studio-create__composer .studio-composer-box__textarea {
@@ -3459,17 +3447,6 @@ a:hover {
   cursor: pointer;
   transition: border-color 0.12s, background 0.12s;
   white-space: nowrap;
-}
-
-.studio-create__params-capsule:hover {
-  border-color: var(--studio-primary);
-  background: rgba(6, 147, 249, 0.04);
-}
-
-.studio-create__params-capsule--active {
-  border-color: var(--studio-primary);
-  background: rgba(6, 147, 249, 0.07);
-  color: var(--studio-primary);
 }
 
 .studio-create__at-btn {
@@ -3785,23 +3762,13 @@ a:hover {
   min-width: 0;
   min-height: 46px;
   padding: 5px 4px;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 10px;
   background: transparent;
-  color: #8b97a8;
+  color: var(--studio-text-secondary);
   cursor: pointer;
-  transition: color 0.12s, background 0.12s, box-shadow 0.12s;
-}
-
-.studio-create__ratio-btn:hover {
-  color: var(--studio-primary);
-  background: rgba(255, 255, 255, 0.52);
-}
-
-.studio-create__ratio-btn--active {
-  color: var(--studio-primary);
-  background: #e7f3ff;
-  box-shadow: inset 0 0 0 1.5px var(--studio-primary);
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+  /* hover / active 交互态权威在 studio-v2.css（--studio-control-*） */
 }
 
 .studio-create__ratio-icon {
@@ -3815,10 +3782,6 @@ a:hover {
   line-height: 1;
   color: currentColor;
   white-space: nowrap;
-}
-
-.studio-create__ratio-btn--active .studio-create__ratio-label {
-  font-weight: 700;
 }
 
 /* 分辨率 + 数量 pills */
@@ -3843,26 +3806,16 @@ a:hover {
   min-width: 0;
   min-height: 34px;
   padding: 5px 8px;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 10px;
   background: transparent;
   font-size: 12px;
   font-weight: 700;
-  color: #8b97a8;
+  color: var(--studio-text-secondary);
   cursor: pointer;
-  transition: color 0.12s, background 0.12s, box-shadow 0.12s;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
   text-align: center;
-}
-
-.studio-create__option-pill:hover {
-  color: var(--studio-primary);
-  background: rgba(255, 255, 255, 0.52);
-}
-
-.studio-create__option-pill--active {
-  background: #e7f3ff;
-  color: var(--studio-primary);
-  box-shadow: inset 0 0 0 1.5px var(--studio-primary);
+  /* hover / active 交互态权威在 studio-v2.css（--studio-control-*） */
 }
 
 @media (max-width: 640px) {
@@ -3894,7 +3847,7 @@ a:hover {
   min-width: 0;
   width: 100%;
   padding: 0 2px;
-  color: #52627a;
+  /* 字色权威在 studio-v2：消费既有 text / secondary / muted，禁止再写浅色硬编码 */
   font-size: var(--studio-create-result-info-font);
   line-height: 1.4;
 }
@@ -3919,7 +3872,6 @@ a:hover {
 
 .studio-create__result-prompt-text {
   min-width: 0;
-  color: #26364f;
   font-size: var(--studio-create-result-prompt-font);
   font-weight: 600;
   line-height: 1.45;
@@ -3950,7 +3902,7 @@ a:hover {
   gap: 10px;
   min-width: 0;
   padding: 0 var(--studio-create-result-meta-x);
-  border-left: 1px solid #d8e0ec;
+  border-left: 1px solid var(--studio-border);
 }
 
 .studio-create__result-meta-group:first-child {
@@ -3960,21 +3912,13 @@ a:hover {
 
 .studio-create__result-meta-label {
   flex: none;
-  color: #7e8da3;
 }
 
 .studio-create__result-meta-value {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #26364f;
   font-weight: 600;
-}
-
-.studio-create__result-meta-model {
-  color: #173e68;
-  text-decoration: underline;
-  text-underline-offset: 3px;
 }
 
 .studio-create__result-actions {
@@ -3983,28 +3927,6 @@ a:hover {
   justify-content: flex-start;
   gap: 8px;
   white-space: nowrap;
-}
-
-.studio-create__result-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: var(--studio-create-result-action-h);
-  padding: 0 var(--studio-create-result-action-x);
-  border: 1px solid var(--studio-border);
-  border-radius: 8px;
-  background: #fff;
-  color: #26364f;
-  font-size: var(--studio-create-result-action-font);
-  font-weight: 500;
-  cursor: pointer;
-  transition: border-color 0.12s, color 0.12s, background 0.12s;
-}
-
-.studio-create__result-action:hover {
-  border-color: rgba(6, 147, 249, 0.35);
-  color: var(--studio-primary);
-  background: rgba(6, 147, 249, 0.04);
 }
 
 .studio-create__result-stack {
@@ -5336,9 +5258,6 @@ a:hover {
     --studio-create-result-info-font: 13px;
     --studio-create-result-prompt-font: 13px;
     --studio-create-result-error-font: 13px;
-    --studio-create-result-action-font: 13px;
-    --studio-create-result-action-h: 30px;
-    --studio-create-result-action-x: 10px;
     --studio-create-result-info-gap: 8px;
     --studio-create-result-footer-gap: 14px;
   }
@@ -5365,9 +5284,6 @@ a:hover {
     --studio-create-result-info-font: 14px;
     --studio-create-result-prompt-font: 15px;
     --studio-create-result-error-font: 14px;
-    --studio-create-result-action-font: 14px;
-    --studio-create-result-action-h: 34px;
-    --studio-create-result-action-x: 14px;
     --studio-create-result-info-gap: 11px;
     --studio-create-result-footer-gap: 18px;
   }
@@ -5378,9 +5294,6 @@ a:hover {
     --studio-create-result-info-font: 15px;
     --studio-create-result-prompt-font: 16px;
     --studio-create-result-error-font: 15px;
-    --studio-create-result-action-font: 15px;
-    --studio-create-result-action-h: 36px;
-    --studio-create-result-action-x: 16px;
     --studio-create-result-info-gap: 12px;
     --studio-create-result-footer-gap: 20px;
     --studio-create-result-meta-x: 20px;
@@ -5429,9 +5342,6 @@ a:hover {
     --studio-create-result-info-font: 14px;
     --studio-create-result-prompt-font: 14px;
     --studio-create-result-error-font: 14px;
-    --studio-create-result-action-font: 14px;
-    --studio-create-result-action-h: 32px;
-    --studio-create-result-action-x: 12px;
     --studio-create-result-info-gap: 10px;
     --studio-create-result-footer-gap: 12px;
     --studio-create-result-meta-x: 14px;

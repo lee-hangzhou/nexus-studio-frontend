@@ -1,11 +1,17 @@
 import { CloseOutlined, FileOutlined } from '@ant-design/icons';
 
-import type { UploadedAttachment } from '../../../api/chat';
-import { isImageAttachment } from '../hooks/useAttachmentUrl';
+import { isImageMime } from '../hooks/useAttachmentUrl';
+
+export type ComposerAttachmentChip = {
+  id: string;
+  filename: string;
+  mime_type: string;
+  preview_url?: string;
+};
 
 type Props = {
-  attachments: UploadedAttachment[];
-  onRemove: (attachmentId: number) => void;
+  attachments: ComposerAttachmentChip[];
+  onRemove: (id: string) => void;
 };
 
 export function ComposerAttachmentList({ attachments, onRemove }: Props) {
@@ -15,28 +21,31 @@ export function ComposerAttachmentList({ attachments, onRemove }: Props) {
 
   return (
     <div className="studio-composer-box__attachments">
-      {attachments.map((item) => (
-        <div key={item.attachment_id} className="studio-composer-chip">
-          {isImageAttachment(item) && item.preview_url ? (
-            <img className="studio-composer-chip__thumb" src={item.preview_url} alt={item.filename} />
-          ) : (
-            <span className="studio-composer-chip__icon">
-              <FileOutlined />
+      {attachments.map((item) => {
+        const isImage = isImageMime(item.mime_type) && Boolean(item.preview_url);
+        return (
+          <div key={item.id} className="studio-composer-chip">
+            {isImage ? (
+              <img className="studio-composer-chip__thumb" src={item.preview_url} alt={item.filename} />
+            ) : (
+              <span className="studio-composer-chip__icon">
+                <FileOutlined />
+              </span>
+            )}
+            <span className="studio-composer-chip__name" title={item.filename}>
+              {item.filename}
             </span>
-          )}
-          <span className="studio-composer-chip__name" title={item.filename}>
-            {item.filename}
-          </span>
-          <button
-            type="button"
-            className="studio-composer-chip__remove"
-            aria-label={`移除 ${item.filename}`}
-            onClick={() => onRemove(item.attachment_id)}
-          >
-            <CloseOutlined />
-          </button>
-        </div>
-      ))}
+            <button
+              type="button"
+              className="studio-composer-chip__remove"
+              aria-label={`移除 ${item.filename}`}
+              onClick={() => onRemove(item.id)}
+            >
+              <CloseOutlined />
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }

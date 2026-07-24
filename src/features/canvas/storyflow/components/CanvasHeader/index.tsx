@@ -11,7 +11,7 @@ export function CanvasHeader({
   busy: boolean;
 }) {
   const navigate = useNavigate();
-  const title = projectName?.trim() || `项目 #${projectId}`;
+  const title = projectName?.trim() || `画布 #${projectId}`;
 
   return (
     <header className="workflow-canvas-header">

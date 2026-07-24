@@ -14,6 +14,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GenerateFeedItem, GenerateResultMedia } from '../types';
 import { isTaskInProgress, TASK_STATUS } from '../../../domains/task/types';
+import { StudioButton } from '../../../shared/ui/StudioButton';
 import { buildPreviewSlides, findPreviewIndex } from '../utils/previewGallery';
 import { CreateResultPreview } from './CreateResultPreview';
 import { PromptWithMentions } from './PromptWithMentions';
@@ -220,7 +221,7 @@ function StageResultInfo({
           <div className="studio-create__result-meta-group studio-create__result-meta-group--model">
             <span className="studio-create__result-meta-label">模型</span>
             <span
-              className="studio-create__result-meta-value studio-create__result-meta-model"
+              className="studio-create__result-meta-value"
               title={item.modelLabel}
             >
               {item.modelLabel}
@@ -236,16 +237,14 @@ function StageResultInfo({
 
         <div className="studio-create__result-actions">
           {onRegenerate && (
-            <button type="button" className="studio-create__result-action" onClick={onRegenerate}>
-              <ReloadOutlined />
+            <StudioButton variant="ghost" size="sm" icon={<ReloadOutlined />} onClick={onRegenerate}>
               再次生成
-            </button>
+            </StudioButton>
           )}
           {onEdit && (
-            <button type="button" className="studio-create__result-action" onClick={onEdit}>
-              <EditOutlined />
+            <StudioButton variant="ghost" size="sm" icon={<EditOutlined />} onClick={onEdit}>
               重新编辑
-            </button>
+            </StudioButton>
           )}
         </div>
       </div>

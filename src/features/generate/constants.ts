@@ -1,5 +1,8 @@
 import type { GenerateKind } from './types';
 
+/** 创作页/模型未返回 material_limits 时的参考图软上限 */
+export const DEFAULT_GENERATE_MAX_REFERENCE_IMAGES = 12;
+
 /** 胶片条中「最近」条数上限（不含置顶） */
 export const FILMSTRIP_RECENT_LIMIT = 5;
 

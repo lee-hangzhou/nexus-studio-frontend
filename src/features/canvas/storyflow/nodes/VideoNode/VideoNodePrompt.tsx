@@ -62,6 +62,7 @@ export function VideoNodePrompt({
     resolutionOptions,
     durationOptions,
     referenceModeOptions,
+    maxReferenceImages,
   } = useCanvasGenerateModels(nodeId, 'video');
   const {
     mentionProvider,
@@ -71,7 +72,7 @@ export function VideoNodePrompt({
     connectedPromptTexts,
   } = useConnectedPredecessorRefs(nodeId, visible, {
     allowedTypes: ['image', 'video', 'audio'],
-    maxReferenceCount: IMAGE_PROMPT_MAX_REFERENCE_IMAGES,
+    maxReferenceCount: maxReferenceImages ?? IMAGE_PROMPT_MAX_REFERENCE_IMAGES,
   });
   const handleRemoveConnectedRef = useDisconnectConnectedRef(nodeId);
   const promptContentRef = useRef<WorkflowPromptContent>([]);

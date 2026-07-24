@@ -12,14 +12,14 @@ export const ASSET_KIND_OPTIONS: { value: AssetKindFilter; label: string }[] = [
 export const ASSET_SOURCE_OPTIONS: { value: AssetSourceFilter; label: string }[] = [
   { value: 'all', label: '全部来源' },
   { value: 'generate', label: '创作' },
-  { value: 'chat', label: '对话' },
+  { value: 'chat', label: '超级工坊' },
   { value: 'canvas', label: '画布' },
   { value: 'import', label: '导入' },
 ];
 
 export const ASSET_SOURCE_LABEL: Record<AssetSource, string> = {
   generate: '创作',
-  chat: '对话',
+  chat: '超级工坊',
   canvas: '画布',
   import: '导入',
 };

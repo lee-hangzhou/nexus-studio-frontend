@@ -28,6 +28,14 @@
   --studio-create-history-w: 360px;
   --studio-create-workspace-w: 1040px;
   --studio-assets-column: min(1360px, calc(100vw - 96px));
+
+  /* 选项控件唯一交互态：Chip / 参数 pill / Select option 必须只消费这套 */
+  --studio-control-hover-fg: var(--studio-text);
+  --studio-control-hover-border: color-mix(in srgb, var(--studio-text) 20%, transparent);
+  --studio-control-hover-bg: color-mix(in srgb, var(--studio-text) 6%, transparent);
+  --studio-control-selected-fg: var(--studio-primary);
+  --studio-control-selected-border: color-mix(in srgb, var(--studio-primary) 35%, transparent);
+  --studio-control-selected-bg: color-mix(in srgb, var(--studio-primary) 10%, transparent);
 }
 
 html {
@@ -79,17 +87,18 @@ body {
 
 .studio-chip:hover:not(:disabled),
 .studio-chip:focus-visible:not(:disabled) {
-  color: var(--studio-text);
-  border-color: color-mix(in srgb, var(--studio-text) 20%, transparent);
+  color: var(--studio-control-hover-fg);
+  border-color: var(--studio-control-hover-border);
+  background: var(--studio-control-hover-bg);
   outline: none;
 }
 
 .studio-chip--active,
 .studio-chip[aria-pressed='true'] {
-  color: var(--studio-primary);
+  color: var(--studio-control-selected-fg);
   font-weight: 650;
-  border-color: color-mix(in srgb, var(--studio-primary) 35%, transparent);
-  background: color-mix(in srgb, var(--studio-primary) 10%, transparent);
+  border-color: var(--studio-control-selected-border);
+  background: var(--studio-control-selected-bg);
 }
 
 .studio-chip:disabled {
@@ -380,9 +389,11 @@ body {
   bottom: auto;
   transform: none;
   font-size: 9px;
-  line-height: 1;
+  line-height: 1.2;
   color: inherit;
-  white-space: nowrap;
+  text-align: center;
+  white-space: normal;
+  max-width: 100%;
   pointer-events: none;
 }
 
@@ -425,198 +436,6 @@ body {
 .studio-main--projects,
 .studio-main--assets {
   overflow-y: auto;
-}
-
-/* Foyer */
-.studio-foyer {
-  min-height: 100%;
-  padding: clamp(40px, 8vh, 72px) clamp(24px, 8vw, 120px) 40px;
-  display: flex;
-  flex-direction: column;
-  background:
-    radial-gradient(ellipse at 50% -8%, rgba(240, 179, 91, 0.14), transparent 48%),
-    var(--studio-bg);
-}
-
-.studio-foyer__hero {
-  max-width: 640px;
-}
-
-.studio-foyer__title {
-  margin: 0 0 16px;
-  color: var(--studio-text);
-  font-size: clamp(34px, 5vw, 52px);
-  font-weight: 650;
-  letter-spacing: -0.038em;
-  line-height: 1.08;
-}
-
-.studio-foyer__lead {
-  margin: 0 0 40px;
-  max-width: 460px;
-  color: var(--studio-text-secondary);
-  font-size: 16px;
-  line-height: 1.65;
-}
-
-.studio-foyer__ctas {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 56px;
-}
-
-
-.studio-foyer__recent {
-  margin-top: auto;
-}
-
-.studio-foyer__recent-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
-}
-
-.studio-foyer__recent-head h2 {
-  margin: 0;
-  color: var(--studio-text-muted);
-  font-size: 12px;
-  font-weight: 550;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.studio-foyer__recent-more {
-  color: var(--studio-primary);
-  font-size: 12px;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.studio-foyer__recent-more:hover {
-  color: var(--studio-primary-hover);
-}
-
-.studio-foyer__loading {
-  display: grid;
-  place-items: center;
-  min-height: 120px;
-}
-
-.studio-foyer__recent-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.studio-foyer__card {
-  width: 100%;
-  min-height: 96px;
-  padding: 12px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 16px;
-  background: linear-gradient(180deg, #1a1e25, #13161b);
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
-}
-
-.studio-foyer__card:hover {
-  border-color: rgba(240, 179, 91, 0.22);
-}
-
-.studio-foyer__card-thumb {
-  width: 108px;
-  height: 72px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border-radius: 10px;
-  background: #15181d;
-  color: var(--studio-text-muted);
-  font-size: 18px;
-}
-
-.studio-foyer__card-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.studio-foyer__card-thumb--canvas,
-.studio-foyer__card-thumb--chat {
-  background:
-    linear-gradient(135deg, rgba(240, 179, 91, 0.12), transparent 50%),
-    #15181d;
-}
-
-.studio-foyer__card-meta {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.studio-foyer__card-kind {
-  color: var(--studio-primary);
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.studio-foyer__card-meta strong {
-  color: var(--studio-text);
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.studio-foyer__card-meta span:last-child {
-  color: var(--studio-text-muted);
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.studio-foyer__card-action {
-  flex: none;
-  padding: 9px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-  background: #1b1f26;
-  color: var(--studio-text);
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.studio-foyer__create-input {
-  width: 100%;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--studio-radius);
-  background: #111419;
-  color: var(--studio-text);
-  outline: none;
-}
-
-.studio-foyer__create-input:focus {
-  border-color: rgba(240, 179, 91, 0.55);
-  box-shadow: 0 0 0 2px rgba(240, 179, 91, 0.12);
 }
 
 /* Projects */
@@ -944,6 +763,19 @@ body {
   border-color: rgba(240, 179, 91, 0.58);
 }
 
+.studio-composer-box__send {
+  border-radius: 4px;
+  background: var(--studio-primary);
+  color: var(--studio-on-primary);
+  box-shadow: none;
+}
+
+.studio-composer-box__send.studio-composer-box__send--stop {
+  background: color-mix(in srgb, var(--studio-surface) 88%, #fff);
+  color: #f07178;
+  border: 1px solid color-mix(in srgb, #f07178 45%, transparent);
+}
+
 .studio-composer-box__input,
 .studio-composer-box__textarea,
 .studio-composer-box__textarea * {
@@ -1044,18 +876,24 @@ body {
   color: var(--studio-primary-hover);
 }
 
+/* 结果信息：复用既有字色层级，不另开语义
+   主内容 text / 辅助值 secondary / 标签 muted */
 .studio-create__result-info {
-  color: var(--studio-text);
+  color: var(--studio-text-secondary);
 }
 
-.studio-create__result-prompt,
-.studio-create__result-meta-value {
+.studio-create__result-prompt-text {
   color: var(--studio-text);
 }
 
 .studio-create__result-meta-label,
 .studio-create__caption-meta {
   color: var(--studio-text-muted);
+}
+
+.studio-create__result-meta-value {
+  color: var(--studio-text-secondary);
+  font-weight: 550;
 }
 
 .studio-create__composer {
@@ -1065,7 +903,9 @@ body {
 .studio-create__inspiration,
 .studio-create__mode-btn,
 .studio-create__params-capsule,
-.studio-create__at-btn {
+.studio-create__at-btn,
+.studio-create__task-select.ant-select .ant-select-selector,
+.studio-create__model-select.ant-select .ant-select-selector {
   border-radius: 4px;
 }
 
@@ -1087,10 +927,112 @@ body {
   color: var(--studio-text-secondary);
 }
 
+.studio-create__params-capsule:hover,
+.studio-create__at-btn:hover {
+  color: var(--studio-control-hover-fg);
+  border-color: var(--studio-control-hover-border);
+  background: var(--studio-control-hover-bg);
+}
+
 .studio-create__mode-btn--active,
 .studio-create__params-capsule--active {
-  background: rgba(240, 179, 91, 0.13);
-  color: var(--studio-primary-hover);
+  color: var(--studio-control-selected-fg);
+  border-color: var(--studio-control-selected-border);
+  background: var(--studio-control-selected-bg);
+}
+
+/* 创作底栏：类型 / 模型 Select 与参数胶囊同一套控件规格 + 同一套 control 交互态 */
+.studio-create__task-select.ant-select .ant-select-selector,
+.studio-create__model-select.ant-select .ant-select-selector {
+  height: 32px !important;
+  padding: 0 28px 0 10px !important;
+  border: 1px solid color-mix(in srgb, var(--studio-text) 12%, transparent) !important;
+  background: #1a1e24 !important;
+  box-shadow: none !important;
+  color: var(--studio-text-secondary) !important;
+  font-size: 13px !important;
+  font-weight: 550 !important;
+}
+
+.studio-create__task-select.ant-select .ant-select-selection-item,
+.studio-create__model-select.ant-select .ant-select-selection-item,
+.studio-create__task-select.ant-select .ant-select-arrow,
+.studio-create__model-select.ant-select .ant-select-arrow {
+  font-weight: 550 !important;
+  color: var(--studio-text-secondary) !important;
+  line-height: 30px !important;
+}
+
+.studio-create__task-select.ant-select .ant-select-arrow,
+.studio-create__model-select.ant-select .ant-select-arrow {
+  line-height: 1 !important;
+}
+
+.studio-create__task-select.ant-select:hover:not(.ant-select-disabled):not(.ant-select-open) .ant-select-selector,
+.studio-create__model-select.ant-select:hover:not(.ant-select-disabled):not(.ant-select-open) .ant-select-selector {
+  border-color: var(--studio-control-hover-border) !important;
+  background: var(--studio-control-hover-bg) !important;
+  color: var(--studio-control-hover-fg) !important;
+}
+
+.studio-create__task-select.ant-select:hover:not(.ant-select-disabled):not(.ant-select-open) .ant-select-selection-item,
+.studio-create__model-select.ant-select:hover:not(.ant-select-disabled):not(.ant-select-open) .ant-select-selection-item,
+.studio-create__task-select.ant-select:hover:not(.ant-select-disabled):not(.ant-select-open) .ant-select-arrow,
+.studio-create__model-select.ant-select:hover:not(.ant-select-disabled):not(.ant-select-open) .ant-select-arrow {
+  color: var(--studio-control-hover-fg) !important;
+}
+
+/* 展开 / 聚焦：与参数胶囊 --active 一致，禁止再跳成纯白字 */
+.studio-create__task-select.ant-select-focused .ant-select-selector,
+.studio-create__model-select.ant-select-focused .ant-select-selector,
+.studio-create__task-select.ant-select-open .ant-select-selector,
+.studio-create__model-select.ant-select-open .ant-select-selector {
+  border-color: var(--studio-control-selected-border) !important;
+  background: var(--studio-control-selected-bg) !important;
+  color: var(--studio-control-selected-fg) !important;
+}
+
+.studio-create__task-select.ant-select-focused .ant-select-selection-item,
+.studio-create__model-select.ant-select-focused .ant-select-selection-item,
+.studio-create__task-select.ant-select-open .ant-select-selection-item,
+.studio-create__model-select.ant-select-open .ant-select-selection-item,
+.studio-create__task-select.ant-select-focused .ant-select-arrow,
+.studio-create__model-select.ant-select-focused .ant-select-arrow,
+.studio-create__task-select.ant-select-open .ant-select-arrow,
+.studio-create__model-select.ant-select-open .ant-select-arrow {
+  color: var(--studio-control-selected-fg) !important;
+}
+
+.studio-create__model-select.ant-select {
+  max-width: 140px;
+}
+
+/* Chat / Canvas Agent 底栏模型 Select：禁止 focused 跳白字，对齐 control token */
+.studio-composer-box__model.ant-select .ant-select-selector,
+.studio-composer-box__model.ant-select .ant-select-selection-item,
+.studio-composer-box__model.ant-select .ant-select-arrow {
+  color: var(--studio-text-secondary) !important;
+}
+
+.studio-composer-box__model.ant-select:hover:not(.ant-select-disabled):not(.ant-select-open) .ant-select-selector,
+.studio-composer-box__model.ant-select:hover:not(.ant-select-disabled):not(.ant-select-open) .ant-select-selection-item,
+.studio-composer-box__model.ant-select:hover:not(.ant-select-disabled):not(.ant-select-open) .ant-select-arrow {
+  color: var(--studio-control-hover-fg) !important;
+  background: var(--studio-control-hover-bg) !important;
+}
+
+.studio-composer-box__model.ant-select-focused .ant-select-selector,
+.studio-composer-box__model.ant-select-open .ant-select-selector,
+.studio-composer-box__model.ant-select-focused .ant-select-selection-item,
+.studio-composer-box__model.ant-select-open .ant-select-selection-item,
+.studio-composer-box__model.ant-select-focused .ant-select-arrow,
+.studio-composer-box__model.ant-select-open .ant-select-arrow {
+  color: var(--studio-control-selected-fg) !important;
+}
+
+.studio-composer-box__model.ant-select-focused .ant-select-selector,
+.studio-composer-box__model.ant-select-open .ant-select-selector {
+  background: var(--studio-control-selected-bg) !important;
 }
 
 .studio-create__composer .studio-composer-box {
@@ -1120,11 +1062,29 @@ body {
   color: var(--studio-primary-hover);
 }
 
-.studio-create__send-btn {
-  border-radius: 4px;
-  background: var(--studio-primary);
-  color: var(--studio-on-primary);
-  box-shadow: none;
+.studio-create__composer-box {
+  position: relative;
+}
+
+.studio-create__ref-hint {
+  align-self: center;
+  font-size: 12px;
+  color: var(--studio-text-secondary);
+}
+
+.studio-create__params-ratio-ico {
+  display: inline-block;
+  width: 12px;
+  height: 9px;
+  margin-right: 4px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.studio-create__file-input {
+  display: none;
 }
 
 .studio-create__params-popup {
@@ -1132,6 +1092,68 @@ body {
   border-radius: 6px;
   background: #1c2026;
   box-shadow: var(--studio-shadow-lg);
+}
+
+/* 参数选项：布局在 global，交互态只走 --studio-control-*（与 StudioChip / Select 同源） */
+.studio-create__params-label {
+  color: var(--studio-text-muted);
+}
+
+.studio-create__ratio-grid,
+.studio-create__pill-row {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.studio-create__ratio-btn,
+.studio-create__option-pill {
+  border: 1px solid transparent;
+  color: var(--studio-text-secondary);
+  background: transparent;
+  box-shadow: none;
+}
+
+.studio-create__ratio-btn:hover,
+.studio-create__option-pill:hover {
+  color: var(--studio-control-hover-fg);
+  border-color: var(--studio-control-hover-border);
+  background: var(--studio-control-hover-bg);
+}
+
+.studio-create__ratio-btn--active,
+.studio-create__option-pill--active,
+.studio-create__ratio-btn--active:hover,
+.studio-create__option-pill--active:hover {
+  color: var(--studio-control-selected-fg);
+  border-color: var(--studio-control-selected-border);
+  background: var(--studio-control-selected-bg);
+  box-shadow: none;
+  font-weight: 650;
+}
+
+.studio-create__ratio-btn--active .studio-create__ratio-label {
+  font-weight: 650;
+}
+
+/* Ant Select 下拉项：默认次级字色，hover/选中走 --studio-control-*（禁止 Antd 默认白字） */
+.ant-select-dropdown .ant-select-item-option {
+  color: var(--studio-text-secondary) !important;
+  font-weight: 500;
+}
+
+.ant-select-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+  background: var(--studio-control-hover-bg) !important; /* Antd 行内背景优先级高 */
+  color: var(--studio-control-hover-fg) !important;
+}
+
+.ant-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background: var(--studio-control-selected-bg) !important;
+  color: var(--studio-control-selected-fg) !important;
+  font-weight: 650;
+}
+
+.ant-select-dropdown .ant-select-item-option-selected.ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+  background: var(--studio-control-selected-bg) !important;
+  color: var(--studio-control-selected-fg) !important;
 }
 
 .studio-create__history-panel {
@@ -1331,58 +1353,6 @@ body {
 
 .studio-shell--canvas .studio-topbar {
   display: none;
-}
-
-@media (max-width: 1023px) {
-  .studio-foyer {
-    padding: 36px 24px 32px;
-  }
-
-  .studio-foyer__recent-list {
-    grid-template-columns: 1fr;
-  }
-
-  .studio-foyer__ctas {
-    margin-bottom: 40px;
-  }
-
-  .studio-topbar--foyer {
-    padding: 0 16px;
-  }
-
-  .studio-topbar--foyer .studio-topbar__link {
-    padding: 8px 8px;
-    font-size: 12px;
-  }
-}
-
-@media (max-width: 560px) {
-  .studio-topbar--foyer .studio-brand__text {
-    display: none;
-  }
-
-  .studio-foyer__ctas {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .studio-foyer__btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .studio-foyer__card {
-    flex-wrap: wrap;
-  }
-
-  .studio-foyer__card-thumb {
-    width: 72px;
-    height: 54px;
-  }
-
-  .studio-foyer__card-action {
-    margin-left: auto;
-  }
 }
 
 @media (max-width: 960px) {

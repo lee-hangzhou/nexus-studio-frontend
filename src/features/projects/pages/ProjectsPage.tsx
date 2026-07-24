@@ -6,28 +6,12 @@ import 'dayjs/locale/zh-cn';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createProject, listProjects, type ProjectView } from '../../../api/projects';
+import { projectAccentStyle } from '../projectAccent';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
 
 const PAGE_SIZE = 11;
-
-const PROJECT_PALETTES = [
-  { base: '#26302c', accent: '#485d4f' },
-  { base: '#30282d', accent: '#5d4650' },
-  { base: '#2b2c35', accent: '#4e5268' },
-  { base: '#332d25', accent: '#62513d' },
-] as const;
-
-function projectAccent(project: ProjectView) {
-  const palette = PROJECT_PALETTES[project.id % PROJECT_PALETTES.length];
-  return {
-    backgroundColor: palette.base,
-    backgroundImage:
-      `linear-gradient(135deg, transparent 0 46%, ${palette.accent} 46% 58%, transparent 58%), ` +
-      'repeating-linear-gradient(90deg, transparent 0 28px, rgba(255,255,255,0.035) 28px 29px)',
-  };
-}
 
 export function ProjectsPage() {
   const navigate = useNavigate();
@@ -47,7 +31,7 @@ export function ProjectsPage() {
       setItems(res.items ?? []);
       setTotal(res.total ?? 0);
     } catch (err) {
-      message.error(err instanceof Error ? err.message : '项目列表加载失败');
+      message.error(err instanceof Error ? err.message : '画布列表加载失败');
       setItems([]);
       setTotal(0);
     } finally {
@@ -65,7 +49,7 @@ export function ProjectsPage() {
   const handleCreate = useCallback(async () => {
     const name = createName.trim();
     if (!name) {
-      message.warning('请输入项目名称');
+      message.warning('请输入画布名称');
       return;
     }
     setCreating(true);
@@ -75,7 +59,7 @@ export function ProjectsPage() {
       setCreateName('');
       navigate(`/projects/${project.id}/canvas`);
     } catch (err) {
-      message.error(err instanceof Error ? err.message : '创建项目失败');
+      message.error(err instanceof Error ? err.message : '创建画布失败');
     } finally {
       setCreating(false);
     }
@@ -85,14 +69,14 @@ export function ProjectsPage() {
     <div className="studio-projects-gallery">
       <div className="studio-projects-gallery__header">
         <div className="studio-projects-gallery__heading">
-          <h1>全部工作</h1>
-          <p>打开已有画布项目，或新建一个工作空间。</p>
+          <h1>画布</h1>
+          <p>打开已有画布，或新建一个继续创作。</p>
         </div>
         <div className="studio-projects-gallery__actions">
           <Input
             className="studio-projects-gallery__search"
             prefix={<SearchOutlined />}
-            placeholder="搜索项目"
+            placeholder="搜索画布"
             value={query}
             allowClear
             onChange={(event) => {
@@ -106,7 +90,7 @@ export function ProjectsPage() {
             onClick={() => setCreateOpen(true)}
           >
             <PlusOutlined />
-            <span>新建项目</span>
+            <span>新建画布</span>
           </button>
         </div>
       </div>
@@ -116,13 +100,13 @@ export function ProjectsPage() {
           <Spin />
         </div>
       ) : total === 0 ? (
-        <Empty description="还没有项目，先创建一个开始画布创作">
+        <Empty description="还没有画布，先新建一个开始创作">
           <button
             type="button"
             className="studio-projects-gallery__empty-action"
             onClick={() => setCreateOpen(true)}
           >
-            新建项目
+            新建画布
           </button>
         </Empty>
       ) : (
@@ -134,7 +118,7 @@ export function ProjectsPage() {
               className="studio-projects-gallery__card"
               onClick={() => navigate(`/projects/${project.id}/canvas`)}
             >
-              <span className="studio-projects-gallery__thumb" style={projectAccent(project)} />
+              <span className="studio-projects-gallery__thumb" style={projectAccentStyle(project)} />
               <span className="studio-projects-gallery__title">{project.name}</span>
               <span className="studio-projects-gallery__meta">
                 编辑于 {dayjs(project.updated_at).fromNow()}
@@ -169,9 +153,9 @@ export function ProjectsPage() {
       )}
 
       <Modal
-        title="新建画布项目"
+        title="新建画布"
         open={createOpen}
-        okText="创建并进入画布"
+        okText="创建并打开"
         cancelText="取消"
         confirmLoading={creating}
         onOk={() => void handleCreate()}
@@ -184,7 +168,7 @@ export function ProjectsPage() {
         destroyOnClose
       >
         <Input
-          placeholder="项目名称，例如：都市逆袭 · 第一集"
+          placeholder="画布名称，例如：都市逆袭 · 第一集"
           value={createName}
           maxLength={255}
           onChange={(event) => setCreateName(event.target.value)}

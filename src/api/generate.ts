@@ -78,6 +78,13 @@ export interface GenerateModelItem {
     durations?: number[];
     reference_modes?: { value: number; label: string }[];
     ratios_by_resolution?: Record<string, string[]>;
+    material_limits?: {
+      images?: number;
+      videos?: number;
+      audios?: number;
+      requires_any?: boolean;
+      allow_audio_only?: boolean;
+    };
   };
 }
 

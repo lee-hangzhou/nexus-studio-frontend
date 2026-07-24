@@ -1,18 +1,18 @@
-import { CommentOutlined, DownOutlined } from '@ant-design/icons';
-import { Button, Dropdown, Spin } from 'antd';
-import type { MenuProps } from 'antd';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { CommentOutlined } from '@ant-design/icons';
+import { Button, Select, Spin } from 'antd';
+import { useCallback, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { ToolStepView } from '../../../api/chat';
+import { ComposerSendButton } from '../../../shared/ui/ComposerSendButton';
+import { ComposerShell } from '../../../shared/ui/ComposerShell';
+import { StudioButton } from '../../../shared/ui/StudioButton';
+import { StudioChip } from '../../../shared/ui/StudioChip';
+import { StudioSegment } from '../../../shared/ui/StudioSegment';
 import { ToolRunTimeline } from '../../chat/components/ToolRunTimeline';
 import { useChatModelCatalog } from '../context/ChatModelCatalogContext';
 import type { CanvasFeedMessage } from '../hooks/useCanvasMessages';
-import { canvasDropdownProps } from '../storyflow/constants/canvasDropdown';
 import { stripPseudoToolMarkup } from '../utils/stripPseudoToolMarkup';
-import { StudioChip } from '../../../shared/ui/StudioChip';
-import { StudioSegment } from '../../../shared/ui/StudioSegment';
-import { StudioButton } from '../../../shared/ui/StudioButton';
 
 function toolStepsFromMetadata(metadata: Record<string, unknown>): ToolStepView[] {
   const raw = metadata.tool_steps;
@@ -90,20 +90,6 @@ export function CanvasAgentPanel({
     if (!composer.trim() || busy || !modelKey) return;
     onSend();
   }, [composer, busy, modelKey, onSend]);
-
-  const modelMenuItems: MenuProps['items'] = useMemo(
-    () =>
-      chatModels.items.map((item) => ({
-        key: item.key,
-        label: item.display_name || item.key,
-      })),
-    [chatModels.items],
-  );
-
-  const selectedModelLabel =
-    chatModels.items.find((item) => item.key === modelKey)?.display_name ||
-    modelKey ||
-    (chatModels.loading ? '加载模型…' : chatModels.failed ? '模型不可用' : '选择模型');
 
   const canSend = Boolean(composer.trim()) && !busy && Boolean(modelKey);
 
@@ -199,69 +185,64 @@ export function CanvasAgentPanel({
           ) : null}
         </div>
 
-        <footer className="workflow-canvas-agent-panel__composer">
-          <textarea
-            className="workflow-canvas-agent-panel__input"
-            value={composer}
-            onChange={(e) => onComposerChange(e.target.value)}
-            placeholder="继续描述你想改的节点或镜头…"
-            rows={3}
-            disabled={busy}
-            aria-label="画布 Agent 输入"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-          />
-          <div className="workflow-canvas-agent-panel__composer-actions">
-            <div className="workflow-canvas-agent-panel__composer-left">
-              <StudioSegment
-                aria-label="运行模式"
-                value={mode}
+        <div className="workflow-canvas-agent-panel__composer">
+          <ComposerShell
+            input={
+              <textarea
+                className="studio-composer-box__textarea"
+                value={composer}
+                onChange={(e) => onComposerChange(e.target.value)}
+                placeholder="继续描述你想改的节点或镜头…"
+                rows={3}
                 disabled={busy}
-                onChange={onModeChange}
-                options={[
-                  { value: 'auto', label: '自动' },
-                  { value: 'manual', label: '手动' },
-                ]}
+                aria-label="画布 Agent 输入"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
               />
-
-              <Dropdown
-                {...canvasDropdownProps({
-                  items: modelMenuItems,
-                  selectedKeys: modelKey ? [modelKey] : [],
-                  onClick: ({ key }) => onModelChange(key),
-                })}
-                trigger={['click']}
-                placement="topLeft"
-                disabled={busy || chatModels.loading || modelMenuItems.length === 0}
-              >
-                <StudioChip
-                  size="sm"
+            }
+            footerLeft={
+              <>
+                <StudioSegment
+                  aria-label="运行模式"
+                  value={mode}
+                  disabled={busy}
+                  onChange={onModeChange}
+                  options={[
+                    { value: 'auto', label: '自动' },
+                    { value: 'manual', label: '手动' },
+                  ]}
+                />
+                <Select
+                  className="studio-composer-box__model"
+                  popupMatchSelectWidth={false}
+                  value={modelKey || undefined}
+                  onChange={onModelChange}
+                  disabled={busy || chatModels.loading || chatModels.items.length === 0}
+                  loading={chatModels.loading}
+                  options={chatModels.items.map((item) => ({
+                    value: item.key,
+                    label: item.display_name || item.key,
+                  }))}
+                  placeholder={chatModels.failed ? '模型不可用' : '选择模型'}
                   aria-label="对话模型"
-                  title={selectedModelLabel}
-                  disabled={busy || chatModels.loading || modelMenuItems.length === 0}
-                >
-                  <span className="workflow-canvas-agent-panel__chip-label">{selectedModelLabel}</span>
-                  <DownOutlined className="workflow-canvas-agent-panel__chip-chevron" />
-                </StudioChip>
-              </Dropdown>
-            </div>
-
-            <StudioButton
-              variant="primary"
-              size="sm"
-              onClick={busy ? onStop : handleSend}
-              disabled={busy ? false : !canSend}
-              aria-label={busy ? '停止生成' : '发送'}
-              title={busy ? '停止生成' : modelKey ? '发送' : '暂无可用模型'}
-            >
-              {busy ? '停止' : '发送'}
-            </StudioButton>
-          </div>
-        </footer>
+                />
+              </>
+            }
+            footerRight={
+              <ComposerSendButton
+                busy={busy}
+                disabled={!canSend}
+                onSend={handleSend}
+                onStop={onStop}
+                title={modelKey ? '发送' : '暂无可用模型'}
+              />
+            }
+          />
+        </div>
       </div>
     </aside>
   );

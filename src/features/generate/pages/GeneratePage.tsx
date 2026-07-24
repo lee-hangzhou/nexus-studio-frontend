@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { message } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   cancelTask,
   deleteTask,
@@ -22,19 +23,16 @@ import { toFeedItem, toFeedItemFromTaskList, toHistoryListPatch } from '../utils
 import { buildPreviewSlides } from '../utils/previewGallery';
 import { buildGenerateTaskListRequest } from '../utils/taskListRequest';
 import { isTaskQueued, isTaskTerminal, TASK_STATUS } from '../../../domains/task/types';
+import { DEFAULT_CREATE_COMPOSER_PARAMS } from '../composerDefaults';
+import {
+  FOYER_HANDOFF_STATE_KEY,
+  isFoyerCreateHandoff,
+  type LocationStateWithFoyerHandoff,
+} from '../../home/foyerHandoff';
 
 export type LoadMoreHistoryResult = {
   appendedItems: GenerateFeedItem[];
   has_more: boolean;
-};
-
-const DEFAULT_PARAMS: CreateComposerParams = {
-  ratio: '4:3',
-  resolution: '2k',
-  count: 1,
-  duration: 5,
-  referenceMode: 3,
-  model: 'image-5-lite',
 };
 
 const POLL_INTERVAL_MS = 5000;
@@ -57,12 +55,14 @@ function useDebouncedValue<T>(value: T, delayMs: number): T {
 }
 
 export function GeneratePage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [historyItems, setHistoryItems] = useState<GenerateFeedItem[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeDetail, setActiveDetail] = useState<GenerateFeedItem | null>(null);
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const [kind, setKind] = useState<GenerateKind>('image');
-  const [params, setParams] = useState<CreateComposerParams>(DEFAULT_PARAMS);
+  const [params, setParams] = useState<CreateComposerParams>(DEFAULT_CREATE_COMPOSER_PARAMS);
   const [historyFilters, setHistoryFilters] = useState<HistoryFilters>(DEFAULT_HISTORY_FILTERS);
   const [historyNextCursor, setHistoryNextCursor] = useState<GenerateTaskCursor | null>(null);
   const [historyHasMore, setHistoryHasMore] = useState(false);
@@ -71,6 +71,10 @@ export function GeneratePage() {
   const [historyOpen, setHistoryOpen] = useState(true);
   const [composerDraft, setComposerDraft] = useState<
     { key: string; prompt: string; refImages?: GenerateFeedItem['refImages'] } | null
+  >(null);
+  const foyerHandoffConsumedRef = useRef(false);
+  const handleSubmitRef = useRef<
+    ((payload: CreateComposerSubmitPayload) => Promise<void>) | null
   >(null);
 
   const debouncedQuery = useDebouncedValue(historyFilters.query, SEARCH_DEBOUNCE_MS);
@@ -317,6 +321,27 @@ export function GeneratePage() {
     },
     [patchHistoryItem],
   );
+
+  handleSubmitRef.current = handleSubmit;
+
+  useEffect(() => {
+    if (foyerHandoffConsumedRef.current) return;
+    const locationState = location.state as LocationStateWithFoyerHandoff | null;
+    const handoff = locationState?.[FOYER_HANDOFF_STATE_KEY];
+    if (!isFoyerCreateHandoff(handoff)) return;
+
+    foyerHandoffConsumedRef.current = true;
+    navigate(location.pathname, { replace: true, state: {} });
+
+    setKind(handoff.payload.kind);
+    setParams(handoff.payload.params);
+    setComposerDraft({
+      key: `foyer-${Date.now()}`,
+      prompt: handoff.payload.prompt,
+      refImages: handoff.payload.refImages,
+    });
+    void handleSubmitRef.current?.(handoff.payload);
+  }, [location.pathname, location.state, navigate]);
 
   const buildParamsFromItem = (item: GenerateFeedItem): CreateComposerParams => ({
     model: item.modelId,

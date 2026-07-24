@@ -1,123 +1,179 @@
-import {
-  AppstoreOutlined,
-  CommentOutlined,
-  PictureOutlined,
-} from '@ant-design/icons';
-import { Empty, Modal, Spin, message } from 'antd';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/zh-cn';
+import { PlusOutlined } from '@ant-design/icons';
+import { Modal, message } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { listConversations, type ConversationView } from '../../../api/chat';
-import { listGenerateTasks } from '../../../api/generate';
+import { useNavigate } from 'react-router-dom';
+import { listChatModels, type ChatModelItem } from '../../../api/chat';
+import { listGenerateTasks, type GenerateTaskListItem } from '../../../api/generate';
 import { createProject, listProjects, type ProjectView } from '../../../api/projects';
-import { toFeedItemFromTaskList } from '../../generate/utils/feedItemMappers';
-import type { GenerateFeedItem } from '../../generate/types';
-import { StudioButton } from '../../../shared/ui/StudioButton';
+import { useUser } from '../../../contexts/UserContext';
+import { StudioSegment } from '../../../shared/ui/StudioSegment';
+import { ChatComposerBox } from '../../chat/components/ChatComposerBox';
+import {
+  CreateComposer,
+  type CreateComposerParams,
+  type CreateComposerSubmitPayload,
+} from '../../generate/components/CreateComposer';
+import { DEFAULT_CREATE_COMPOSER_PARAMS } from '../../generate/composerDefaults';
+import type { GenerateKind } from '../../generate/types';
+import { DEFAULT_HISTORY_FILTERS } from '../../generate/types';
+import { buildGenerateTaskListRequest } from '../../generate/utils/taskListRequest';
+import { FoyerInProgressTasks } from '../components/FoyerInProgressTasks';
+import { FoyerRecentCanvases } from '../components/FoyerRecentCanvases';
+import { buildFoyerGreeting } from '../foyerGreeting';
+import {
+  FOYER_HANDOFF_STATE_KEY,
+  type FoyerAgentHandoff,
+  type FoyerCreateHandoff,
+} from '../foyerHandoff';
+import {
+  createPendingLocalFile,
+  revokePendingLocalFile,
+  revokePendingLocalFiles,
+  type PendingLocalFile,
+} from '../pendingLocalFiles';
+import styles from './FoyerPage.module.css';
 
-dayjs.extend(relativeTime);
-dayjs.locale('zh-cn');
+type FoyerMode = 'create' | 'agent';
 
-type ContinueKind = 'canvas' | 'generate' | 'chat';
+const MODE_OPTIONS: { value: FoyerMode; label: string }[] = [
+  { value: 'create', label: '创作' },
+  { value: 'agent', label: 'Agent' },
+];
 
-type ContinueItem =
-  | { kind: 'canvas'; project: ProjectView }
-  | { kind: 'generate'; item: GenerateFeedItem }
-  | { kind: 'chat'; conversation: ConversationView };
-
-function kindLabel(kind: ContinueKind): string {
-  switch (kind) {
-    case 'canvas':
-      return '画布';
-    case 'generate':
-      return '创作';
-    case 'chat':
-      return '对话';
-  }
-}
+const RECENT_CANVAS_LIMIT = 6;
+const IN_PROGRESS_LIMIT = 8;
 
 export function FoyerPage() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [continues, setContinues] = useState<ContinueItem[]>([]);
+  const { user } = useUser();
+
+  const [mode, setMode] = useState<FoyerMode>('create');
+  const [kind, setKind] = useState<GenerateKind>('image');
+  const [params, setParams] = useState<CreateComposerParams>(DEFAULT_CREATE_COMPOSER_PARAMS);
+
+  const [agentInput, setAgentInput] = useState('');
+  const [agentModels, setAgentModels] = useState<ChatModelItem[]>([]);
+  const [agentModelsLoading, setAgentModelsLoading] = useState(false);
+  const [agentModel, setAgentModel] = useState('');
+  const [agentFiles, setAgentFiles] = useState<PendingLocalFile[]>([]);
+  const [agentModelsError, setAgentModelsError] = useState<string | null>(null);
+
+  const [projects, setProjects] = useState<ProjectView[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
+  const [projectsError, setProjectsError] = useState<string | null>(null);
+
+  const [inProgressTasks, setInProgressTasks] = useState<GenerateTaskListItem[]>([]);
+  const [inProgressLoading, setInProgressLoading] = useState(true);
+  const [inProgressError, setInProgressError] = useState<string | null>(null);
+
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('');
   const [creating, setCreating] = useState(false);
 
-  const loadRecent = useCallback(async () => {
-    setLoading(true);
+  const loadProjects = useCallback(async () => {
+    setProjectsLoading(true);
+    setProjectsError(null);
     try {
-      const [projectsRes, tasksRes, chatsRes] = await Promise.allSettled([
-        listProjects({ page: 1, page_size: 6, query: '' }),
-        listGenerateTasks({ page_size: 6 }),
-        listConversations({ offset: 0, limit: 6 }),
-      ]);
-
-      const projectItems: ContinueItem[] =
-        projectsRes.status === 'fulfilled'
-          ? (projectsRes.value.items ?? []).map((project) => ({
-              kind: 'canvas' as const,
-              project,
-            }))
-          : [];
-      const generateItems: ContinueItem[] =
-        tasksRes.status === 'fulfilled'
-          ? (tasksRes.value.items ?? [])
-              .map((row) => toFeedItemFromTaskList(row))
-              .filter((item): item is GenerateFeedItem => item != null)
-              .map((item) => ({ kind: 'generate' as const, item }))
-          : [];
-      const chatItems: ContinueItem[] =
-        chatsRes.status === 'fulfilled'
-          ? (chatsRes.value.items ?? []).map((conversation) => ({
-              kind: 'chat' as const,
-              conversation,
-            }))
-          : [];
-
-      if (
-        projectsRes.status === 'rejected' &&
-        tasksRes.status === 'rejected' &&
-        chatsRes.status === 'rejected'
-      ) {
-        const first = projectsRes.reason;
-        message.error(first instanceof Error ? first.message : '最近工作加载失败');
-      }
-
-      const merged = [...projectItems, ...generateItems, ...chatItems].sort((a, b) => {
-        const ta =
-          a.kind === 'canvas'
-            ? a.project.updated_at
-            : a.kind === 'generate'
-              ? a.item.createdAt
-              : a.conversation.updated_at;
-        const tb =
-          b.kind === 'canvas'
-            ? b.project.updated_at
-            : b.kind === 'generate'
-              ? b.item.createdAt
-              : b.conversation.updated_at;
-        return dayjs(tb).valueOf() - dayjs(ta).valueOf();
-      });
-
-      setContinues(merged.slice(0, 6));
+      const res = await listProjects({ page: 1, page_size: RECENT_CANVAS_LIMIT });
+      setProjects(res.items ?? []);
     } catch (err) {
-      message.error(err instanceof Error ? err.message : '最近工作加载失败');
-      setContinues([]);
+      setProjects([]);
+      setProjectsError(err instanceof Error ? err.message : '画布列表加载失败');
     } finally {
-      setLoading(false);
+      setProjectsLoading(false);
+    }
+  }, []);
+
+  const loadInProgress = useCallback(async () => {
+    setInProgressLoading(true);
+    setInProgressError(null);
+    try {
+      const res = await listGenerateTasks(
+        buildGenerateTaskListRequest(
+          { ...DEFAULT_HISTORY_FILTERS, status: 'in_progress' },
+          null,
+          IN_PROGRESS_LIMIT,
+        ),
+      );
+      setInProgressTasks(res.items ?? []);
+    } catch (err) {
+      setInProgressTasks([]);
+      setInProgressError(err instanceof Error ? err.message : '在途任务加载失败');
+    } finally {
+      setInProgressLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    void loadRecent();
-  }, [loadRecent]);
+    void loadProjects();
+    void loadInProgress();
+  }, [loadInProgress, loadProjects]);
+
+  const loadAgentModels = useCallback(async () => {
+    setAgentModelsLoading(true);
+    setAgentModelsError(null);
+    try {
+      const items = await listChatModels();
+      setAgentModels(items);
+      setAgentModel((current) => current || items[0]?.key || '');
+    } catch (err) {
+      setAgentModels([]);
+      setAgentModelsError(err instanceof Error ? err.message : '模型列表加载失败');
+    } finally {
+      setAgentModelsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAgentModels();
+  }, [loadAgentModels]);
+
+  useEffect(() => {
+    return () => {
+      revokePendingLocalFiles(agentFiles);
+    };
+    // 仅卸载时回收；文件增删在各自 handler 里 revoke
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCreateSubmit = useCallback(
+    (payload: CreateComposerSubmitPayload) => {
+      const handoff: FoyerCreateHandoff = {
+        version: 1,
+        target: 'create',
+        autoSubmit: true,
+        payload,
+      };
+      navigate('/generate', { state: { [FOYER_HANDOFF_STATE_KEY]: handoff } });
+    },
+    [navigate],
+  );
+
+  const handleAgentSend = useCallback(() => {
+    const messageText = agentInput.trim();
+    if (!messageText) {
+      message.warning('请先输入内容');
+      return;
+    }
+    if (!agentModel) {
+      message.error(agentModelsError ?? '暂无可用模型，请稍后重试');
+      return;
+    }
+    const handoff: FoyerAgentHandoff = {
+      version: 1,
+      target: 'agent',
+      autoSubmit: true,
+      model: agentModel,
+      message: messageText,
+      files: agentFiles.map((item) => item.file),
+    };
+    navigate('/chat', { state: { [FOYER_HANDOFF_STATE_KEY]: handoff } });
+  }, [agentFiles, agentInput, agentModel, agentModelsError, navigate]);
 
   const handleCreateCanvas = useCallback(async () => {
     const name = createName.trim();
     if (!name) {
-      message.warning('请输入项目名称');
+      message.warning('请输入画布名称');
       return;
     }
     setCreating(true);
@@ -127,120 +183,127 @@ export function FoyerPage() {
       setCreateName('');
       navigate(`/projects/${project.id}/canvas`);
     } catch (err) {
-      message.error(err instanceof Error ? err.message : '创建项目失败');
+      message.error(err instanceof Error ? err.message : '创建画布失败');
     } finally {
       setCreating(false);
     }
   }, [createName, navigate]);
 
-  const openContinue = (entry: ContinueItem) => {
-    if (entry.kind === 'canvas') {
-      navigate(`/projects/${entry.project.id}/canvas`);
-      return;
-    }
-    if (entry.kind === 'generate') {
-      navigate('/generate');
-      return;
-    }
-    navigate(`/chat?conversation=${entry.conversation.id}`);
-  };
+  const greeting = buildFoyerGreeting(user?.username);
 
   return (
-    <div className="studio-foyer">
-      <div className="studio-foyer__hero">
-        <h1 className="studio-foyer__title">把想象变成画面</h1>
-        <p className="studio-foyer__lead">写一句描述，开始生成。</p>
-        <div className="studio-foyer__ctas">
-          <StudioButton variant="primary" size="lg" onClick={() => navigate('/generate')}>
-            开始创作
-          </StudioButton>
-          <StudioButton variant="ghost" size="lg" onClick={() => setCreateOpen(true)}>
-            打开画布
-          </StudioButton>
-          <StudioButton variant="text" size="lg" onClick={() => navigate('/chat')}>
-            打开对话
-          </StudioButton>
-        </div>
+    <div className={styles.page}>
+      <header className={styles.head}>
+        <h1 className={styles.title}>{greeting}</h1>
+        <p className={styles.lead}>从一句话开始，或继续你的画布。</p>
+      </header>
+
+      <div className={styles.body}>
+        <section className={styles.composerBlock} aria-label="首页创作入口">
+          <StudioSegment
+            className={styles.modeSwitch}
+            aria-label="首页模式"
+            options={MODE_OPTIONS}
+            value={mode}
+            onChange={setMode}
+          />
+
+          {agentModelsError && mode === 'agent' ? (
+            <div className={styles.composerBanner} role="alert">
+              <p>{agentModelsError}</p>
+              <button
+                type="button"
+                className={styles.textAction}
+                onClick={() => void loadAgentModels()}
+              >
+                重试
+              </button>
+            </div>
+          ) : null}
+
+          <div className={styles.composerMount}>
+            <div
+              className={`${styles.composerSlot}${mode === 'create' ? ` ${styles.composerSlotActive}` : ''}`}
+              aria-hidden={mode !== 'create'}
+              ref={(node) => {
+                if (node) node.inert = mode !== 'create';
+              }}
+            >
+              <CreateComposer
+                kind={kind}
+                params={params}
+                onKindChange={setKind}
+                onParamsChange={(patch) => setParams((prev) => ({ ...prev, ...patch }))}
+                onSubmit={handleCreateSubmit}
+              />
+            </div>
+            <div
+              className={`${styles.composerSlot}${mode === 'agent' ? ` ${styles.composerSlotActive}` : ''}`}
+              aria-hidden={mode !== 'agent'}
+              ref={(node) => {
+                if (node) node.inert = mode !== 'agent';
+              }}
+            >
+              <ChatComposerBox
+                input={agentInput}
+                onInputChange={setAgentInput}
+                models={agentModels}
+                selectedModel={agentModel}
+                onModelChange={setAgentModel}
+                attachments={agentFiles.map((item) => ({
+                  id: item.localId,
+                  filename: item.file.name,
+                  mime_type: item.file.type || 'application/octet-stream',
+                  preview_url: item.previewUrl,
+                }))}
+                onRemoveAttachment={(localId) => {
+                  setAgentFiles((prev) => {
+                    const target = prev.find((item) => item.localId === localId);
+                    if (target) revokePendingLocalFile(target);
+                    return prev.filter((item) => item.localId !== localId);
+                  });
+                }}
+                onUploadFile={(file) => {
+                  setAgentFiles((prev) => [...prev, createPendingLocalFile(file)]);
+                }}
+                busy={false}
+                modelsLoading={agentModelsLoading}
+                canSend={Boolean(agentModel) && Boolean(agentInput.trim())}
+                onSend={handleAgentSend}
+                showDisclaimer={false}
+                fixedTextareaHeight
+              />
+            </div>
+          </div>
+        </section>
+
+        <button
+          type="button"
+          className={styles.createCanvasBtn}
+          onClick={() => setCreateOpen(true)}
+        >
+          <PlusOutlined aria-hidden />
+          新建画布
+        </button>
+
+        <FoyerRecentCanvases
+          projects={projects}
+          loading={projectsLoading}
+          error={projectsError}
+          onRetry={() => void loadProjects()}
+          onCreateCanvas={() => setCreateOpen(true)}
+        />
+
+        <FoyerInProgressTasks
+          tasks={inProgressTasks}
+          loading={inProgressLoading}
+          error={inProgressError}
+          onRetry={() => void loadInProgress()}
+        />
       </div>
 
-      <section className="studio-foyer__recent" aria-label="最近工作">
-        <div className="studio-foyer__recent-head">
-          <h2>最近</h2>
-          <Link to="/projects" className="studio-foyer__recent-more">
-            全部工作
-          </Link>
-        </div>
-
-        {loading ? (
-          <div className="studio-foyer__loading">
-            <Spin />
-          </div>
-        ) : continues.length === 0 ? (
-          <Empty description="还没有最近工作，从上方开始一次创作或画布" />
-        ) : (
-          <ul className="studio-foyer__recent-list">
-            {continues.map((entry) => {
-              if (entry.kind === 'canvas') {
-                return (
-                  <li key={`canvas-${entry.project.id}`}>
-                    <button type="button" className="studio-foyer__card" onClick={() => openContinue(entry)}>
-                      <div className="studio-foyer__card-thumb studio-foyer__card-thumb--canvas" aria-hidden>
-                        <AppstoreOutlined />
-                      </div>
-                      <div className="studio-foyer__card-meta">
-                        <span className="studio-foyer__card-kind">{kindLabel('canvas')}</span>
-                        <strong>{entry.project.name}</strong>
-                        <span>{dayjs(entry.project.updated_at).fromNow()}</span>
-                      </div>
-                      <span className="studio-foyer__card-action">继续</span>
-                    </button>
-                  </li>
-                );
-              }
-              if (entry.kind === 'generate') {
-                const thumb = entry.item.resultImages?.[0]?.url;
-                return (
-                  <li key={`generate-${entry.item.id}`}>
-                    <button type="button" className="studio-foyer__card" onClick={() => openContinue(entry)}>
-                      <div className="studio-foyer__card-thumb" aria-hidden>
-                        {thumb ? (
-                          <img src={thumb} alt="" />
-                        ) : (
-                          <PictureOutlined />
-                        )}
-                      </div>
-                      <div className="studio-foyer__card-meta">
-                        <span className="studio-foyer__card-kind">{kindLabel('generate')}</span>
-                        <strong>{entry.item.prompt || '未命名生成'}</strong>
-                        <span>{dayjs(entry.item.createdAt).fromNow()}</span>
-                      </div>
-                      <span className="studio-foyer__card-action">打开</span>
-                    </button>
-                  </li>
-                );
-              }
-              return (
-                <li key={`chat-${entry.conversation.id}`}>
-                  <button type="button" className="studio-foyer__card" onClick={() => openContinue(entry)}>
-                    <div className="studio-foyer__card-thumb studio-foyer__card-thumb--chat" aria-hidden>
-                      <CommentOutlined />
-                    </div>
-                    <div className="studio-foyer__card-meta">
-                      <span className="studio-foyer__card-kind">{kindLabel('chat')}</span>
-                      <strong>{entry.conversation.title || '新对话'}</strong>
-                      <span>{dayjs(entry.conversation.updated_at).fromNow()}</span>
-                    </div>
-                    <span className="studio-foyer__card-action">打开</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
       <Modal
-        title="新建画布项目"
+        title="新建画布"
         open={createOpen}
         okText="创建并打开"
         cancelText="取消"
@@ -252,13 +315,14 @@ export function FoyerPage() {
             setCreateName('');
           }
         }}
+        destroyOnClose
       >
         <input
-          className="studio-foyer__create-input"
+          className={styles.createInput}
           value={createName}
-          placeholder="项目名称"
-          aria-label="项目名称"
           onChange={(event) => setCreateName(event.target.value)}
+          placeholder="画布名称"
+          aria-label="画布名称"
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault();

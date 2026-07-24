@@ -41,7 +41,7 @@ export function SessionListItem({ session, active, busy = false, onSelect, onRen
 
   const confirmDelete = () => {
     Modal.confirm({
-      title: '删除此对话？',
+      title: '删除此会话？',
       content: '删除后无法恢复。',
       okText: '删除',
       okType: 'danger',
@@ -107,7 +107,7 @@ export function SessionListItem({ session, active, busy = false, onSelect, onRen
         </div>
       </div>
       <Modal
-        title="重命名对话"
+        title="重命名会话"
         open={renameOpen}
         onOk={() => void submitRename()}
         onCancel={() => setRenameOpen(false)}

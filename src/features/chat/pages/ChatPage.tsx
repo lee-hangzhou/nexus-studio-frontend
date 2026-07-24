@@ -1,18 +1,16 @@
 import {
-  ArrowUpOutlined,
   CopyOutlined,
   DeleteOutlined,
   FolderOpenOutlined,
-  PictureOutlined,
   PlusOutlined,
   SearchOutlined,
-  StopOutlined,
 } from '@ant-design/icons';
-import { Button, Select, Spin, Upload, message as antMessage } from 'antd';
+import { Button, Spin, Upload, message as antMessage } from 'antd';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useRef, useState, Fragment } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   createConversation,
   getConversation,
@@ -34,13 +32,18 @@ import {
 } from '../../../api/chat';
 import { PageScaffold } from '../../../shared/ui/PageScaffold';
 import { StudioChip } from '../../../shared/ui/StudioChip';
+import { ChatComposerBox } from '../components/ChatComposerBox';
 import { ChatRightPanel } from '../components/ChatRightPanel';
 import { UserGatePanel, type UserGateState } from '../components/UserGatePanel';
 import { TurnWorkingStatus } from '../components/TurnWorkingStatus';
-import { ComposerAttachmentList } from '../components/ComposerAttachmentList';
 import { MessageAttachmentList, getMessageAttachments } from '../components/MessageAttachmentList';
 import { SessionListItem } from '../components/SessionListItem';
 import { ToolRunTimeline } from '../components/ToolRunTimeline';
+import {
+  FOYER_HANDOFF_STATE_KEY,
+  isFoyerAgentHandoff,
+  type LocationStateWithFoyerHandoff,
+} from '../../home/foyerHandoff';
 import { sanitizeToolResultPreview } from '../toolResultPreview';
 import {
   appendLiveToolStart,
@@ -289,6 +292,8 @@ const TIME_FILTER_TABS: { key: TimeFilter; label: string }[] = [
 // ── 主组件 ───────────────────────────────────────────────────────────────────
 
 export function ChatPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [input, setInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sessionFilter, setSessionFilter] = useState<TimeFilter>('all');
@@ -314,6 +319,15 @@ export function ChatPage() {
   >(new Map());
   const gateResumeInFlightRef = useRef(false);
   const gateResumeControllerRef = useRef<AbortController | null>(null);
+  const foyerHandoffConsumedRef = useRef(false);
+  const sendTurnRef = useRef<
+    ((options?: {
+      text?: string;
+      model?: string;
+      conversationId?: number;
+      attachments?: UploadedAttachment[];
+    }) => Promise<void>) | null
+  >(null);
   const dismissedGateIdDuringResumeRef = useRef<string | null>(null);
   const loadingIdsRef = useRef<Set<number>>(new Set());
   const activeConversationIdRef = useRef<number | null>(null);
@@ -324,14 +338,10 @@ export function ChatPage() {
   const loadingOlderIdsRef = useRef<Set<number>>(new Set());
   const tempIdRef = useRef(-1);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const composerInputRef = useRef<HTMLTextAreaElement>(null);
   const turnStartedAtFallbackRef = useRef<number | null>(null);
 
-  const focusComposerIfActive = useCallback((conversationId: number) => {
-    if (activeConversationIdRef.current !== conversationId) return;
-    requestAnimationFrame(() => {
-      composerInputRef.current?.focus();
-    });
+  const focusComposerIfActive = useCallback((_conversationId: number) => {
+    // 输入焦点由 ChatComposerBox 自持；会话切换后不强抢焦点。
   }, []);
 
   const activeSession = sessions.find((s) => s.id === activeConversationId);
@@ -844,21 +854,37 @@ export function ChatPage() {
     }
   };
 
-  const send = async () => {
-    const text = input.trim();
+  const send = async (options?: {
+    text?: string;
+    model?: string;
+    conversationId?: number;
+    attachments?: UploadedAttachment[];
+  }) => {
+    const text = (options?.text ?? input).trim();
     if (!text) return;
-    if (!selectedModel) {
+    const model = options?.model ?? selectedModel;
+    if (!model) {
       antMessage.error('暂无可用模型，请稍后重试');
       return;
     }
-    if (attachments.some((item) => isImageMime(item.mime_type)) && !supportsVision) {
+    const currentAttachments = options?.attachments ?? attachments;
+    const modelSupportsVision = models.find((item) => item.key === model)?.supports_vision === true;
+    if (currentAttachments.some((item) => isImageMime(item.mime_type)) && !modelSupportsVision) {
       antMessage.error('当前模型不支持识图，无法发送图片');
       return;
     }
 
     let conversationId: number;
     try {
-      conversationId = await ensureConversationId();
+      if (options?.conversationId != null) {
+        conversationId = options.conversationId;
+        if (activeConversationIdRef.current !== conversationId) {
+          setActiveConversationId(conversationId);
+          applyUiFromCache(conversationId);
+        }
+      } else {
+        conversationId = await ensureConversationId();
+      }
     } catch (err) {
       antMessage.error(err instanceof Error ? err.message : '创建会话失败');
       return;
@@ -884,8 +910,12 @@ export function ChatPage() {
       streamsByConversationRef.current.get(conversationId)?.turnId === turnId;
     const isActiveConversation = () => activeConversationIdRef.current === conversationId;
 
-    const sentAttachmentIds = attachmentIdsForSend;
-    const sentAttachments: MessageAttachment[] = attachments.map((item) => ({
+    const sentAttachmentIds = modelSupportsVision
+      ? currentAttachments.map((item) => item.attachment_id)
+      : currentAttachments
+          .filter((item) => !isImageMime(item.mime_type))
+          .map((item) => item.attachment_id);
+    const sentAttachments: MessageAttachment[] = currentAttachments.map((item) => ({
       attachment_id: item.attachment_id,
       filename: item.filename,
       mime_type: item.mime_type,
@@ -1156,7 +1186,7 @@ export function ChatPage() {
           request_id: crypto.randomUUID(),
           conversation_id: conversationId,
           content: text,
-          model: selectedModel,
+          model: model,
           attachment_ids: sentAttachmentIds,
           enable_tools: true,
           client_turn_id: turnId,
@@ -1244,6 +1274,73 @@ export function ChatPage() {
       }
     }
   };
+
+  sendTurnRef.current = send;
+
+  useEffect(() => {
+    if (booting || foyerHandoffConsumedRef.current) return;
+    const locationState = location.state as LocationStateWithFoyerHandoff | null;
+    const handoff = locationState?.[FOYER_HANDOFF_STATE_KEY];
+    if (!isFoyerAgentHandoff(handoff)) return;
+
+    foyerHandoffConsumedRef.current = true;
+    navigate(location.pathname, { replace: true, state: {} });
+
+    void (async () => {
+      try {
+        const model = models.some((item) => item.key === handoff.model)
+          ? handoff.model
+          : (models[0]?.key ?? '');
+        if (!model) {
+          antMessage.error('暂无可用模型，无法从首页发起对话');
+          return;
+        }
+        setSelectedModel(model);
+        if (activeConversationIdRef.current != null) {
+          saveUiToCache(activeConversationIdRef.current);
+        }
+        const conv = await createConversation({
+          title: DEFAULT_CONVERSATION_TITLE,
+          model,
+        });
+        const items = await loadSessions();
+        setSessions(items);
+        uiByConversationRef.current.set(conv.id, { ...EMPTY_CONVERSATION_UI });
+        setActiveConversationId(conv.id);
+        applyUiFromCache(conv.id);
+
+        const uploaded: UploadedAttachment[] = [];
+        for (const file of handoff.files) {
+          if (!(file instanceof File)) continue;
+          try {
+            const result = await uploadAttachment(conv.id, file);
+            const preview_url = file.type.startsWith('image/')
+              ? URL.createObjectURL(file)
+              : undefined;
+            uploaded.push({
+              ...result,
+              mime_type: result.mime_type || file.type,
+              preview_url,
+            });
+          } catch (err) {
+            antMessage.error(err instanceof Error ? err.message : '附件上传失败');
+          }
+        }
+        if (uploaded.length > 0) {
+          setAttachments(uploaded);
+        }
+
+        await sendTurnRef.current?.({
+          text: handoff.message,
+          model,
+          conversationId: conv.id,
+          attachments: uploaded,
+        });
+      } catch (err) {
+        antMessage.error(err instanceof Error ? err.message : '无法从首页发起对话');
+      }
+    })();
+  }, [applyUiFromCache, booting, loadSessions, location.pathname, location.state, models, navigate, saveUiToCache]);
 
   const submitUserGate = async (fields: Record<string, string>) => {
     if (!activeConversationId || !gatePending) return;
@@ -1520,14 +1617,14 @@ export function ChatPage() {
               icon={<PlusOutlined />}
               onClick={() => void newSession()}
             >
-              新对话
+              新会话
             </Button>
 
             <label className="studio-chat__search">
               <SearchOutlined className="studio-chat__search-icon" />
               <input
                 type="text"
-                placeholder="搜索对话..."
+                placeholder="搜索会话..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -1553,7 +1650,7 @@ export function ChatPage() {
           <div className="studio-chat__sessions">
             {sessionGroups.length === 0 && (
               <div className="studio-chat__empty">
-                {searchQuery ? '无匹配结果' : '暂无对话'}
+                {searchQuery ? '无匹配结果' : '暂无会话'}
               </div>
             )}
             {sessionGroups.map((group) => (
@@ -1588,14 +1685,14 @@ export function ChatPage() {
         {/* ── 中间内容区 ── */}
         <section className="studio-chat__main">
           <div className="studio-chat__title-bar">
-            <span className="studio-chat__title">{activeSession?.title || '新对话'}</span>
+            <span className="studio-chat__title">{activeSession?.title || '新会话'}</span>
             {!resourcesOpen ? (
               <StudioChip
                 icon={<FolderOpenOutlined aria-hidden />}
                 aria-controls="studio-chat-resources-panel"
                 onClick={() => setResourcesOpen(true)}
               >
-                会话素材
+                会话资源
               </StudioChip>
             ) : null}
           </div>
@@ -1609,7 +1706,7 @@ export function ChatPage() {
             >
               {activeConversationId == null && (
                 <div className="studio-chat__empty">
-                  <p>点击「新对话」或直接输入发送以开始</p>
+                  <p>点击「新会话」或直接输入发送以开始</p>
                 </div>
               )}
               {visibleMessages(messages).map((m) => {
@@ -1672,93 +1769,36 @@ export function ChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* 输入框 */}
-            <footer className="studio-chat__composer">
-              <div className="studio-composer-box">
-                {modelVisionHint && (
-                  <div className="studio-composer-box__notice">{modelVisionHint}</div>
-                )}
-                <ComposerAttachmentList
-                  attachments={attachments}
-                  onRemove={(attachmentId) =>
-                    setAttachments((prev) => {
-                      const target = prev.find((item) => item.attachment_id === attachmentId);
-                      if (target?.preview_url) URL.revokeObjectURL(target.preview_url);
-                      return prev.filter((item) => item.attachment_id !== attachmentId);
-                    })
-                  }
-                />
-                <div className="studio-composer-box__input">
-                  <textarea
-                    ref={composerInputRef}
-                    className="studio-composer-box__textarea"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="描述你的想法…"
-                    disabled={conversationBusy}
-                    rows={1}
-                    onInput={(e) => {
-                      const t = e.currentTarget;
-                      t.style.height = 'auto';
-                      t.style.height = `${Math.min(t.scrollHeight, 180)}px`;
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        void send();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="studio-composer-box__footer">
-                  <div className="studio-composer-box__footer-left">
-                    {/* 图片 + 文件合并上传 */}
-                    <Upload
-                      beforeUpload={(f) => void onUpload(f, false)}
-                      showUploadList={false}
-                      disabled={conversationBusy}
-                    >
-                      <button
-                        type="button"
-                        className="studio-composer-tool"
-                        disabled={conversationBusy}
-                        title="上传图片或文件"
-                      >
-                        <PictureOutlined />
-                        图片 / 文件
-                      </button>
-                    </Upload>
-                  </div>
-
-                  <div className="studio-composer-box__footer-right">
-                    <Select
-                      className="studio-composer-box__model"
-                      popupMatchSelectWidth={false}
-                      value={selectedModel || undefined}
-                      onChange={handleModelChange}
-                      disabled={conversationBusy || models.length === 0}
-                      options={models.map((m) => ({ value: m.key, label: m.display_name }))}
-                    />
-                    <button
-                      type="button"
-                      className={`studio-composer-box__send${conversationBusy ? ' studio-composer-box__send--stop' : ''}`}
-                      onClick={() => (conversationBusy ? void cancelInFlightTurn() : void send())}
-                      disabled={
-                        !conversationBusy
-                        && (!selectedModel || (!input.trim() && attachmentIdsForSend.length === 0))
-                      }
-                      aria-label={conversationBusy ? '停止生成' : '发送'}
-                      title={conversationBusy ? '停止生成' : selectedModel ? '发送' : '暂无可用模型'}
-                    >
-                      {conversationBusy ? <StopOutlined /> : <ArrowUpOutlined />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <p className="studio-composer-disclaimer">
-                Nexus Studio 由 AI 生成内容，可能出现错误，请核实重要信息。
-              </p>
-            </footer>
+            <ChatComposerBox
+              input={input}
+              onInputChange={setInput}
+              models={models}
+              selectedModel={selectedModel}
+              onModelChange={handleModelChange}
+              attachments={attachments.map((item) => ({
+                id: String(item.attachment_id),
+                filename: item.filename,
+                mime_type: item.mime_type,
+                preview_url: item.preview_url,
+              }))}
+              onRemoveAttachment={(attachmentId) => {
+                const numericId = Number(attachmentId);
+                setAttachments((prev) => {
+                  const target = prev.find((item) => item.attachment_id === numericId);
+                  if (target?.preview_url) URL.revokeObjectURL(target.preview_url);
+                  return prev.filter((item) => item.attachment_id !== numericId);
+                });
+              }}
+              onUploadFile={(file) => onUpload(file, false)}
+              busy={conversationBusy}
+              modelVisionHint={modelVisionHint}
+              canSend={
+                Boolean(selectedModel)
+                && (Boolean(input.trim()) || attachmentIdsForSend.length > 0)
+              }
+              onSend={() => void send()}
+              onStop={() => void cancelInFlightTurn()}
+            />
           </div>
         </section>
 

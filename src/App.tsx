@@ -41,6 +41,11 @@ export default function App() {
             borderRadiusSM: 4,
             controlInteractiveSize: 16,
           },
+          /* 与 --studio-control-* 对齐（Antd token 不吃 CSS 变量，用等价色） */
+          Select: {
+            optionSelectedBg: 'rgba(240, 179, 91, 0.1)',
+            optionActiveBg: 'rgba(242, 243, 245, 0.06)',
+          },
         },
       }}
     >

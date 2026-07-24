@@ -67,7 +67,7 @@ export function AssetsPage() {
       setTotal(res.total);
       setSelectedIds((prev) => new Set([...prev].filter((id) => res.items.some((item) => item.id === id))));
     } catch (err) {
-      message.error(err instanceof Error ? err.message : '资产列表加载失败');
+      message.error(err instanceof Error ? err.message : '资源列表加载失败');
       setAssets([]);
       setTotal(0);
     } finally {
@@ -148,7 +148,7 @@ export function AssetsPage() {
   const handleRename = async (asset: AssetBase, filename: string) => {
     const nextName = filename.trim();
     if (!nextName) {
-      message.warning('请输入资产名称');
+      message.warning('请输入资源名称');
       return;
     }
     try {
@@ -172,8 +172,8 @@ export function AssetsPage() {
   const handleDelete = async (ids: string[]) => {
     if (ids.length === 0) return;
     Modal.confirm({
-      title: ids.length === 1 ? '删除这个资产？' : `删除选中的 ${ids.length} 个资产？`,
-      content: '删除后不会在资产库中显示。',
+      title: ids.length === 1 ? '删除这个资源？' : `删除选中的 ${ids.length} 个资源？`,
+      content: '删除后不会在资源库中显示。',
       okText: '删除',
       okButtonProps: { danger: true },
       cancelText: '取消',
@@ -250,7 +250,7 @@ export function AssetsPage() {
         <div className="studio-assets__banner">
           <span>当前仅显示来自「创作」的成稿</span>
           <button type="button" className="studio-assets__banner-link" onClick={clearGenerateFilter}>
-            查看全部资产
+            查看全部资源
           </button>
         </div>
       ) : null}
@@ -270,7 +270,7 @@ export function AssetsPage() {
             onMediaError={(asset) => void refreshAssetPreview(asset)}
           />
         ) : (
-          <p className="studio-assets__empty">没有匹配的资产，试试调整筛选或搜索关键词。</p>
+          <p className="studio-assets__empty">没有匹配的资源，试试调整筛选或搜索关键词。</p>
         )}
         {!loading && total > ASSET_PAGE_SIZE ? (
           <Pagination

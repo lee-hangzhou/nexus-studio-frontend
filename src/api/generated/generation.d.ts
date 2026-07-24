@@ -83,6 +83,11 @@ export type Label = string;
 export type ModelId3 = string;
 export type Counts = number[];
 export type Durations = number[];
+export type AllowAudioOnly = boolean;
+export type Audios = number;
+export type Images = number;
+export type RequiresAny = boolean;
+export type Videos = number;
 export type Ratios = string[];
 export type Label1 = string;
 export type ReferenceModes = ReferenceModeOption[];
@@ -198,10 +203,21 @@ export interface GenerateModelItem {
 export interface GenerateParamOptions {
   counts?: Counts;
   durations?: Durations;
+  material_limits?: GenerateMaterialLimits;
   ratios?: Ratios;
   ratios_by_resolution?: RatiosByResolution;
   reference_modes?: ReferenceModes;
   resolutions?: Resolutions;
+}
+/**
+ * 产品 list_models.param_options.material_limits，与网关目录同构。
+ */
+export interface GenerateMaterialLimits {
+  allow_audio_only?: AllowAudioOnly;
+  audios?: Audios;
+  images?: Images;
+  requires_any?: RequiresAny;
+  videos?: Videos;
 }
 export interface RatiosByResolution {
   [k: string]: string[];
