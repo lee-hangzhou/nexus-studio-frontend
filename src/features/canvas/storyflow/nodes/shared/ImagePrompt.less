@@ -51,16 +51,13 @@
       font-size: 8px;
       line-height: 1;
       cursor: pointer;
-      opacity: 0;
-      transition: opacity 0.2s;
-
-      &:hover {
-        background: #3a3f47;
-      }
+      opacity: 1;
     }
 
-    &:hover &-remove {
-      opacity: 1;
+    &-remove:hover,
+    &-remove:focus-visible {
+      background: #3a3f47;
+      outline: none;
     }
   }
 }

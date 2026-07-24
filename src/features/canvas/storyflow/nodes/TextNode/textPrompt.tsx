@@ -7,6 +7,7 @@ import { ConnectedRefRail } from '../../components/ConnectedRefRail';
 import { useCanvasGenerate } from '../../../context/CanvasGenerateContext';
 import { NodeFloatPromptPanel } from '../../components/NodeFloatPromptPanel';
 import { useConnectedPredecessorRefs } from '../../hooks/useConnectedPredecessorRefs';
+import { useDisconnectConnectedRef } from '../../hooks/useDisconnectConnectedRef';
 import { useCanvasChatModels } from '../../hooks/useCanvasChatModels';
 import type { WorkflowPromptContent } from '../../types';
 import { buildPlainSubmitPrompt } from '../../utils/buildPromptSubmit';
@@ -30,6 +31,7 @@ export default function TextNodePrompt({ id: nodeId, panelWidth }: TextNodePromp
     useConnectedPredecessorRefs(nodeId, true, {
       allowedTypes: ['image', 'video', 'audio'],
     });
+  const handleRemoveConnectedRef = useDisconnectConnectedRef(nodeId);
   const promptContentRef = useRef<WorkflowPromptContent>([]);
   const [submitting, setSubmitting] = useState(false);
   const data = useStore(
@@ -108,7 +110,12 @@ export default function TextNodePrompt({ id: nodeId, panelWidth }: TextNodePromp
 
   const topSlot =
     previewTextRefs.length > 0 || previewMediaRefs.length > 0 ? (
-      <ConnectedRefRail items={[...previewTextRefs, ...previewMediaRefs]} />
+      <div className="workflow-image-prompt-ref-rail">
+        <ConnectedRefRail
+          items={[...previewTextRefs, ...previewMediaRefs]}
+          onRemove={handleRemoveConnectedRef}
+        />
+      </div>
     ) : null;
 
   return (

@@ -63,6 +63,7 @@ function CanvasPageInner() {
   const chatModelCatalog = useChatModelCatalog();
   const [projectName, setProjectName] = useState<string | undefined>();
   const [mode, setMode] = useState<'auto' | 'manual'>('auto');
+  const [agentOpen, setAgentOpen] = useState(true);
   const [agentModelKey, setAgentModelKey] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [composer, setComposer] = useState('');
@@ -506,7 +507,6 @@ function CanvasPageInner() {
           projectId={projectId}
           projectName={projectName}
           busy={busy}
-          onStop={onStop}
           nodes={nodes}
           edges={edges}
           loaded={loaded}
@@ -518,6 +518,8 @@ function CanvasPageInner() {
           onQuickAdd={onQuickAdd}
         />
         <CanvasAgentPanel
+          open={agentOpen}
+          onOpenChange={setAgentOpen}
           messages={messages}
           loading={messagesLoading}
           busy={busy}
@@ -528,6 +530,7 @@ function CanvasPageInner() {
           composer={composer}
           onComposerChange={setComposer}
           onSend={() => void sendTurn()}
+          onStop={onStop}
           liveToolSteps={liveToolSteps}
           toolPending={toolPending}
           onConfirmTool={() =>

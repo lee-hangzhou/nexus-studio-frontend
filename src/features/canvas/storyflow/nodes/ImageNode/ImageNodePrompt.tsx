@@ -1,4 +1,4 @@
-import { ArrowUpOutlined, PlusOutlined } from '@ant-design/icons';
+import { ArrowUpOutlined, CloseOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Dropdown, message } from 'antd';
 import { useStore } from '@xyflow/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -13,6 +13,7 @@ import { CanvasPromptEditor } from '../../components/CanvasPromptEditor';
 import { ConnectedRefRail } from '../../components/ConnectedRefRail';
 import type { WorkflowPromptContent } from '../../types';
 import { useConnectedPredecessorRefs } from '../../hooks/useConnectedPredecessorRefs';
+import { useDisconnectConnectedRef } from '../../hooks/useDisconnectConnectedRef';
 import { IMAGE_PROMPT_MAX_REFERENCE_IMAGES } from '../../constants';
 import { canvasDropdownProps } from '../../constants/canvasDropdown';
 import {
@@ -56,6 +57,7 @@ export function ImageNodePrompt({
     allowedTypes: ['image'],
     maxReferenceCount: IMAGE_PROMPT_MAX_REFERENCE_IMAGES,
   });
+  const handleRemoveConnectedRef = useDisconnectConnectedRef(nodeId);
   const promptContentRef = useRef<WorkflowPromptContent>([]);
   const promptDraftRef = useRef(data.input_prompt ?? '');
   const [refUrl, setRefUrl] = useState<string | null>(null);
@@ -174,17 +176,32 @@ export function ImageNodePrompt({
     </button>
   );
 
-  const topSlot =
-    previewTextRefs.length > 0 || previewMediaRefs.length > 0 || refUrl ? (
-      <div className="workflow-image-prompt-ref-rail">
-        <ConnectedRefRail items={[...previewTextRefs, ...previewMediaRefs]} />
-        {refUrl ? (
-          <div className="workflow-image-prompt-ref-rail__thumb">
-            <img src={refUrl} alt="" />
-          </div>
-        ) : null}
-      </div>
-    ) : null;
+  const topSlot = (
+    <div className="workflow-image-prompt-ref-rail">
+      {addRefBtn}
+      <ConnectedRefRail
+        items={[...previewTextRefs, ...previewMediaRefs]}
+        onRemove={handleRemoveConnectedRef}
+      />
+      {refUrl ? (
+        <div className="workflow-image-prompt-ref-rail__thumb">
+          <img src={refUrl} alt="" />
+          <button
+            type="button"
+            className="workflow-image-prompt-ref-rail__thumb-remove"
+            aria-label="移除参考图"
+            onClick={() => {
+              setRefUrl(null);
+              setRefMaterialId(null);
+              setRefAssetId(null);
+            }}
+          >
+            <CloseOutlined aria-hidden />
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
 
   const bottomStartSlot = (
     <div className="workflow-image-gen-bar">
@@ -234,7 +251,6 @@ export function ImageNodePrompt({
       visible
       width={panelWidth}
       topSlot={topSlot}
-      bodyLeadingSlot={addRefBtn}
       bottomStartSlot={bottomStartSlot}
       bottomEndSlot={
         <button

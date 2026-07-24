@@ -19,7 +19,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 12px 6px;
+    padding: 10px 40px 6px 12px;
     min-height: 40px;
   }
 
@@ -38,19 +38,25 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     padding: 0;
-    border: none;
+    border: 1px solid #ccddff24;
     border-radius: 8px;
     background: #ccddff14;
     color: #e0f5ffcc;
     cursor: pointer;
     font-size: 14px;
+    flex-shrink: 0;
 
     &:hover {
       background: #ccddff1f;
       color: #fff;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
     }
   }
 
@@ -81,22 +87,23 @@
   }
 
   &__body {
-    position: relative;
-    padding: 0 4px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px 4px;
     min-height: 72px;
-
-    &--with-leading .canvas-prompt-editor.composer-input-area {
-      padding-left: 44px;
-    }
   }
 
   &__body-leading {
-    position: absolute;
-    left: 12px;
-    top: 10px;
-    z-index: 2;
+    flex: none;
     display: flex;
     align-items: flex-start;
+    margin-top: 2px;
+  }
+
+  &__body .canvas-prompt-editor {
+    flex: 1;
+    min-width: 0;
   }
 
   /* 展开后拉高 Prompt 编辑区（ProseMirror max-height 250px） */

@@ -47,6 +47,8 @@ export type StreamErrorCode =
   | "agent_recovery_exhausted"
   | "canvas_duplicate_turn"
   | "canvas_project_busy"
+  | "empty_response"
+  | "execution_lost"
   | "generation_failed"
   | "generation_timeout"
   | "gateway_upstream_failed"

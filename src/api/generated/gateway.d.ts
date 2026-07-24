@@ -15,23 +15,33 @@ export type Gateway =
   | GatewayGenerateCallback;
 export type Id = string;
 export type Object = string;
+export type Counts = number[];
+export type Durations = number[];
+export type AllowAudioOnly = boolean;
+export type Audios = number;
+export type Images = number;
+export type RequiresAny = boolean;
+export type Videos = number;
+export type Ratios = string[];
+export type ReferenceModes = number[];
+export type Resolutions = string[];
 export type SupportsVision = boolean;
 export type GatewayModelTaskType = 1 | 2 | 3 | 8 | 9;
 export type Data = GatewayModelItem[];
 export type Object1 = string;
-export type Callbackurl = string;
-export type Materialrefindex = number | null;
+export type CallbackUrl = string;
+export type MaterialRefIndex = number | null;
 export type Text = string | null;
 export type GatewayContentType = 1 | 2 | 3 | 4;
 export type Content = GatewayContentPart[];
-export type Toskey = string;
+export type StorageKey = string;
 export type MaterialType = 1 | 2 | 3;
 export type Materials = GatewayGenerateMaterial[];
-export type Maximages = number;
+export type MaxImages = number;
 export type Model = string;
 export type Ratio = string | null;
 export type Resolution = string | null;
-export type Callbackurl1 = string;
+export type CallbackUrl1 = string;
 export type Content1 = GatewayContentPart[];
 export type Duration = number;
 export type Materials1 = GatewayGenerateMaterial[];
@@ -43,9 +53,10 @@ export type Code = number;
 export type Taskid = number;
 export type Message = string;
 export type Code1 = number;
+export type Errorcode = number | null;
 export type Reason = string | null;
 /**
- * 模型网关异步任务状态
+ * 模型网关异步任务状态，与 union_lm 任务状态枚举对齐
  */
 export type GatewayTaskStatus = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type Taskid1 = number;
@@ -67,6 +78,7 @@ export type Taskid2 = number;
 export type Total = number | null;
 export type Tasks = GatewayQueueItem[];
 export type Message2 = string;
+export type Errorcode1 = number | null;
 export type Reason1 = string | null;
 export type Taskid3 = number;
 export type Urls1 = GatewayResultItem[] | null;
@@ -79,40 +91,67 @@ export interface GatewayModelsResponse {
   object: Object1;
 }
 /**
- * Strict OpenAI-compatible model catalog item.
+ * Strict OpenAI-compatible model catalog item（厚目录）。
  */
 export interface GatewayModelItem {
   id: Id;
   object: Object;
+  parameters: GatewayModelParameters;
   supports_vision: SupportsVision;
   task_type: GatewayModelTaskType;
 }
+/**
+ * 网关 GET /api/v1/models 厚目录 parameters。
+ */
+export interface GatewayModelParameters {
+  counts?: Counts;
+  durations?: Durations;
+  input_schema?: unknown;
+  material_limits?: GatewayMaterialLimits;
+  ratios?: Ratios;
+  ratios_by_resolution?: RatiosByResolution;
+  reference_modes?: ReferenceModes;
+  resolutions?: Resolutions;
+}
+/**
+ * 网关公开目录 parameters.material_limits。
+ */
+export interface GatewayMaterialLimits {
+  allow_audio_only?: AllowAudioOnly;
+  audios?: Audios;
+  images?: Images;
+  requires_any?: RequiresAny;
+  videos?: Videos;
+}
+export interface RatiosByResolution {
+  [k: string]: string[];
+}
 export interface GatewayImageSubmitRequest {
-  callbackUrl: Callbackurl;
+  callback_url: CallbackUrl;
   content: Content;
   materials?: Materials;
-  maxImages: Maximages;
+  max_images: MaxImages;
   model: Model;
   ratio?: Ratio;
   resolution?: Resolution;
 }
 export interface GatewayContentPart {
-  materialRefIndex?: Materialrefindex;
+  material_ref_index?: MaterialRefIndex;
   text?: Text;
   type: GatewayContentType;
 }
 export interface GatewayGenerateMaterial {
-  tosKey: Toskey;
+  storage_key: StorageKey;
   type: MaterialType;
 }
 export interface GatewayVideoSubmitRequest {
-  callbackUrl: Callbackurl1;
+  callback_url: CallbackUrl1;
   content: Content1;
   duration: Duration;
   materials?: Materials1;
   model: Model1;
   ratio?: Ratio1;
-  referenceMode: ReferenceMode;
+  reference_mode: ReferenceMode;
   resolution?: Resolution1;
 }
 export interface GatewayTaskSubmitResponse {
@@ -132,6 +171,7 @@ export interface GatewayTaskStatusResponse {
  * 对齐 union_lm api.TaskResponse。
  */
 export interface GatewayTaskStatusData {
+  errorCode?: Errorcode;
   reason?: Reason;
   result?: unknown;
   status: GatewayTaskStatus;
@@ -167,6 +207,7 @@ export interface GatewayQueueItem {
  * 对齐 union_lm api.TaskResponse（callback 直 POST，无外层信封）。
  */
 export interface GatewayGenerateCallback {
+  errorCode?: Errorcode1;
   reason?: Reason1;
   result?: unknown;
   status: GatewayTaskStatus;

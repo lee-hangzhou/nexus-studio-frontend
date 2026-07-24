@@ -1,4 +1,4 @@
-import { DownOutlined } from '@ant-design/icons';
+import { CommentOutlined, DownOutlined } from '@ant-design/icons';
 import { Button, Dropdown, Spin } from 'antd';
 import type { MenuProps } from 'antd';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -40,6 +40,8 @@ function toolStepsFromMetadata(metadata: Record<string, unknown>): ToolStepView[
 export type CanvasAgentMode = 'auto' | 'manual';
 
 export function CanvasAgentPanel({
+  open,
+  onOpenChange,
   messages,
   loading,
   busy,
@@ -50,12 +52,15 @@ export function CanvasAgentPanel({
   composer,
   onComposerChange,
   onSend,
+  onStop,
   liveToolSteps,
   toolPending,
   onConfirmTool,
   onRejectTool,
   resumeLoading,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   messages: CanvasFeedMessage[];
   loading: boolean;
   busy: boolean;
@@ -66,6 +71,7 @@ export function CanvasAgentPanel({
   composer: string;
   onComposerChange: (v: string) => void;
   onSend: () => void;
+  onStop: () => void;
   liveToolSteps: ToolStepView[];
   toolPending: { call_id: string; summary: string } | null;
   onConfirmTool: () => void;
@@ -76,8 +82,9 @@ export function CanvasAgentPanel({
   const chatModels = useChatModelCatalog();
 
   useEffect(() => {
+    if (!open) return;
     feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight, behavior: 'smooth' });
-  }, [messages, liveToolSteps]);
+  }, [messages, liveToolSteps, open]);
 
   const handleSend = useCallback(() => {
     if (!composer.trim() || busy || !modelKey) return;
@@ -100,12 +107,36 @@ export function CanvasAgentPanel({
 
   const canSend = Boolean(composer.trim()) && !busy && Boolean(modelKey);
 
+  if (!open) {
+    return (
+      <div className="canvas-agent-float canvas-agent-float--collapsed">
+        <StudioChip
+          icon={<CommentOutlined aria-hidden />}
+          onClick={() => onOpenChange(true)}
+          aria-controls="canvas-agent-panel"
+        >
+          画布 Agent
+        </StudioChip>
+        {busy ? (
+          <StudioButton variant="primary" size="sm" onClick={onStop} aria-label="停止生成">
+            停止
+          </StudioButton>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <aside className="canvas-agent-float" aria-label="画布 Agent">
-      <div className="workflow-canvas-agent-panel">
+      <div className="workflow-canvas-agent-panel" id="canvas-agent-panel">
         <header className="workflow-canvas-agent-panel__head">
-          <strong>画布 Agent</strong>
-          <span>消息可上滚查看历史</span>
+          <div className="workflow-canvas-agent-panel__head-main">
+            <strong>画布 Agent</strong>
+            <span>消息可上滚查看历史</span>
+          </div>
+          <StudioChip size="sm" onClick={() => onOpenChange(false)}>
+            收起
+          </StudioChip>
         </header>
 
         <div className="workflow-canvas-agent-panel__feed" ref={feedRef}>
@@ -222,10 +253,12 @@ export function CanvasAgentPanel({
             <StudioButton
               variant="primary"
               size="sm"
-              onClick={handleSend}
-              disabled={!canSend}
+              onClick={busy ? onStop : handleSend}
+              disabled={busy ? false : !canSend}
+              aria-label={busy ? '停止生成' : '发送'}
+              title={busy ? '停止生成' : modelKey ? '发送' : '暂无可用模型'}
             >
-              发送
+              {busy ? '停止' : '发送'}
             </StudioButton>
           </div>
         </footer>

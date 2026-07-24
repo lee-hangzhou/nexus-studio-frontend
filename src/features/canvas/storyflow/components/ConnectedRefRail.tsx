@@ -1,17 +1,19 @@
+import { CloseOutlined } from '@ant-design/icons';
 import { AudioOutlined, FileTextOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import type { WorkflowMentionItem } from './CanvasPromptEditor/types';
 
 type Props = {
   items: WorkflowMentionItem[];
+  onRemove?: (itemId: string) => void;
 };
 
-/** Prompt 顶栏：展示连线前置节点的媒体缩略图 */
-export function ConnectedRefRail({ items }: Props) {
+/** Prompt 顶栏：展示连线前置节点的媒体缩略图；可删并断连线 */
+export function ConnectedRefRail({ items, onRemove }: Props) {
   if (items.length === 0) {
     return null;
   }
   return (
-    <div className="workflow-image-prompt-ref-rail">
+    <>
       {items.map((item) => (
         <div
           key={item.id}
@@ -36,8 +38,22 @@ export function ConnectedRefRail({ items }: Props) {
               ) : null}
             </>
           ) : null}
+          {onRemove ? (
+            <button
+              type="button"
+              className="workflow-image-prompt-ref-rail__thumb-remove"
+              aria-label={`移除引用 ${item.name ?? item.label ?? item.id}`}
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                onRemove(item.id);
+              }}
+            >
+              <CloseOutlined aria-hidden />
+            </button>
+          ) : null}
         </div>
       ))}
-    </div>
+    </>
   );
 }

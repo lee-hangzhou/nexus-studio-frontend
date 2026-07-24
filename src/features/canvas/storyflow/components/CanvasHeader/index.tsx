@@ -5,12 +5,10 @@ export function CanvasHeader({
   projectId,
   projectName,
   busy,
-  onStop,
 }: {
   projectId: number;
   projectName?: string;
   busy: boolean;
-  onStop: () => void;
 }) {
   const navigate = useNavigate();
   const title = projectName?.trim() || `项目 #${projectId}`;
@@ -43,17 +41,6 @@ export function CanvasHeader({
               <i aria-hidden />
               Agent 工作中
             </span>
-          ) : null}
-        </div>
-        <div className="workflow-canvas-header__right">
-          {busy ? (
-            <button
-              type="button"
-              className="workflow-canvas-header__stop"
-              onClick={onStop}
-            >
-              停止
-            </button>
           ) : null}
         </div>
       </div>

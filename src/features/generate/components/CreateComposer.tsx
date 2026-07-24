@@ -18,31 +18,10 @@ const TASK_TYPE_OPTIONS = [
 
 const PREFERRED_IMAGE_RATIO: GenerateRatio = '4:3';
 
-function pickImageRatio(
-  options: GenerateRatio[] | undefined,
-  fallback: GenerateRatio,
-): GenerateRatio {
-  if (!options?.length) return fallback;
+function pickImageRatio(options: GenerateRatio[] | undefined): GenerateRatio | undefined {
+  if (!options?.length) return undefined;
   return options.includes(PREFERRED_IMAGE_RATIO) ? PREFERRED_IMAGE_RATIO : options[0];
 }
-
-const DEFAULT_RATIO_OPTIONS: { value: GenerateRatio; w: number; h: number }[] = [
-  { value: '21:9', w: 21, h: 9 },
-  { value: '16:9', w: 16, h: 9 },
-  { value: '3:2',  w: 3,  h: 2 },
-  { value: '4:3',  w: 4,  h: 3 },
-  { value: '1:1',  w: 1,  h: 1 },
-  { value: '3:4',  w: 3,  h: 4 },
-  { value: '2:3',  w: 2,  h: 3 },
-  { value: '9:16', w: 9,  h: 16 },
-];
-
-const RESOLUTION_OPTIONS: { value: GenerateResolution; label: string }[] = [
-  { value: '2k', label: '高清 2K' },
-  { value: '4k', label: '超清 4K' },
-];
-
-const COUNT_OPTIONS = [1, 2, 3, 4, 5, 6];
 
 function resolutionLabel(r: GenerateResolution) {
   const normalized = r.toLowerCase();
@@ -65,8 +44,8 @@ function ratioShape(value: string) {
 }
 
 function normalizeRatioOptions(values?: string[]) {
-  const source = values && values.length > 0 ? values : DEFAULT_RATIO_OPTIONS.map((opt) => opt.value);
-  return source.map((value) => ({ value, ...ratioShape(value) }));
+  if (!values?.length) return [];
+  return values.map((value) => ({ value, ...ratioShape(value) }));
 }
 
 function referenceModeLabel(value?: number, options?: { value: number; label: string }[]) {
@@ -311,15 +290,21 @@ export function CreateComposer({
   const currentModel = params.model || modelOptions[0]?.value || '';
   const currentModelSpec = modelSpecs.find((m) => m.model_id === currentModel);
   const paramOptions = currentModelSpec?.param_options;
-  const resolutionOptions = paramOptions?.resolutions?.length ? paramOptions.resolutions : RESOLUTION_OPTIONS.map((opt) => opt.value);
-  const countOptions = paramOptions?.counts?.length ? paramOptions.counts : COUNT_OPTIONS;
-  const durationOptions = paramOptions?.durations?.length ? paramOptions.durations : [];
-  const referenceModeOptions = paramOptions?.reference_modes?.length
-    ? paramOptions.reference_modes
-    : [{ value: 3, label: '全能参考' }];
+  const resolutionOptions = paramOptions?.resolutions ?? [];
+  const countOptions = paramOptions?.counts ?? [];
+  const durationOptions = paramOptions?.durations ?? [];
+  const referenceModeOptions = paramOptions?.reference_modes ?? [];
   const ratiosByResolution = paramOptions?.ratios_by_resolution ?? {};
   const ratioValues = ratiosByResolution[params.resolution] ?? paramOptions?.ratios;
   const ratioOptions = normalizeRatioOptions(ratioValues);
+  const paramsReady = Boolean(
+    currentModelSpec
+    && (
+      kind === 'image'
+        ? resolutionOptions.length > 0 && ratioOptions.length > 0 && countOptions.length > 0
+        : ratioOptions.length > 0 && durationOptions.length > 0 && referenceModeOptions.length > 0
+    ),
+  );
   const mentionMaterials = [...refImages, ...favoriteMaterials.filter(
     (asset) => !refImages.some((item) => item.assetId != null && item.assetId === asset.assetId),
   )];
@@ -333,24 +318,31 @@ export function CreateComposer({
         const opts = items.map((m) => ({ value: m.model_id, label: m.label }));
         setModelSpecs(items);
         setModelOptions(opts);
-        if (opts.length > 0 && (!params.model || !opts.find((o) => o.value === params.model))) {
+        if (opts.length === 0) {
+          message.warning('暂无可用生成模型');
+          return;
+        }
+        if (!params.model || !opts.find((o) => o.value === params.model)) {
           const nextSpec = items[0];
           const nextOptions = nextSpec?.param_options;
-          const ratioOptions = nextOptions?.ratios as GenerateRatio[] | undefined;
+          const nextRatios = nextOptions?.ratios as GenerateRatio[] | undefined;
+          const nextRatio =
+            k === 'image' ? pickImageRatio(nextRatios) : nextRatios?.[0];
           onParamsChange({
             model: opts[0].value,
-            ratio:
-              k === 'image'
-                ? pickImageRatio(ratioOptions, params.ratio)
-                : (ratioOptions?.[0] ?? params.ratio),
-            resolution: nextOptions?.resolutions?.[0] ?? params.resolution,
-            count: nextOptions?.counts?.[0] ?? params.count,
-            duration: nextOptions?.durations?.[0] ?? params.duration,
-            referenceMode: nextOptions?.reference_modes?.[0]?.value ?? params.referenceMode,
+            ...(nextRatio ? { ratio: nextRatio } : {}),
+            ...(nextOptions?.resolutions?.[0] ? { resolution: nextOptions.resolutions[0] } : {}),
+            ...(nextOptions?.counts?.[0] != null ? { count: nextOptions.counts[0] } : {}),
+            ...(nextOptions?.durations?.[0] != null ? { duration: nextOptions.durations[0] } : {}),
+            ...(nextOptions?.reference_modes?.[0]?.value != null
+              ? { referenceMode: nextOptions.reference_modes[0].value }
+              : {}),
           });
         }
       } catch {
-        // 拉取失败保持现有选项，不打断用户操作
+        message.error('模型列表加载失败');
+        setModelSpecs([]);
+        setModelOptions([]);
       } finally {
         setModelsLoading(false);
       }
@@ -413,10 +405,11 @@ export function CreateComposer({
       next.resolution = nextResolutions[0];
     }
     if (nextRatioValues.length > 0 && !nextRatioValues.includes(params.ratio)) {
-      next.ratio =
+      const picked =
         kind === 'image'
-          ? pickImageRatio(nextRatioValues as GenerateRatio[], params.ratio)
+          ? pickImageRatio(nextRatioValues as GenerateRatio[])
           : nextRatioValues[0];
+      if (picked) next.ratio = picked;
     }
     if (kind === 'image' && nextCounts.length > 0 && !nextCounts.includes(params.count)) {
       next.count = nextCounts[0];
@@ -521,6 +514,10 @@ export function CreateComposer({
   const submit = () => {
     const text = prompt.trim();
     if (!text || materialsUploading) return;
+    if (!paramsReady) {
+      message.warning('模型参数不可用，请刷新后重试');
+      return;
+    }
     onSubmit({ kind, prompt: text, params, refImages });
     editorRef.current?.clear();
   };
@@ -658,7 +655,7 @@ export function CreateComposer({
           <button
             type="button"
             className="studio-create__send-btn"
-            disabled={!prompt.trim() || materialsUploading}
+            disabled={!prompt.trim() || materialsUploading || !paramsReady || modelsLoading}
             onClick={submit}
             title="生成 (Enter)"
           >

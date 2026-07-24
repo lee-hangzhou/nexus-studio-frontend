@@ -6,12 +6,6 @@ import { useGenerateModelCatalog } from '../../context/GenerateModelCatalogConte
 import { isPlaceholderModelId } from '../../lib/generateModelId';
 import { useCanvasActions } from '../context/CanvasActionsContext';
 import type { CanvasNodeData } from '../../schema/canvasSchema';
-import {
-  RATIO_OPTIONS,
-  RESOLUTION_OPTIONS,
-  VIDEO_DURATION_OPTIONS,
-  VIDEO_REFERENCE_MODES,
-} from '../nodes/shared/canvasPromptCopy';
 
 export {
   LEGACY_PLACEHOLDER_MODEL_ID,
@@ -67,27 +61,32 @@ export function useCanvasGenerateModels(nodeId: string, kind: 'image' | 'video')
     [models, nodeId, onNodeChange],
   );
 
-  const ratioOptions = useMemo(() => {
-    const fromApi = currentSpec?.param_options?.ratios;
-    return fromApi?.length ? fromApi : RATIO_OPTIONS;
-  }, [currentSpec]);
+  const ratioOptions = useMemo(
+    () => currentSpec?.param_options?.ratios ?? [],
+    [currentSpec],
+  );
 
-  const durationOptions = useMemo(() => {
-    const fromApi = currentSpec?.param_options?.durations;
-    return fromApi?.length ? fromApi : VIDEO_DURATION_OPTIONS;
-  }, [currentSpec]);
+  const durationOptions = useMemo(
+    () => currentSpec?.param_options?.durations ?? [],
+    [currentSpec],
+  );
 
-  const referenceModeOptions = useMemo(() => {
-    const fromApi = currentSpec?.param_options?.reference_modes;
-    return fromApi?.length ? fromApi : VIDEO_REFERENCE_MODES;
-  }, [currentSpec]);
+  const referenceModeOptions = useMemo(
+    () => currentSpec?.param_options?.reference_modes ?? [],
+    [currentSpec],
+  );
 
-  const resolutionOptions = useMemo(() => {
-    const fromApi = currentSpec?.param_options?.resolutions;
-    return fromApi?.length ? fromApi : [...RESOLUTION_OPTIONS];
-  }, [currentSpec]);
+  const resolutionOptions = useMemo(
+    () => currentSpec?.param_options?.resolutions ?? [],
+    [currentSpec],
+  );
 
-  const modelReady = !loading && !loadFailed && models.length > 0 && !!resolvedModelId;
+  const modelReady = !loading && !loadFailed && models.length > 0 && !!resolvedModelId
+    && (
+      kind === 'image'
+        ? resolutionOptions.length > 0 && ratioOptions.length > 0
+        : ratioOptions.length > 0 && durationOptions.length > 0 && referenceModeOptions.length > 0
+    );
 
   return {
     models,

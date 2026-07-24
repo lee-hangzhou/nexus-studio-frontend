@@ -56,10 +56,10 @@
 @import '../storyflow/nodes/AudioNode/AudioNode.less';
 @import '../storyflow/styles/Header.less';
 
-/* 右侧 Agent 浮层：可滚历史 + 底栏 composer（含模式 / 模型） */
+/* 右侧 Agent 浮层：贴顶栏下沿，可收起 */
 .canvas-agent-float {
   position: absolute;
-  top: calc(52px + 16px);
+  top: 52px;
   right: 16px;
   bottom: 16px;
   width: min(360px, calc(100% - 32px));
@@ -69,11 +69,23 @@
   pointer-events: auto;
 }
 
+.canvas-agent-float--collapsed {
+  top: auto;
+  bottom: 24px;
+  width: auto;
+  height: auto;
+  inset: auto 16px 24px auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .canvas-agent-float .workflow-canvas-agent-panel {
   flex: 1;
   min-height: 0;
-  border-radius: 14px;
+  border-radius: 0 0 14px 14px;
   border: 1px solid var(--border-color);
+  border-top: none;
   background: var(--card);
   box-shadow: var(--studio-shadow-lg);
   display: flex;
@@ -82,23 +94,33 @@
 }
 
 .workflow-canvas-agent-panel__head {
-  padding: 12px 14px;
+  padding: 10px 12px 10px 14px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
-.workflow-canvas-agent-panel__head strong {
+.workflow-canvas-agent-panel__head-main {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.workflow-canvas-agent-panel__head-main strong {
   color: var(--text);
   font-size: 13px;
   font-weight: 650;
 }
 
-.workflow-canvas-agent-panel__head span {
+.workflow-canvas-agent-panel__head-main span {
   color: var(--text-tertiary);
   font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .workflow-canvas-agent-panel__feed {

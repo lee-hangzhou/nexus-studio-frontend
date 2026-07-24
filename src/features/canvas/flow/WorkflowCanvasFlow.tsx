@@ -27,7 +27,6 @@ type Props = {
   projectId: number;
   projectName?: string;
   busy: boolean;
-  onStop: () => void;
   nodes: CanvasFlowNode[];
   edges: CanvasFlowEdge[];
   loaded: boolean;
@@ -43,7 +42,6 @@ export function WorkflowCanvasFlow({
   projectId,
   projectName,
   busy,
-  onStop,
   nodes,
   edges,
   loaded,
@@ -140,7 +138,6 @@ export function WorkflowCanvasFlow({
             projectId={projectId}
             projectName={projectName}
             busy={busy}
-            onStop={onStop}
           />
           <div className="workflow-canvas-flow__stage">
             <ReactFlow

@@ -1,4 +1,4 @@
-import { ArrowUpOutlined, PlusOutlined } from '@ant-design/icons';
+import { ArrowUpOutlined, CloseOutlined, PlusOutlined } from '@ant-design/icons';
 import { Button, Dropdown, message } from 'antd';
 import { useStore } from '@xyflow/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -13,6 +13,7 @@ import { CanvasPromptEditor } from '../../components/CanvasPromptEditor';
 import { ConnectedRefRail } from '../../components/ConnectedRefRail';
 import type { WorkflowPromptContent } from '../../types';
 import { useConnectedPredecessorRefs } from '../../hooks/useConnectedPredecessorRefs';
+import { useDisconnectConnectedRef } from '../../hooks/useDisconnectConnectedRef';
 import { IMAGE_PROMPT_MAX_REFERENCE_IMAGES } from '../../constants';
 import { canvasDropdownProps } from '../../constants/canvasDropdown';
 import {
@@ -72,6 +73,7 @@ export function VideoNodePrompt({
     allowedTypes: ['image', 'video', 'audio'],
     maxReferenceCount: IMAGE_PROMPT_MAX_REFERENCE_IMAGES,
   });
+  const handleRemoveConnectedRef = useDisconnectConnectedRef(nodeId);
   const promptContentRef = useRef<WorkflowPromptContent>([]);
   const promptDraftRef = useRef(data.input_prompt ?? '');
   const [referenceMode, setReferenceMode] = useState(3);
@@ -233,19 +235,30 @@ export function VideoNodePrompt({
     </button>
   );
 
-  const topSlot =
-    previewTextRefs.length > 0 || previewMediaRefs.length > 0 || refs.length > 0 ? (
-      <div className="workflow-image-prompt-ref-rail">
-        <ConnectedRefRail items={[...previewTextRefs, ...previewMediaRefs]} />
-        {refs.map((item) => (
-          <div key={item.id} className="workflow-image-prompt-ref-rail__thumb" title={item.type}>
-            {item.type === 'image' ? <img src={item.url} alt="" /> : null}
-            {item.type === 'video' ? <video src={item.url} muted playsInline /> : null}
-            {item.type === 'audio' ? <span>{item.type}</span> : null}
-          </div>
-        ))}
-      </div>
-    ) : null;
+  const topSlot = (
+    <div className="workflow-image-prompt-ref-rail">
+      {addRefBtn}
+      <ConnectedRefRail
+        items={[...previewTextRefs, ...previewMediaRefs]}
+        onRemove={handleRemoveConnectedRef}
+      />
+      {refs.map((item) => (
+        <div key={item.id} className="workflow-image-prompt-ref-rail__thumb" title={item.type}>
+          {item.type === 'image' ? <img src={item.url} alt="" /> : null}
+          {item.type === 'video' ? <video src={item.url} muted playsInline /> : null}
+          {item.type === 'audio' ? <span>{item.type}</span> : null}
+          <button
+            type="button"
+            className="workflow-image-prompt-ref-rail__thumb-remove"
+            aria-label="移除参考"
+            onClick={() => setRefs((prev) => prev.filter((x) => x.id !== item.id))}
+          >
+            <CloseOutlined aria-hidden />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
 
   const bottomStartSlot = (
     <div className="workflow-image-gen-bar">
@@ -327,7 +340,6 @@ export function VideoNodePrompt({
       visible
       width={panelWidth}
       topSlot={topSlot}
-      bodyLeadingSlot={addRefBtn}
       bottomStartSlot={bottomStartSlot}
       bottomEndSlot={
         <button
