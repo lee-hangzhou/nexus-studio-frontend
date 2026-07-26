@@ -178,10 +178,10 @@ export function FoyerPage() {
     }
     setCreating(true);
     try {
-      const project = await createProject(name);
+      const created = await createProject(name);
       setCreateOpen(false);
       setCreateName('');
-      navigate(`/projects/${project.id}/canvas`);
+      navigate(`/projects/${created.project.id}/episodes/${created.default_episode.id}`);
     } catch (err) {
       message.error(err instanceof Error ? err.message : '创建画布失败');
     } finally {

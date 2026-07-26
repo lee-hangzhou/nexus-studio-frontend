@@ -1,0 +1,39 @@
+.root {
+  --project-accent-base: var(--studio-project-accent-0-base);
+  --project-accent-mid: var(--studio-project-accent-0-mid);
+  background-color: var(--project-accent-base);
+  background-image:
+    linear-gradient(
+      135deg,
+      transparent 0 46%,
+      var(--project-accent-mid) 46% 58%,
+      transparent 58%
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 28px,
+      color-mix(in srgb, var(--studio-text) 3.5%, transparent) 28px 29px
+    );
+}
+
+.root[data-accent='1'] {
+  --project-accent-base: var(--studio-project-accent-1-base);
+  --project-accent-mid: var(--studio-project-accent-1-mid);
+}
+
+.root[data-accent='2'] {
+  --project-accent-base: var(--studio-project-accent-2-base);
+  --project-accent-mid: var(--studio-project-accent-2-mid);
+}
+
+.root[data-accent='3'] {
+  --project-accent-base: var(--studio-project-accent-3-base);
+  --project-accent-mid: var(--studio-project-accent-3-mid);
+}
+
+.media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

@@ -31,7 +31,7 @@ export function AppShell() {
     navigate('/login', { replace: true });
   };
 
-  const isCanvasEditorRoute = /\/projects\/\d+\/canvas/.test(location.pathname);
+  const isCanvasEditorRoute = /\/projects\/\d+\/episodes\/\d+/.test(location.pathname);
   const isFoyerRoute = location.pathname === '/';
   const mainRouteKey = isCanvasEditorRoute
     ? 'canvas'

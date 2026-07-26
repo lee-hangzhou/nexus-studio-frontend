@@ -70,7 +70,10 @@ function toAsset(item: AssetListItem): AssetBase {
   };
 }
 
-export async function listAssets(params: ListAssetsParams = {}): Promise<{
+export async function listAssets(
+  params: ListAssetsParams = {},
+  init?: RequestInit,
+): Promise<{
   items: AssetBase[];
   total: number;
 }> {
@@ -86,6 +89,7 @@ export async function listAssets(params: ListAssetsParams = {}): Promise<{
       created_from: params.created_from ?? null,
       created_to: params.created_to ?? null,
     }),
+    ...init,
   });
 
   return {

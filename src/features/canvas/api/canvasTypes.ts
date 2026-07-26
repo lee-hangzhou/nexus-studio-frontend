@@ -26,6 +26,8 @@ export type CanvasNodeRecord = CanvasNodeView & {
 export type CanvasEdgeRecord = CanvasEdgeView;
 
 export interface CanvasSnapshot {
+  project_id: number;
+  episode_id: number;
   revision: number;
   nodes: CanvasNodeRecord[];
   edges: CanvasEdgeRecord[];

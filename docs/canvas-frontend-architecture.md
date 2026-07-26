@@ -351,7 +351,7 @@ function applyCanvasPatchDelta(
 |------|-----|
 | Agent turn 进行中 | 侧栏 Composer 禁用；顶栏「停止」→ `cancelCanvasTurn`；画布可只读或允许 PATCH（与后端「边聊边改」一致则允许，冲突靠 revision） |
 | 409 冲突 | Modal：「画布已被更新」→ 刷新 snapshot |
-| `CANVAS_PROJECT_BUSY` | Toast：「Agent 正在执行」 |
+| `CANVAS_EPISODE_BUSY` | Toast：「Agent 正在执行」 |
 
 ---
 
@@ -608,7 +608,7 @@ CanvasToolConfirmCard
 | 后端 § | 前端 |
 |--------|------|
 | 行级表 + revision | §5、§9 PATCH + SSE delta |
-| §8.4 Redis 锁 | §9.3 `CANVAS_PROJECT_BUSY` |
+| §8.4 Redis 锁 | §9.3 `CANVAS_EPISODE_BUSY` |
 | §10 manual interrupt | §12 |
 | §11 协议 | §7 |
 | query_canvas_nodes | v1 仅 Agent；前端用户用可视化画布，不需此工具 |

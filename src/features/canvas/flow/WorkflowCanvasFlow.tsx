@@ -25,7 +25,9 @@ import type { CanvasFlowEdge, CanvasFlowNode } from '../schema/canvasSchema';
 
 type Props = {
   projectId: number;
+  episodeId: number;
   projectName?: string;
+  episodeName?: string;
   busy: boolean;
   nodes: CanvasFlowNode[];
   edges: CanvasFlowEdge[];
@@ -40,7 +42,9 @@ type Props = {
 
 export function WorkflowCanvasFlow({
   projectId,
+  episodeId,
   projectName,
+  episodeName,
   busy,
   nodes,
   edges,
@@ -136,7 +140,9 @@ export function WorkflowCanvasFlow({
         <div ref={containerRef} className="workflow-canvas-flow" tabIndex={0}>
           <CanvasHeader
             projectId={projectId}
+            episodeId={episodeId}
             projectName={projectName}
+            episodeName={episodeName}
             busy={busy}
           />
           <div className="workflow-canvas-flow__stage">

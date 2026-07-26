@@ -4,6 +4,7 @@ import type { CanvasSnapshot } from '../api/canvasTypes';
 
 type CanvasProjectContextValue = {
   projectId: number;
+  episodeId: number;
   revision: number;
   revisionRef: React.MutableRefObject<number>;
   setRevision: (n: number) => void;
@@ -15,9 +16,11 @@ const CanvasProjectContext = createContext<CanvasProjectContextValue | null>(nul
 
 export function CanvasProjectProvider({
   projectId,
+  episodeId,
   children,
 }: {
   projectId: number;
+  episodeId: number;
   children: ReactNode;
 }) {
   const [revision, setRevisionState] = useState(0);
@@ -32,17 +35,17 @@ export function CanvasProjectProvider({
   const refetchSnapshot = useCallback(async () => {
     setLoading(true);
     try {
-      const snap = await getCanvasSnapshot(projectId);
+      const snap = await getCanvasSnapshot(episodeId);
       setRevision(snap.revision);
       return snap;
     } finally {
       setLoading(false);
     }
-  }, [projectId, setRevision]);
+  }, [episodeId, setRevision]);
 
   const value = useMemo(
-    () => ({ projectId, revision, revisionRef, setRevision, loading, refetchSnapshot }),
-    [projectId, revision, setRevision, loading, refetchSnapshot],
+    () => ({ projectId, episodeId, revision, revisionRef, setRevision, loading, refetchSnapshot }),
+    [projectId, episodeId, revision, setRevision, loading, refetchSnapshot],
   );
 
   return <CanvasProjectContext.Provider value={value}>{children}</CanvasProjectContext.Provider>;

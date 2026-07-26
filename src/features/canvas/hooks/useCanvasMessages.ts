@@ -71,19 +71,19 @@ function buildFeed(rows: CanvasMessageRecord[]): CanvasFeedMessage[] {
     .filter((message) => message.role === 'user' || message.content.trim() || Array.isArray(message.metadata.tool_steps));
 }
 
-export function useCanvasMessages(projectId: number) {
+export function useCanvasMessages(episodeId: number) {
   const [messages, setMessages] = useState<CanvasFeedMessage[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadMessages = useCallback(async () => {
     setLoading(true);
     try {
-      const rows = await listCanvasMessages(projectId, { limit: 50 });
+      const rows = await listCanvasMessages(episodeId, { limit: 50 });
       setMessages(buildFeed(rows));
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [episodeId]);
 
   const appendUser = useCallback((content: string, clientTurnId: string) => {
     const temp: CanvasFeedMessage = {

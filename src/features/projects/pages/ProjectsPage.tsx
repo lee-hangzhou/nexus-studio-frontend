@@ -6,7 +6,7 @@ import 'dayjs/locale/zh-cn';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createProject, listProjects, type ProjectView } from '../../../api/projects';
-import { projectAccentStyle } from '../projectAccent';
+import { CoverThumb } from '../components/CoverThumb';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
@@ -54,10 +54,10 @@ export function ProjectsPage() {
     }
     setCreating(true);
     try {
-      const project = await createProject(name);
+      const created = await createProject(name);
       setCreateOpen(false);
       setCreateName('');
-      navigate(`/projects/${project.id}/canvas`);
+      navigate(`/projects/${created.project.id}/episodes/${created.default_episode.id}`);
     } catch (err) {
       message.error(err instanceof Error ? err.message : '创建画布失败');
     } finally {
@@ -116,12 +116,16 @@ export function ProjectsPage() {
               key={project.id}
               type="button"
               className="studio-projects-gallery__card"
-              onClick={() => navigate(`/projects/${project.id}/canvas`)}
+              onClick={() => navigate(`/projects/${project.id}`)}
             >
-              <span className="studio-projects-gallery__thumb" style={projectAccentStyle(project)} />
+              <CoverThumb
+                id={project.id}
+                cover={project.cover}
+                className="studio-projects-gallery__thumb"
+              />
               <span className="studio-projects-gallery__title">{project.name}</span>
               <span className="studio-projects-gallery__meta">
-                编辑于 {dayjs(project.updated_at).fromNow()}
+                {project.episode_count} 集 · {dayjs(project.activity_at).fromNow()}活动
               </span>
             </button>
           ))}

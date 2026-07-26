@@ -4,14 +4,18 @@ import '../../styles/Header.less';
 export function CanvasHeader({
   projectId,
   projectName,
+  episodeName,
   busy,
 }: {
   projectId: number;
+  episodeId: number;
   projectName?: string;
+  episodeName?: string;
   busy: boolean;
 }) {
   const navigate = useNavigate();
-  const title = projectName?.trim() || `画布 #${projectId}`;
+  const title = projectName?.trim() || '加载中…';
+  const episodeTitle = episodeName?.trim() || '加载中…';
 
   return (
     <header className="workflow-canvas-header">
@@ -21,9 +25,9 @@ export function CanvasHeader({
             <button
               type="button"
               className="workflow-canvas-header__back-button"
-              onClick={() => navigate('/')}
+              onClick={() => navigate(`/projects/${projectId}`)}
             >
-              ← Home
+              ← 项目
             </button>
             <span className="workflow-canvas-header__sep" aria-hidden>
               /
@@ -35,6 +39,12 @@ export function CanvasHeader({
               ·
             </span>
             <span className="workflow-canvas-header__surface">画布</span>
+            <span className="workflow-canvas-header__sep" aria-hidden>
+              /
+            </span>
+            <span className="workflow-canvas-header__surface" title={episodeTitle}>
+              {episodeTitle}
+            </span>
           </nav>
           {busy ? (
             <span className="workflow-canvas-header__live" aria-live="polite">

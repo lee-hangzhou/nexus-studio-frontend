@@ -18,6 +18,7 @@ export type CanvasSourcePort = "output_text" | "output_asset";
 export type Target = string;
 export type CanvasTargetPort = "prompt_input" | "reference_asset";
 export type Edges = CanvasEdgeView[];
+export type EpisodeId = number;
 export type DurationSec = number | null;
 export type ErrorMessage = string | null;
 export type Id1 = string;
@@ -36,6 +37,7 @@ export type TaskId = number | null;
 export type Title = string;
 export type VoiceId = string | null;
 export type Nodes = CanvasNodeView[];
+export type ProjectId = number;
 export type Revision = number;
 export type ExpectedRevision = number;
 /**
@@ -95,7 +97,9 @@ export type TaskId3 = number | null;
 
 export interface CanvasSnapshot {
   edges: Edges;
+  episode_id: EpisodeId;
   nodes: Nodes;
+  project_id: ProjectId;
   revision: Revision;
 }
 export interface CanvasEdgeView {

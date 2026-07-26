@@ -5,7 +5,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
 import { Link, useNavigate } from 'react-router-dom';
 import type { ProjectView } from '../../../api/projects';
-import { projectAccentStyle } from '../../projects/projectAccent';
+import { CoverThumb } from '../../projects/components/CoverThumb';
 import styles from '../pages/FoyerPage.module.css';
 
 dayjs.extend(relativeTime);
@@ -64,13 +64,13 @@ export function FoyerRecentCanvases({
               key={project.id}
               type="button"
               className={styles.canvasCard}
-              onClick={() => navigate(`/projects/${project.id}/canvas`)}
+              onClick={() => navigate(`/projects/${project.id}`)}
             >
-              <span className={styles.canvasThumb} style={projectAccentStyle(project)} />
+              <CoverThumb id={project.id} cover={project.cover} className={styles.canvasThumb} />
               <span className={styles.canvasMeta}>
                 <strong className={styles.canvasName}>{project.name}</strong>
                 <span className={styles.canvasTime}>
-                  {dayjs(project.updated_at).fromNow()}编辑
+                  {dayjs(project.activity_at).fromNow()}活动
                 </span>
               </span>
             </button>

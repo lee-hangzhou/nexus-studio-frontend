@@ -57,11 +57,12 @@ import type { NodeChangeInput } from '../storyflow/types';
 
 function CanvasPageInner() {
   const navigate = useNavigate();
-  const { projectId, setRevision, refetchSnapshot, loading: snapLoading } = useCanvasProject();
+  const { projectId, episodeId, setRevision, refetchSnapshot, loading: snapLoading } = useCanvasProject();
   const { pendingNodeIds, setNodePending } = useCanvasTask();
   const modelCatalog = useGenerateModelCatalog();
   const chatModelCatalog = useChatModelCatalog();
   const [projectName, setProjectName] = useState<string | undefined>();
+  const [episodeName, setEpisodeName] = useState<string | undefined>();
   const [mode, setMode] = useState<'auto' | 'manual'>('auto');
   const [agentOpen, setAgentOpen] = useState(true);
   const [agentModelKey, setAgentModelKey] = useState<string | undefined>(undefined);
@@ -109,13 +110,32 @@ function CanvasPageInner() {
   });
 
   useEffect(() => {
-    void getProject(projectId)
-      .then((p) => setProjectName(p.name))
-      .catch(() => {
-        message.error('画布不存在或无权访问');
+    const controller = new AbortController();
+    void getProject(projectId, { signal: controller.signal })
+      .then((detail) => {
+        if (controller.signal.aborted) return;
+        const episode = detail.episodes.find((item) => item.id === episodeId);
+        if (!episode) throw new Error('episode not found');
+        setProjectName(detail.project.name);
+        setEpisodeName(episode.name);
+      })
+      .catch((err) => {
+        if (controller.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) return;
+        message.error('集不存在或无权访问');
         navigate('/projects', { replace: true });
       });
-  }, [projectId, navigate]);
+    return () => controller.abort();
+  }, [projectId, episodeId, navigate]);
+
+  useEffect(() => {
+    return () => {
+      agentAbortRef.current?.abort();
+      nodeAbortRef.current.forEach((controller) => controller.abort());
+      nodeAbortRef.current.clear();
+      activeTurnRef.current = null;
+      streamRequestIdRef.current = null;
+    };
+  }, [episodeId]);
   useEffect(() => {
     if (!snapLoading) setLoaded(true);
   }, [snapLoading]);
@@ -128,7 +148,7 @@ function CanvasPageInner() {
     appendAssistantStream,
     appendAssistantToken,
     finishAssistantStream,
-  } = useCanvasMessages(projectId);
+  } = useCanvasMessages(episodeId);
 
   useEffect(() => {
     void loadMessages();
@@ -223,7 +243,7 @@ function CanvasPageInner() {
       try {
         await runner((f) => handleStreamFrame(f, activeTurnRef.current ?? ''), ac.signal);
       } catch (err) {
-        if (err instanceof Error && err.message === 'canvas_project_busy') {
+        if (err instanceof Error && err.message === 'canvas_episode_busy') {
           message.warning('画布正在执行 Agent，请稍后再试');
         } else if (err instanceof Error && err.message !== 'http_409') {
           message.error(err.message || '请求失败');
@@ -313,7 +333,7 @@ function CanvasPageInner() {
     setLiveToolSteps([]);
     await runStream((onFrame, signal) =>
       streamCanvasTurn(
-        projectId,
+        episodeId,
         {
           request_id: requestId,
           content,
@@ -329,7 +349,7 @@ function CanvasPageInner() {
   }, [
     composer,
     busy,
-    projectId,
+    episodeId,
     mode,
     agentModelKey,
     chatModelCatalog,
@@ -431,7 +451,7 @@ function CanvasPageInner() {
         const saved = await commitOps([{ op: 'update_node', node_id: nodeId, patch: nodePatch }]);
         if (!saved) return;
 
-        const result = await submitCanvasNodeGenerate(projectId, nodeId, body, ac.signal);
+        const result = await submitCanvasNodeGenerate(episodeId, nodeId, body, ac.signal);
         applyGenerateResult(result);
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') return;
@@ -449,7 +469,7 @@ function CanvasPageInner() {
       modelCatalog,
       commitOps,
       pendingNodeIds,
-      projectId,
+      episodeId,
       setNodeGeneratePending,
       setNodePending,
       setNodes,
@@ -491,8 +511,8 @@ function CanvasPageInner() {
 
   const onStop = useCallback(() => {
     agentAbortRef.current?.abort();
-    void cancelCanvasTurn(projectId);
-  }, [projectId]);
+    void cancelCanvasTurn(episodeId);
+  }, [episodeId]);
 
   return (
     <div className="workflow-canvas-page">
@@ -505,7 +525,9 @@ function CanvasPageInner() {
       <CanvasGenerateProvider onNodeGenerate={onNodeGenerate}>
         <WorkflowCanvasFlow
           projectId={projectId}
+          episodeId={episodeId}
           projectName={projectName}
+          episodeName={episodeName}
           busy={busy}
           nodes={nodes}
           edges={edges}
@@ -542,7 +564,7 @@ function CanvasPageInner() {
               try {
                 await runStream((onFrame, signal) =>
                   resumeCanvasTurn(
-                    projectId,
+                    episodeId,
                     {
                       request_id: requestId,
                       tool_call_id: toolPending.call_id,
@@ -568,7 +590,7 @@ function CanvasPageInner() {
               try {
                 await runStream((onFrame, signal) =>
                   resumeCanvasTurn(
-                    projectId,
+                    episodeId,
                     {
                       request_id: requestId,
                       tool_call_id: toolPending.call_id,
@@ -593,9 +615,10 @@ function CanvasPageInner() {
 }
 
 export function CanvasPage() {
-  const { projectId: raw } = useParams();
-  const projectId = Number(raw);
-  if (!Number.isFinite(projectId) || projectId <= 0) {
+  const { projectId: rawProjectId, episodeId: rawEpisodeId } = useParams();
+  const projectId = Number(rawProjectId);
+  const episodeId = Number(rawEpisodeId);
+  if (!Number.isFinite(projectId) || projectId <= 0 || !Number.isFinite(episodeId) || episodeId <= 0) {
     return (
       <div className="workflow-canvas-page workflow-canvas-page--invalid">
         <p>无效的画布，请从画布列表进入。</p>
@@ -606,7 +629,7 @@ export function CanvasPage() {
 
   return (
     <ReactFlowProvider>
-      <CanvasProjectProvider projectId={projectId}>
+      <CanvasProjectProvider key={`${projectId}:${episodeId}`} projectId={projectId} episodeId={episodeId}>
         <ChatModelCatalogProvider>
           <GenerateModelCatalogProvider>
             <CanvasTaskProvider>

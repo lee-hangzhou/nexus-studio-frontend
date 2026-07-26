@@ -1,0 +1,280 @@
+.page {
+  min-height: 100%;
+  padding: 32px clamp(24px, 4vw, 56px) 56px;
+  background: var(--studio-bg);
+  color: var(--studio-text);
+}
+
+.loading,
+.error {
+  display: grid;
+  place-items: center;
+  gap: 12px;
+  min-height: 40vh;
+}
+
+.error {
+  color: var(--studio-text-secondary);
+  text-align: center;
+}
+
+.error button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--studio-border);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--studio-text) 2%, transparent);
+  color: var(--studio-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.error button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--studio-primary) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.header,
+.episodes {
+  width: min(100%, 1280px);
+  margin-inline: auto;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid color-mix(in srgb, var(--studio-text) 8%, transparent);
+}
+
+.back {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+  color: var(--studio-text-secondary);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.back:hover {
+  color: var(--studio-primary);
+}
+
+.back:focus-visible {
+  color: var(--studio-primary);
+  outline: 2px solid color-mix(in srgb, var(--studio-primary) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+
+.cover,
+.episodeCover {
+  display: block;
+  overflow: hidden;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--studio-text) 9%, transparent);
+  border-radius: 6px;
+  background-size: cover;
+}
+
+.cover {
+  width: min(260px, 30vw);
+  aspect-ratio: 16 / 9;
+}
+
+.episodeCover {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+}
+
+.cover img,
+.cover video,
+.episodeCover img,
+.episodeCover video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.titleBlock {
+  min-width: 0;
+}
+
+.titleBlock h1 {
+  margin: 0;
+  color: var(--studio-text);
+  font-size: clamp(24px, 3vw, 36px);
+  font-weight: 650;
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.titleBlock p {
+  margin: 8px 0 14px;
+  color: var(--studio-text-secondary);
+  font-size: 13px;
+}
+
+.primaryBtn,
+.ghostBtn,
+.episodeActions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.primaryBtn {
+  align-self: end;
+  border: 1px solid var(--studio-primary);
+  background: var(--studio-primary);
+  color: var(--studio-on-primary);
+}
+
+.ghostBtn,
+.episodeActions button {
+  border: 1px solid var(--studio-border);
+  background: color-mix(in srgb, var(--studio-text) 2%, transparent);
+  color: var(--studio-text-secondary);
+}
+
+.primaryBtn:hover,
+.ghostBtn:hover,
+.episodeActions button:hover {
+  filter: brightness(1.06);
+}
+
+.primaryBtn:focus-visible,
+.ghostBtn:focus-visible,
+.episodeActions button:focus-visible {
+  filter: brightness(1.06);
+  outline: 2px solid color-mix(in srgb, var(--studio-primary) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.episodes {
+  padding-top: 24px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.sectionHead h2 {
+  margin: 0;
+  color: var(--studio-text);
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.episodeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.episodeCard {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--studio-text) 8%, transparent);
+  border-radius: 6px;
+  background: var(--studio-surface);
+}
+
+.episodeOpen {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.episodeOpen:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--studio-primary) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.episodeMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 14px;
+}
+
+.episodeMeta strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--studio-text);
+  font-size: 14px;
+}
+
+.episodeMeta span {
+  color: var(--studio-text-muted);
+  font-size: 12px;
+}
+
+.episodeActions {
+  display: flex;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+
+@media (max-width: 960px) {
+  .page {
+    padding: 24px 20px 48px;
+  }
+
+  .header {
+    grid-template-columns: 1fr;
+  }
+
+  .primaryBtn {
+    justify-self: start;
+  }
+
+  .cover {
+    width: min(220px, 34vw);
+  }
+}
+
+@media (max-width: 640px) {
+  .hero {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cover {
+    width: 100%;
+  }
+
+  .episodeGrid {
+    grid-template-columns: 1fr;
+  }
+}

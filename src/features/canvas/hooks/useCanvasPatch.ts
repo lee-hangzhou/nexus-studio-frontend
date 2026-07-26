@@ -13,7 +13,7 @@ export function useCanvasPatch(
   setEdges: (e: CanvasFlowEdge[]) => void,
   onRevisionConflict: () => void | Promise<void>,
 ) {
-  const { projectId, revisionRef, setRevision } = useCanvasProject();
+  const { episodeId, revisionRef, setRevision } = useCanvasProject();
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
   useEffect(() => {
@@ -51,7 +51,7 @@ export function useCanvasPatch(
     async (ops: CanvasPatchOp[]): Promise<CanvasPatchResult | null> => {
       if (ops.length === 0) return null;
       try {
-        const result = await patchCanvas(projectId, {
+        const result = await patchCanvas(episodeId, {
           expected_revision: revisionRef.current,
           ops,
         });
@@ -67,7 +67,7 @@ export function useCanvasPatch(
         return null;
       }
     },
-    [projectId, revisionRef, applyResult, onRevisionConflict],
+    [episodeId, revisionRef, applyResult, onRevisionConflict],
   );
 
   return { commitOps, applyResult };

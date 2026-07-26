@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const schemaDirectory = path.join(root, 'contracts', 'schema');
 const generatedDirectory = path.join(root, 'src', 'api', 'generated');
-const contractNames = ['canvas', 'generation', 'gateway', 'stream'];
+const contractNames = ['canvas', 'generation', 'gateway', 'projects', 'stream'];
 const executable = path.join(
   root,
   'node_modules',
