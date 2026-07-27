@@ -387,6 +387,177 @@ body.canvas-agent-panel--resizing {
 .workflow-canvas-agent-panel__composer {
   padding: 10px 12px 12px;
   border-top: 1px solid var(--border-color);
+
+  .studio-composer-box__footer {
+    gap: 8px;
+  }
+
+  .studio-composer-box__footer-left {
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
+  .studio-composer-box__model {
+    width: min(168px, 42vw);
+    max-width: 168px;
+  }
+}
+
+.workflow-canvas-agent-panel__turn-mode-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--studio-text) 12%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--studio-text) 4%, transparent);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible {
+    color: var(--text);
+    border-color: color-mix(in srgb, var(--studio-text) 22%, transparent);
+    background: color-mix(in srgb, var(--studio-text) 8%, transparent);
+    outline: none;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.workflow-canvas-agent-panel__turn-mode-chip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 14px;
+  opacity: 0.9;
+
+  svg {
+    width: 1em;
+    height: 1em;
+  }
+}
+
+.workflow-canvas-agent-panel__turn-mode-dropdown {
+  /* antd overlay 默认可能透底，整层用不透色盖死 */
+  .ant-dropdown {
+    background: transparent;
+  }
+
+  .ant-dropdown-menu {
+    padding: 0;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+}
+
+.workflow-canvas-agent-panel__turn-mode-menu {
+  width: 300px;
+  padding: 6px;
+  border: 1px solid color-mix(in srgb, var(--studio-text) 12%, transparent);
+  border-radius: 12px;
+  /* 必须用不透色，避免压在消息/输入框上透字重叠 */
+  background: var(--studio-surface-solid, #15181d);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  color: var(--text);
+  isolation: isolate;
+}
+
+.workflow-canvas-agent-panel__turn-mode-menu-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: color-mix(in srgb, var(--studio-text) 6%, transparent);
+    outline: none;
+  }
+
+  &.is-active {
+    background: color-mix(in srgb, var(--studio-text) 4%, transparent);
+  }
+}
+
+.workflow-canvas-agent-panel__turn-mode-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-size: 18px;
+  color: var(--text);
+  opacity: 0.92;
+
+  svg {
+    width: 1em;
+    height: 1em;
+  }
+}
+
+.workflow-canvas-agent-panel__turn-mode-menu-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.workflow-canvas-agent-panel__turn-mode-menu-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.workflow-canvas-agent-panel__turn-mode-menu-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.workflow-canvas-agent-panel__turn-mode-menu-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 3px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.workflow-canvas-agent-panel__skill-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 2px 6px;
 }
 
 

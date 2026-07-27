@@ -10,6 +10,7 @@ export type StudioSegmentProps<T extends string> = {
   value: T;
   onChange: (value: T) => void;
   disabled?: boolean;
+  orientation?: 'horizontal' | 'vertical';
   'aria-label'?: string;
   className?: string;
 };
@@ -24,11 +25,20 @@ export function StudioSegment<T extends string>({
   value,
   onChange,
   disabled = false,
+  orientation = 'horizontal',
   className,
   'aria-label': ariaLabel,
 }: StudioSegmentProps<T>) {
   return (
-    <div className={cx('studio-segment', className)} role="group" aria-label={ariaLabel}>
+    <div
+      className={cx(
+        'studio-segment',
+        orientation === 'vertical' && 'studio-segment--vertical',
+        className,
+      )}
+      role="group"
+      aria-label={ariaLabel}
+    >
       {options.map((opt) => (
         <StudioChip
           key={opt.value}

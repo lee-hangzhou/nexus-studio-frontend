@@ -1,4 +1,5 @@
 import type { StreamFrame } from '../../../api/chat';
+import type { SkillWriteOperation, TurnContentBlock, TurnUserInput } from '../../skills/types';
 import type {
   CanvasEdgeView,
   CanvasNodeKind,
@@ -60,6 +61,7 @@ export interface CanvasMessageRecord {
   id: number;
   role: number;
   content: string;
+  input?: TurnUserInput | Record<string, unknown> | null;
   metadata: Record<string, unknown>;
   created_at: string;
 }
@@ -69,7 +71,8 @@ export type { CanvasSessionView } from '../../../api/generated/canvas';
 export interface CanvasTurnBody {
   session_id: number;
   request_id: string;
-  content: string;
+  content: TurnContentBlock[];
+  materials?: [];
   model_key?: string;
   client_turn_id?: string;
   mode?: 'auto' | 'manual';
@@ -83,6 +86,7 @@ export interface CanvasResumeBody {
   action: 'confirm' | 'reject';
   client_turn_id?: string;
   model_key?: string;
+  operation?: SkillWriteOperation | null;
 }
 
 export type CanvasPatchEvent = Omit<CanvasPatchResponse, 'nodes' | 'edges'> & {

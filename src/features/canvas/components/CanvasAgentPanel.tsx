@@ -8,14 +8,24 @@ import { ComposerSendButton } from '../../../shared/ui/ComposerSendButton';
 import { ComposerShell } from '../../../shared/ui/ComposerShell';
 import { StudioButton } from '../../../shared/ui/StudioButton';
 import { StudioChip } from '../../../shared/ui/StudioChip';
-import { StudioSegment } from '../../../shared/ui/StudioSegment';
 import { ToolRunTimeline } from '../../chat/components/ToolRunTimeline';
+import { ComposerPlusMenu } from '../../skills/ComposerPlusMenu';
+import { SkillManageModal } from '../../skills/SkillManageModal';
+import { SkillPill } from '../../skills/SkillPill';
+import { SkillWritePendingCard } from '../../skills/SkillWritePendingCard';
+import { SKILL_WRITE_OPERATION_TYPE } from '../../skills/constants';
+import { UserMessageContent } from '../../skills/UserMessageContent';
+import type { SkillWriteOperation, ToolPendingState } from '../../skills/types';
 import type { CanvasSessionView } from '../api/canvasTypes';
 import { CANVAS_DEFAULT_SESSION_TITLE } from '../constants';
 import { useChatModelCatalog } from '../context/ChatModelCatalogContext';
 import type { CanvasFeedMessage } from '../hooks/useCanvasMessages';
 import { stripPseudoToolMarkup } from '../utils/stripPseudoToolMarkup';
 import { CanvasAgentSessionList } from './CanvasAgentSessionList';
+import {
+  CanvasAgentTurnModeMenu,
+  type CanvasAgentMode,
+} from './CanvasAgentTurnModeMenu';
 import { useAgentPanelWidth } from './useAgentPanelWidth';
 
 function toolStepsFromMetadata(metadata: Record<string, unknown>): ToolStepView[] {
@@ -41,7 +51,7 @@ function toolStepsFromMetadata(metadata: Record<string, unknown>): ToolStepView[
   });
 }
 
-export type CanvasAgentMode = 'auto' | 'manual';
+export type { CanvasAgentMode };
 
 export function CanvasAgentPanel({
   open,
@@ -55,6 +65,9 @@ export function CanvasAgentPanel({
   onModelChange,
   composer,
   onComposerChange,
+  selectedSkillPaths,
+  onSelectedSkillPathsChange,
+  projectId,
   onSend,
   onStop,
   liveToolSteps,
@@ -82,11 +95,14 @@ export function CanvasAgentPanel({
   onModelChange: (modelKey: string) => void;
   composer: string;
   onComposerChange: (v: string) => void;
+  selectedSkillPaths: string[];
+  onSelectedSkillPathsChange: (paths: string[]) => void;
+  projectId: number;
   onSend: () => void;
   onStop: () => void;
   liveToolSteps: ToolStepView[];
-  toolPending: { call_id: string; summary: string } | null;
-  onConfirmTool: () => void;
+  toolPending: ToolPendingState | null;
+  onConfirmTool: (operation?: SkillWriteOperation | null) => void;
   onRejectTool: () => void;
   resumeLoading: boolean;
   sessions: CanvasSessionView[];
@@ -103,6 +119,7 @@ export function CanvasAgentPanel({
   const { width, onResizePointerDown } = useAgentPanelWidth();
   const [sessionListOpen, setSessionListOpen] = useState(false);
   const [sessionListEditing, setSessionListEditing] = useState(false);
+  const [skillManageOpen, setSkillManageOpen] = useState(false);
 
   const sessionTitle = useMemo(() => {
     const active = sessions.find((s) => s.id === activeSessionId);
@@ -127,7 +144,11 @@ export function CanvasAgentPanel({
     [onSessionChange],
   );
 
-  const canSend = Boolean(composer.trim()) && !busy && Boolean(modelKey) && activeSessionId != null;
+  const canSend =
+    Boolean(composer.trim())
+    && !busy
+    && Boolean(modelKey)
+    && activeSessionId != null;
 
   const sessionOptions = useMemo(
     () =>
@@ -263,7 +284,7 @@ export function CanvasAgentPanel({
               return (
                 <article key={m.id} className="workflow-canvas-agent-panel__bubble is-user">
                   <span className="workflow-canvas-agent-panel__who">你</span>
-                  <p className="workflow-canvas-agent-panel__text">{m.content}</p>
+                  <UserMessageContent content={m.content} input={m.input} />
                 </article>
               );
             }
@@ -291,21 +312,48 @@ export function CanvasAgentPanel({
 
           {toolPending ? (
             <div className="workflow-canvas-agent-panel__bubble is-assistant">
-              <p className="workflow-canvas-agent-panel__text">{toolPending.summary}</p>
-              <div className="workflow-canvas-agent-panel__gate">
-                <Button size="small" type="primary" loading={resumeLoading} onClick={onConfirmTool}>
-                  确认
-                </Button>
-                <Button size="small" disabled={resumeLoading} onClick={onRejectTool}>
-                  拒绝
-                </Button>
-              </div>
+              {toolPending.operation?.type === SKILL_WRITE_OPERATION_TYPE ? (
+                <SkillWritePendingCard
+                  summary={toolPending.summary}
+                  operation={toolPending.operation}
+                  loading={resumeLoading}
+                  onConfirm={(operation) => onConfirmTool(operation)}
+                  onReject={onRejectTool}
+                />
+              ) : (
+                <>
+                  <p className="workflow-canvas-agent-panel__text">{toolPending.summary}</p>
+                  <div className="workflow-canvas-agent-panel__gate">
+                    <Button size="small" type="primary" loading={resumeLoading} onClick={() => onConfirmTool()}>
+                      确认
+                    </Button>
+                    <Button size="small" disabled={resumeLoading} onClick={onRejectTool}>
+                      拒绝
+                    </Button>
+                  </div>
+                </>
+              )}
             </div>
           ) : null}
         </div>
 
         <div className="workflow-canvas-agent-panel__composer">
           <ComposerShell
+            top={
+              selectedSkillPaths.length > 0 ? (
+                <div className="workflow-canvas-agent-panel__skill-chips">
+                  {selectedSkillPaths.map((path) => (
+                    <SkillPill
+                      key={path}
+                      path={path}
+                      onRemove={() =>
+                        onSelectedSkillPathsChange(selectedSkillPaths.filter((item) => item !== path))
+                      }
+                    />
+                  ))}
+                </div>
+              ) : null
+            }
             input={
               <textarea
                 className="studio-composer-box__textarea"
@@ -325,16 +373,25 @@ export function CanvasAgentPanel({
             }
             footerLeft={
               <>
-                <StudioSegment
-                  aria-label="运行模式"
-                  value={mode}
+                <ComposerPlusMenu
                   disabled={busy}
-                  onChange={onModeChange}
-                  options={[
-                    { value: 'auto', label: '自动' },
-                    { value: 'manual', label: '手动' },
-                  ]}
+                  skills={{
+                    surface: 'canvas',
+                    projectId,
+                    selectedPaths: selectedSkillPaths,
+                    onSelectedPathsChange: onSelectedSkillPathsChange,
+                    onManage: () => setSkillManageOpen(true),
+                  }}
                 />
+                <CanvasAgentTurnModeMenu
+                  value={mode}
+                  onChange={onModeChange}
+                  disabled={busy}
+                />
+              </>
+            }
+            footerRight={
+              <>
                 <Select
                   className="studio-composer-box__model"
                   popupMatchSelectWidth={false}
@@ -349,17 +406,21 @@ export function CanvasAgentPanel({
                   placeholder={chatModels.failed ? '模型不可用' : '选择模型'}
                   aria-label="对话模型"
                 />
+                <ComposerSendButton
+                  busy={busy}
+                  disabled={!canSend}
+                  onSend={handleSend}
+                  onStop={onStop}
+                  title={modelKey ? '发送' : '暂无可用模型'}
+                />
               </>
             }
-            footerRight={
-              <ComposerSendButton
-                busy={busy}
-                disabled={!canSend}
-                onSend={handleSend}
-                onStop={onStop}
-                title={modelKey ? '发送' : '暂无可用模型'}
-              />
-            }
+          />
+          <SkillManageModal
+            open={skillManageOpen}
+            onClose={() => setSkillManageOpen(false)}
+            surface="canvas"
+            projectId={projectId}
           />
         </div>
       </div>

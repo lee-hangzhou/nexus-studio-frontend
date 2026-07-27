@@ -63,14 +63,4 @@ export function canvasSessionTitleFromFrame(frame: CanvasStreamFrame): CanvasSes
   };
 }
 
-export function toolPendingFromFrame(
-  frame: CanvasStreamFrame,
-): { call_id: string; name: string; summary: string } | null {
-  if (frame.type !== 'tool_pending') return null;
-  if (!frame.call_id) return null;
-  return {
-    call_id: frame.call_id,
-    name: frame.name ?? '',
-    summary: frame.summary ?? '待确认的工具操作',
-  };
-}
+export { toolPendingFromFrame } from '../../skills/toolPending';

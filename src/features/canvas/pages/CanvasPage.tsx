@@ -32,6 +32,8 @@ import type {
   CanvasStreamFrame,
   NodeGenerateBody,
 } from '../api/canvasTypes';
+import { buildTurnUserInput, compileHumanTextFromBlocks } from '../../skills/serializeTurnContent';
+import type { ToolPendingState } from '../../skills/types';
 import { CanvasAgentPanel } from '../components/CanvasAgentPanel';
 import { buildTurnId } from '../components/CanvasAgentPanel.utils';
 import { CanvasGenerateProvider, type NodeGenerateExtra } from '../context/CanvasGenerateContext';
@@ -65,12 +67,13 @@ import type { NodeChangeInput } from '../storyflow/types';
 
 type SessionUiCache = {
   composer: string;
+  selectedSkillPaths: string[];
   mode: 'auto' | 'manual';
   agentModelKey?: string;
   clientTurnId?: string | null;
   requestId?: string | null;
   lastEventId?: string | null;
-  toolPending?: { call_id: string; summary: string } | null;
+  toolPending?: ToolPendingState | null;
 };
 
 function CanvasPageInner() {
@@ -87,9 +90,10 @@ function CanvasPageInner() {
   const [agentModelKey, setAgentModelKey] = useState<string | undefined>(undefined);
   const [busySessionIds, setBusySessionIds] = useState<Set<number>>(() => new Set());
   const [composer, setComposer] = useState('');
+  const [selectedSkillPaths, setSelectedSkillPaths] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [liveToolSteps, setLiveToolSteps] = useState<ToolStepView[]>([]);
-  const [toolPending, setToolPending] = useState<{ call_id: string; summary: string } | null>(null);
+  const [toolPending, setToolPending] = useState<ToolPendingState | null>(null);
   const [resumeLoading, setResumeLoading] = useState(false);
   const [sessions, setSessions] = useState<CanvasSessionView[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
@@ -350,12 +354,12 @@ function CanvasPageInner() {
       // 图增量 / progress 只吃 episode events, 不从 turn SSE 合并
       const pending = toolPendingFromFrame(frame);
       if (pending) {
-        setToolPending({ call_id: pending.call_id, summary: pending.summary });
+        setToolPending(pending);
         const cached = uiBySessionRef.current.get(sessionId);
         if (cached) {
           uiBySessionRef.current.set(sessionId, {
             ...cached,
-            toolPending: { call_id: pending.call_id, summary: pending.summary },
+            toolPending: pending,
           });
         }
       }
@@ -384,6 +388,7 @@ function CanvasPageInner() {
     } else {
       uiBySessionRef.current.set(sessionId, {
         composer: '',
+        selectedSkillPaths: [],
         mode: 'auto',
         lastEventId: eventId,
       });
@@ -440,7 +445,6 @@ function CanvasPageInner() {
           // 切会话掐本地流: 服务端仍在跑, 保持 busy 以便切回重挂
         } else {
           setSessionBusy(sessionId, false);
-          if (activeSessionIdRef.current === sessionId) setToolPending(null);
           const cached = uiBySessionRef.current.get(sessionId);
           if (cached) {
             uiBySessionRef.current.set(sessionId, {
@@ -448,7 +452,8 @@ function CanvasPageInner() {
               requestId: null,
               lastEventId: null,
               clientTurnId: cached.clientTurnId,
-              toolPending: null,
+              // interrupt 后保留 toolPending, 供 HITL 确认卡继续展示
+              toolPending: cached.toolPending ?? null,
             });
           }
           if (activeSessionIdRef.current === sessionId) {
@@ -521,8 +526,12 @@ function CanvasPageInner() {
   );
 
   const sendTurn = useCallback(async () => {
-    const content = composer.trim();
-    if (!content || busy || activeSessionId == null) return;
+    const text = composer.trim();
+    if ((!text && selectedSkillPaths.length === 0) || busy || activeSessionId == null) return;
+    if (selectedSkillPaths.length > 0 && !text) {
+      message.warning('引用技能后须填写说明文字');
+      return;
+    }
     const modelKey = chatModelCatalog.resolveModelKey(agentModelKey);
     if (!hasResolvedChatModelKey(modelKey)) {
       message.warning('对话模型不可用，请稍后重试');
@@ -531,6 +540,8 @@ function CanvasPageInner() {
     if (modelKey !== agentModelKey) {
       setAgentModelKey(modelKey);
     }
+    const userInput = buildTurnUserInput(text, selectedSkillPaths);
+    const content = userInput.content;
     const clientTurnId = buildTurnId();
     const requestId = crypto.randomUUID();
     activeTurnRef.current = clientTurnId;
@@ -538,6 +549,7 @@ function CanvasPageInner() {
     lastEventIdRef.current = null;
     uiBySessionRef.current.set(activeSessionId, {
       composer: '',
+      selectedSkillPaths: [],
       mode,
       agentModelKey: modelKey,
       clientTurnId,
@@ -546,7 +558,8 @@ function CanvasPageInner() {
       toolPending: null,
     });
     setComposer('');
-    appendUser(content, clientTurnId);
+    setSelectedSkillPaths([]);
+    appendUser(compileHumanTextFromBlocks(content), clientTurnId, userInput);
     appendAssistantStream(clientTurnId);
     setLiveToolSteps([]);
     await runStream(activeSessionId, (onFrame, signal) =>
@@ -556,6 +569,7 @@ function CanvasPageInner() {
           session_id: activeSessionId,
           request_id: requestId,
           content,
+          materials: [],
           model_key: modelKey,
           client_turn_id: clientTurnId,
           mode,
@@ -567,6 +581,7 @@ function CanvasPageInner() {
     );
   }, [
     composer,
+    selectedSkillPaths,
     busy,
     activeSessionId,
     episodeId,
@@ -606,6 +621,7 @@ function CanvasPageInner() {
         const prevCache = uiBySessionRef.current.get(activeSessionId);
         uiBySessionRef.current.set(activeSessionId, {
           composer,
+          selectedSkillPaths,
           mode,
           agentModelKey,
           clientTurnId: activeTurnRef.current ?? prevCache?.clientTurnId ?? null,
@@ -622,6 +638,7 @@ function CanvasPageInner() {
       const cached = uiBySessionRef.current.get(nextSessionId);
       setActiveSessionId(nextSessionId);
       setComposer(cached?.composer ?? '');
+      setSelectedSkillPaths(cached?.selectedSkillPaths ?? []);
       setMode(cached?.mode ?? 'auto');
       // 无 cache 时不沿用上一会话 modelKey
       setAgentModelKey(cached?.agentModelKey);
@@ -640,6 +657,7 @@ function CanvasPageInner() {
       busySessionIds,
       clearMessages,
       composer,
+      selectedSkillPaths,
       mode,
       reattachSessionStream,
       toolPending,
@@ -938,6 +956,9 @@ function CanvasPageInner() {
           onModelChange={setAgentModelKey}
           composer={composer}
           onComposerChange={setComposer}
+          selectedSkillPaths={selectedSkillPaths}
+          onSelectedSkillPathsChange={setSelectedSkillPaths}
+          projectId={projectId}
           onSend={() => void sendTurn()}
           onStop={onStop}
           liveToolSteps={liveToolSteps}
@@ -950,9 +971,10 @@ function CanvasPageInner() {
           onCloseSession={(sessionId) => void handleCloseSession(sessionId)}
           sessionsLoading={sessionsLoading}
           creatingSession={creatingSession}
-          onConfirmTool={() =>
+          onConfirmTool={(operation) =>
             void (async () => {
               if (!toolPending || !activeTurnRef.current || activeSessionId == null) return;
+              const pending = toolPending;
               const modelKey = chatModelCatalog.resolveModelKey(agentModelKey);
               if (!hasResolvedChatModelKey(modelKey)) {
                 message.warning('对话模型不可用，请稍后重试');
@@ -962,22 +984,39 @@ function CanvasPageInner() {
               streamRequestIdRef.current = requestId;
               lastEventIdRef.current = null;
               setResumeLoading(true);
+              let streamFailed = false;
               try {
-                await runStream(activeSessionId, (onFrame, signal) =>
-                  resumeCanvasTurn(
-                    episodeId,
-                    {
-                      session_id: activeSessionId,
-                      request_id: requestId,
-                      tool_call_id: toolPending.call_id,
-                      action: 'confirm',
-                      client_turn_id: activeTurnRef.current!,
-                      model_key: modelKey,
-                    },
-                    onFrame,
-                    turnStreamHooks(activeSessionId, signal, null),
-                  ),
-                );
+                await runStream(activeSessionId, async (onFrame, signal) => {
+                  try {
+                    await resumeCanvasTurn(
+                      episodeId,
+                      {
+                        session_id: activeSessionId,
+                        request_id: requestId,
+                        tool_call_id: pending.call_id,
+                        action: 'confirm',
+                        client_turn_id: activeTurnRef.current!,
+                        model_key: modelKey,
+                        operation: operation ?? pending.operation ?? null,
+                      },
+                      (frame) => {
+                        if (frame.type === 'error') streamFailed = true;
+                        onFrame(frame);
+                      },
+                      turnStreamHooks(activeSessionId, signal, null),
+                    );
+                  } catch (err) {
+                    streamFailed = true;
+                    throw err;
+                  }
+                });
+                if (!streamFailed) {
+                  setToolPending(null);
+                  const cached = uiBySessionRef.current.get(activeSessionId);
+                  if (cached) {
+                    uiBySessionRef.current.set(activeSessionId, { ...cached, toolPending: null });
+                  }
+                }
               } finally {
                 setResumeLoading(false);
               }
@@ -986,6 +1025,7 @@ function CanvasPageInner() {
           onRejectTool={() =>
             void (async () => {
               if (!toolPending || !activeTurnRef.current || activeSessionId == null) return;
+              const pending = toolPending;
               const modelKey = chatModelCatalog.resolveModelKey(agentModelKey);
               if (!hasResolvedChatModelKey(modelKey)) {
                 message.warning('对话模型不可用，请稍后重试');
@@ -995,22 +1035,38 @@ function CanvasPageInner() {
               streamRequestIdRef.current = requestId;
               lastEventIdRef.current = null;
               setResumeLoading(true);
+              let streamFailed = false;
               try {
-                await runStream(activeSessionId, (onFrame, signal) =>
-                  resumeCanvasTurn(
-                    episodeId,
-                    {
-                      session_id: activeSessionId,
-                      request_id: requestId,
-                      tool_call_id: toolPending.call_id,
-                      action: 'reject',
-                      client_turn_id: activeTurnRef.current!,
-                      model_key: modelKey,
-                    },
-                    onFrame,
-                    turnStreamHooks(activeSessionId, signal, null),
-                  ),
-                );
+                await runStream(activeSessionId, async (onFrame, signal) => {
+                  try {
+                    await resumeCanvasTurn(
+                      episodeId,
+                      {
+                        session_id: activeSessionId,
+                        request_id: requestId,
+                        tool_call_id: pending.call_id,
+                        action: 'reject',
+                        client_turn_id: activeTurnRef.current!,
+                        model_key: modelKey,
+                      },
+                      (frame) => {
+                        if (frame.type === 'error') streamFailed = true;
+                        onFrame(frame);
+                      },
+                      turnStreamHooks(activeSessionId, signal, null),
+                    );
+                  } catch (err) {
+                    streamFailed = true;
+                    throw err;
+                  }
+                });
+                if (!streamFailed) {
+                  setToolPending(null);
+                  const cached = uiBySessionRef.current.get(activeSessionId);
+                  if (cached) {
+                    uiBySessionRef.current.set(activeSessionId, { ...cached, toolPending: null });
+                  }
+                }
               } finally {
                 setResumeLoading(false);
               }

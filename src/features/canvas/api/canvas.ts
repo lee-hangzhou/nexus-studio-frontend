@@ -298,6 +298,7 @@ export async function streamCanvasTurn(
           session_id: body.session_id,
           request_id: body.request_id,
           content: body.content,
+          materials: body.materials ?? [],
           model_key: body.model_key,
           client_turn_id: body.client_turn_id,
           mode: body.mode ?? 'auto',
@@ -339,6 +340,7 @@ export async function resumeCanvasTurn(
           action: body.action,
           client_turn_id: body.client_turn_id,
           model_key: body.model_key,
+          ...(body.operation ? { operation: body.operation } : {}),
         },
         {
           onFrame: (f) => openHooks.onFrame(f as CanvasStreamFrame),

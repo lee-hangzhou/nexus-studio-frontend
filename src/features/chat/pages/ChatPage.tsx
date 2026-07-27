@@ -61,6 +61,8 @@ import {
   type ConversationMessagePagination,
 } from '../messageList';
 import { isImageMime } from '../hooks/useAttachmentUrl';
+import { buildTurnUserInput, compileHumanTextFromBlocks } from '../../skills/serializeTurnContent';
+import { UserMessageContent } from '../../skills/UserMessageContent';
 
 function userGateFromPending(conversationId: number, pending: GatePendingView): UserGateState {
   return {
@@ -295,6 +297,7 @@ export function ChatPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [input, setInput] = useState('');
+  const [selectedSkillPaths, setSelectedSkillPaths] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sessionFilter, setSessionFilter] = useState<TimeFilter>('all');
   const [models, setModels] = useState<ChatModelItem[]>([]);
@@ -522,12 +525,6 @@ export function ChatPage() {
       setModelVisionHint(null);
     }
   };
-
-  const attachmentIdsForSend = supportsVision
-    ? attachments.map((item) => item.attachment_id)
-    : attachments
-        .filter((item) => !isImageMime(item.mime_type))
-        .map((item) => item.attachment_id);
 
   const nextTempId = () => {
     const id = tempIdRef.current;
@@ -808,6 +805,7 @@ export function ChatPage() {
       saveUiToCache(activeConversationId);
     }
     setActiveConversationId(id);
+    setSelectedSkillPaths([]);
     if (loadingIdsRef.current.has(id)) {
       applyUiFromCache(id);
       return;
@@ -832,6 +830,7 @@ export function ChatPage() {
       setNarrationCursor(0);
       setLiveTurnId(null);
       setAttachments([]);
+      setSelectedSkillPaths([]);
     }
   };
 
@@ -848,6 +847,7 @@ export function ChatPage() {
       setSessions(items);
       uiByConversationRef.current.set(conv.id, { ...EMPTY_CONVERSATION_UI });
       setActiveConversationId(conv.id);
+      setSelectedSkillPaths([]);
       applyUiFromCache(conv.id);
     } catch (err) {
       antMessage.error(err instanceof Error ? err.message : '创建会话失败');
@@ -861,7 +861,14 @@ export function ChatPage() {
     attachments?: UploadedAttachment[];
   }) => {
     const text = (options?.text ?? input).trim();
-    if (!text) return;
+    const skillPaths = options?.text != null ? [] : selectedSkillPaths;
+    // content[] 须含非空文本块；仅附件不可发空 content（与后端 min_length / validate 对齐）
+    if (!text) {
+      if (skillPaths.length > 0) {
+        antMessage.warning('引用技能后须填写说明文字');
+      }
+      return;
+    }
     const model = options?.model ?? selectedModel;
     if (!model) {
       antMessage.error('暂无可用模型，请稍后重试');
@@ -922,8 +929,11 @@ export function ChatPage() {
       preview_url: item.preview_url,
     }));
     queuePreviewUrlForDelayedRevoke(sentAttachments.map((item) => item.preview_url));
+    const userInput = buildTurnUserInput(text, skillPaths);
+    const turnContent = userInput.content;
     if (isActiveConversation()) {
       setInput('');
+      setSelectedSkillPaths([]);
     }
     setConversationLoading(conversationId, true);
     setSessions((prev) =>
@@ -945,8 +955,9 @@ export function ChatPage() {
         {
           id: userTempId,
           role: 'user',
-          content: text,
-          metadata: { client_turn_id: turnId, attachments: sentAttachments },
+          content: compileHumanTextFromBlocks(turnContent),
+          input: userInput,
+          metadata: { client_turn_id: turnId, attachments: sentAttachments, input: userInput },
           created_at: new Date().toISOString(),
         },
         {
@@ -1185,7 +1196,7 @@ export function ChatPage() {
         {
           request_id: crypto.randomUUID(),
           conversation_id: conversationId,
-          content: text,
+          content: turnContent,
           model: model,
           attachment_ids: sentAttachmentIds,
           enable_tools: true,
@@ -1558,6 +1569,12 @@ export function ChatPage() {
 
     return (
       <>
+        {message.role === 'user' ? (
+          <UserMessageContent
+            content={message.content}
+            input={message.input ?? (message.metadata.input as Record<string, unknown> | undefined)}
+          />
+        ) : null}
         {msgAttachments.length > 0 && <MessageAttachmentList attachments={msgAttachments} />}
         {showWorkingStatus ? (
           <TurnWorkingStatus
@@ -1577,7 +1594,7 @@ export function ChatPage() {
             </div>
           </details>
         )}
-        {content && (
+        {content && isAssistant && (
           <div className="studio-bubble__markdown">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
           </div>
@@ -1772,6 +1789,8 @@ export function ChatPage() {
             <ChatComposerBox
               input={input}
               onInputChange={setInput}
+              selectedSkillPaths={selectedSkillPaths}
+              onSelectedSkillPathsChange={setSelectedSkillPaths}
               models={models}
               selectedModel={selectedModel}
               onModelChange={handleModelChange}
@@ -1792,10 +1811,7 @@ export function ChatPage() {
               onUploadFile={(file) => onUpload(file, false)}
               busy={conversationBusy}
               modelVisionHint={modelVisionHint}
-              canSend={
-                Boolean(selectedModel)
-                && (Boolean(input.trim()) || attachmentIdsForSend.length > 0)
-              }
+              canSend={Boolean(selectedModel) && Boolean(input.trim())}
               onSend={() => void send()}
               onStop={() => void cancelInFlightTurn()}
             />

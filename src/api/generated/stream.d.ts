@@ -126,6 +126,9 @@ export type TurnId5 = string | null;
 export type Type10 = "generation_progress";
 export type CallId2 = string;
 export type Name2 = string;
+export type Operation = {
+  [k: string]: unknown;
+} | null;
 export type ProtocolVersion12 = number;
 export type Summary = string | null;
 export type TurnId6 = string;
@@ -292,6 +295,7 @@ export interface GenerationProgress {
 export interface ToolPendingFrame {
   call_id: CallId2;
   name: Name2;
+  operation?: Operation;
   protocol_version?: ProtocolVersion12;
   summary?: Summary;
   turn_id: TurnId6;

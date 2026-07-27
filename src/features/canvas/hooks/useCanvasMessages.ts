@@ -1,5 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import type { ToolStepView } from '../../../api/chat';
+import type { TurnUserInput } from '../../skills/types';
+import { parseUserInputSnapshot } from '../../skills/serializeTurnContent';
 import { listCanvasMessages } from '../api/canvas';
 import { stripPseudoToolMarkup } from '../utils/stripPseudoToolMarkup';
 import type { CanvasMessageRecord } from '../api/canvasTypes';
@@ -10,16 +12,19 @@ export type CanvasFeedMessage = {
   id: number | string;
   role: 'user' | 'assistant';
   content: string;
+  input?: TurnUserInput | null;
   metadata: Record<string, unknown>;
   created_at: string;
   streaming?: boolean;
 };
 
 function toFeed(m: CanvasMessageRecord): CanvasFeedMessage {
+  const input = m.input ? parseUserInputSnapshot(m.input) : null;
   return {
     id: m.id,
     role: m.role === ROLE_USER ? 'user' : 'assistant',
     content: stripPseudoToolMarkup(m.content),
+    input,
     metadata: m.metadata ?? {},
     created_at: m.created_at,
   };
@@ -110,12 +115,13 @@ export function useCanvasMessages(episodeId: number, sessionId: number | null) {
     }
   }, [episodeId, sessionId, clearMessages]);
 
-  const appendUser = useCallback((content: string, clientTurnId: string) => {
+  const appendUser = useCallback((content: string, clientTurnId: string, input?: TurnUserInput) => {
     const temp: CanvasFeedMessage = {
       id: `temp-user-${clientTurnId}`,
       role: 'user',
       content,
-      metadata: { client_turn_id: clientTurnId },
+      input: input ?? null,
+      metadata: { client_turn_id: clientTurnId, ...(input ? { input } : {}) },
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, temp]);

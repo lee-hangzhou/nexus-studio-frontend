@@ -1,5 +1,7 @@
 import { apiOriginUrl, apiUrl, fetchWithAuth, getAccessToken, request } from './base';
 import type { Stream as GeneratedStreamFrame } from './generated/stream';
+import type { TurnContentBlock } from './turnContent';
+import { toolPendingFromFrame, type SkillWriteOperation } from './toolPending';
 
 export type StreamFrame = GeneratedStreamFrame;
 export type StreamFrameType = StreamFrame['type'];
@@ -28,6 +30,7 @@ export interface ChatMessageView {
   id: number;
   role: string;
   content: string;
+  input?: Record<string, unknown> | null;
   metadata: Record<string, unknown>;
   created_at: string;
 }
@@ -252,6 +255,12 @@ type StreamHandlers = {
     message: string;
     conversation_id: number;
   }) => void;
+  onToolPending?: (payload: {
+    call_id: string;
+    name: string;
+    summary: string;
+    operation?: SkillWriteOperation | null;
+  }) => void;
   onActivity?: () => void;
 };
 
@@ -337,6 +346,13 @@ async function consumeChatSSE(
                 conversation_id: (frame as { conversation_id?: number }).conversation_id ?? 0,
               });
               break;
+            case 'tool_pending': {
+              const pending = toolPendingFromFrame(frame as Parameters<typeof toolPendingFromFrame>[0]);
+              if (pending) {
+                handlers.onToolPending?.(pending);
+              }
+              break;
+            }
             case 'error':
               handlers.onError(frame.code ?? 'error', frame.message ?? 'unknown error');
               break;
@@ -373,11 +389,12 @@ export async function streamMessage(
   body: {
     request_id: string;
     conversation_id: number;
-    content: string;
+    content: TurnContentBlock[];
     model: string;
     attachment_ids?: number[];
     enable_tools?: boolean;
     client_turn_id?: string;
+    project_id?: number;
   },
   handlers: StreamHandlers,
   signal?: AbortSignal,

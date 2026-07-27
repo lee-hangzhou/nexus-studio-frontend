@@ -2070,11 +2070,18 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+}
+
+.studio-composer-box__footer-left {
+  flex: 1 1 auto;
+  flex-wrap: wrap;
 }
 
 .studio-composer-box__footer-right {
   margin-left: auto;
-  min-width: 0;
+  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 
 .studio-composer-box__attach {
@@ -2192,6 +2199,7 @@ a:hover {
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .studio-composer-tool:hover:not(:disabled) {
