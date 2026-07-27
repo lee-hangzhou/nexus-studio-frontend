@@ -19,7 +19,7 @@ export function canvasPatchFromFrame(frame: CanvasStreamFrame): CanvasPatchEvent
 export type GenerationProgressEvent = {
   node_id: string;
   status?: CanvasNodeStatus;
-  task_id?: number;
+  task_id?: number | null;
   revision: number;
 };
 
@@ -34,11 +34,32 @@ export function generationProgressFromFrame(frame: CanvasStreamFrame): Generatio
   if (typeof revision !== 'number' || !Number.isInteger(revision) || revision < 1) {
     throw new Error(`invalid generation_progress revision for ${nodeId}`);
   }
-  return {
+  const event: GenerationProgressEvent = {
     node_id: nodeId,
     status: d.status,
-    task_id: d.task_id ?? undefined,
     revision,
+  };
+  if (d && 'task_id' in d) {
+    event.task_id = d.task_id ?? null;
+  }
+  return event;
+}
+
+export type CanvasSessionTitleEvent = {
+  session_id: number;
+  title: string;
+  updated_at?: string;
+};
+
+export function canvasSessionTitleFromFrame(frame: CanvasStreamFrame): CanvasSessionTitleEvent | null {
+  if (frame.type !== 'canvas_session_title') return null;
+  if (frame.session_id == null || !frame.title) {
+    throw new Error('canvas_session_title missing session_id/title');
+  }
+  return {
+    session_id: frame.session_id,
+    title: frame.title,
+    updated_at: frame.updated_at,
   };
 }
 

@@ -11,7 +11,11 @@ export type Canvas =
   | CanvasPatchResponse
   | CanvasRevisionConflictItem
   | GenerationProgress
-  | (CreateNodeOp | UpdateNodeOp | DeleteNodeOp | ConnectNodesOp | DisconnectNodesOp);
+  | (CreateNodeOp | UpdateNodeOp | DeleteNodeOp | ConnectNodesOp | DisconnectNodesOp)
+  | CanvasSessionView
+  | CanvasSessionCreateRequest
+  | CanvasSessionUpdateRequest
+  | CanvasSessionIdRequest;
 export type CanvasEdgeType = "dependency";
 export type Id = string;
 export type Revision = number;
@@ -101,6 +105,17 @@ export type Kind = "node" | "edge";
 export type NodeId3 = string;
 export type Revision2 = number;
 export type TaskId3 = number | null;
+export type CreatedAt = string;
+export type EpisodeId1 = number;
+export type Id3 = number;
+export type IsDefault = boolean;
+export type CanvasSessionStatus = 1 | 2;
+export type Title3 = string;
+export type UpdatedAt = string;
+export type Title4 = string | null;
+export type SessionId = number;
+export type Title5 = string;
+export type SessionId1 = number;
 
 export interface CanvasSnapshot {
   edges: Edges;
@@ -247,4 +262,35 @@ export interface GenerationProgress {
   revision: Revision2;
   status: CanvasNodeStatus2;
   task_id?: TaskId3;
+}
+/**
+ * 画布 Agent 会话视图
+ */
+export interface CanvasSessionView {
+  created_at: CreatedAt;
+  episode_id: EpisodeId1;
+  id: Id3;
+  is_default: IsDefault;
+  status: CanvasSessionStatus;
+  title: Title3;
+  updated_at: UpdatedAt;
+}
+/**
+ * 新建画布会话
+ */
+export interface CanvasSessionCreateRequest {
+  title?: Title4;
+}
+/**
+ * 更新画布会话标题
+ */
+export interface CanvasSessionUpdateRequest {
+  session_id: SessionId;
+  title: Title5;
+}
+/**
+ * 按 session_id 操作
+ */
+export interface CanvasSessionIdRequest {
+  session_id: SessionId1;
 }

@@ -226,18 +226,40 @@ mount → POST .../get snapshot → setNodes/setEdges
 
 ## 7. API 与 SSE
 
+| 能力 | 路径 / 说明 |
+|------|-------------|
+| Snapshot | `POST .../get`（图权威） |
+| Patch | `POST .../patch` + 实体 `expected_revision` |
+| 集级 events | `POST .../events`（Redis 扇出 `canvas_patch` / `generation_progress`） |
+| Sessions | `POST .../sessions/{list,ensure,create,update,delete}`（仅创建者可见；`list` 纯读；`ensure` 写默认会话幂等） |
+| Messages | `POST .../messages/list`，body **必填** `session_id` |
+| Turn | `POST .../turn` 等，body **必填** `session_id`；只推对话 / tool / gate |
+
+### 7.0 多 Session 与权威
+
+- 同一 episode **一张共享图**；Agent 对话按 session 隔离（消息、checkpoint、turn 锁）
+- `activeSessionId` 仅 React state，**不进 URL**；刷新后选该用户该集最近 session
+- 图增量只走 **episode events**；turn SSE 不再推 patch / progress
+- 断线重连 = 重新订 events + **立刻** snapshot `get`；增量不是权威
+- 冲突：`await` refetch 并写回 patch 用的 `nodesRef` / `edgesRef`
+- 关会话 / 删集：先 cancel 范围内 active turn，等锁释放，再清 checkpoint
+
+### 7.1 API 一览
+
 新建 `web/src/features/canvas/api/canvas.ts`（路径与后端 §11 对齐）：
 
 | 方法 | 函数 |
 |------|------|
 | POST snapshot | `getCanvasSnapshot(episodeId)` → `.../episodes/{id}/get` |
 | POST patch | `patchCanvas(episodeId, body)` → `.../episodes/{id}/patch` |
-| 消息列表 | `listCanvasMessages(episodeId, cursor?)` |
-| 发起 turn | `streamCanvasTurn(episodeId, body, handlers)` |
+| 集级 events | `streamCanvasEpisodeEvents(episodeId, onFrame)` |
+| Sessions | `list/create/update/deleteCanvasSession` |
+| 消息列表 | `listCanvasMessages(episodeId, { session_id, ... })` |
+| 发起 turn | `streamCanvasTurn(episodeId, body, handlers)`（body 含 `session_id`） |
 | resume | `resumeCanvasTurn(episodeId, body)` |
-| cancel | `cancelCanvasTurn(episodeId)` |
+| cancel | `cancelCanvasTurn(episodeId, sessionId)` |
 
-### 7.1 SSE 帧处理（扩展 `StreamFrame`）
+### 7.2 SSE 帧处理（扩展 `StreamFrame`）
 
 在 `web/src/api/canvas.ts` 或共享 `stream.ts` 扩展：
 
@@ -352,7 +374,8 @@ function applyCanvasPatchDelta(
 |------|-----|
 | Agent turn 进行中 | 侧栏 Composer 禁用；顶栏「停止」→ `cancelCanvasTurn`；画布可只读或允许 POST .../patch（与后端「边聊边改」一致则允许，冲突靠实体 revision） |
 | 409 冲突 | Modal：「画布已被更新」→ 刷新 snapshot |
-| `CANVAS_EPISODE_BUSY` | Toast：「Agent 正在执行」 |
+| `CANVAS_SESSION_BUSY` | Toast：「该会话正在执行」 |
+| `CANVAS_EPISODE_BUSY` | Toast：删集等破坏性操作占用集级 mutex |
 | 同节点并发 commitOps | `useCanvasPatch` 串行队列，避免自撞 409 |
 
 ---

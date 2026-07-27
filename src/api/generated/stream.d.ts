@@ -14,6 +14,7 @@ export type Stream =
   | DoneFrame
   | CancelledFrame
   | ConversationTitleFrame
+  | CanvasSessionTitleFrame
   | CanvasPatchFrame
   | GenerationProgressFrame
   | ToolPendingFrame
@@ -47,6 +48,7 @@ export type StreamErrorCode =
   | "agent_recovery_exhausted"
   | "canvas_duplicate_turn"
   | "canvas_episode_busy"
+  | "canvas_session_busy"
   | "empty_response"
   | "execution_lost"
   | "generation_failed"
@@ -77,6 +79,11 @@ export type ProtocolVersion8 = number;
 export type Title = string;
 export type Type7 = "conversation_title";
 export type UpdatedAt = string;
+export type ProtocolVersion9 = number;
+export type SessionId = number;
+export type Title1 = string;
+export type Type8 = "canvas_session_title";
+export type UpdatedAt1 = string;
 export type DeletedEdgeIds = string[];
 export type DeletedNodeIds = string[];
 export type CanvasEdgeType = "dependency";
@@ -103,26 +110,26 @@ export type Resolution = string | null;
 export type Revision1 = number;
 export type CanvasNodeStatus = "idle" | "waiting_inputs" | "ready" | "running" | "success" | "failed" | "cancelled";
 export type TaskId = number | null;
-export type Title1 = string;
+export type Title2 = string;
 export type VoiceId = string | null;
 export type Nodes = CanvasNodeView[];
 export type OpId = string | null;
-export type ProtocolVersion9 = number;
+export type ProtocolVersion10 = number;
 export type TurnId4 = string | null;
-export type Type8 = "canvas_patch";
+export type Type9 = "canvas_patch";
 export type NodeId = string;
 export type Revision2 = number;
 export type CanvasNodeStatus1 = "idle" | "waiting_inputs" | "ready" | "running" | "success" | "failed" | "cancelled";
 export type TaskId1 = number | null;
-export type ProtocolVersion10 = number;
+export type ProtocolVersion11 = number;
 export type TurnId5 = string | null;
-export type Type9 = "generation_progress";
+export type Type10 = "generation_progress";
 export type CallId2 = string;
 export type Name2 = string;
-export type ProtocolVersion11 = number;
+export type ProtocolVersion12 = number;
 export type Summary = string | null;
 export type TurnId6 = string;
-export type Type10 = "tool_pending";
+export type Type11 = "tool_pending";
 export type Choices = {
   [k: string]: unknown;
 }[];
@@ -134,19 +141,19 @@ export type GateId = string;
 export type GateType = string;
 export type Phase = string | null;
 export type Prompt = string;
-export type ProtocolVersion12 = number;
+export type ProtocolVersion13 = number;
 export type TurnId7 = string;
-export type Type11 = "user_gate_required";
+export type Type12 = "user_gate_required";
 export type ConversationId1 = number;
 export type Message1 = string;
-export type ProtocolVersion13 = number;
+export type ProtocolVersion14 = number;
 export type ScreenshotUrl = string | null;
 export type TurnId8 = string;
-export type Type12 = "browser_blocked";
+export type Type13 = "browser_blocked";
 export type FrameB64 = string;
 export type Height = number;
-export type ProtocolVersion14 = number;
-export type Type13 = "browser_frame";
+export type ProtocolVersion15 = number;
+export type Type14 = "browser_frame";
 export type Width = number;
 
 export interface TokenFrame {
@@ -214,11 +221,18 @@ export interface ConversationTitleFrame {
   type: Type7;
   updated_at: UpdatedAt;
 }
+export interface CanvasSessionTitleFrame {
+  protocol_version?: ProtocolVersion9;
+  session_id: SessionId;
+  title: Title1;
+  type: Type8;
+  updated_at: UpdatedAt1;
+}
 export interface CanvasPatchFrame {
   data: CanvasPatchResponse;
-  protocol_version?: ProtocolVersion9;
+  protocol_version?: ProtocolVersion10;
   turn_id?: TurnId4;
-  type: Type8;
+  type: Type9;
 }
 export interface CanvasPatchResponse {
   deleted_edge_ids?: DeletedEdgeIds;
@@ -256,7 +270,7 @@ export interface CanvasNodeView {
   revision: Revision1;
   status?: CanvasNodeStatus;
   task_id?: TaskId;
-  title?: Title1;
+  title?: Title2;
   voice_id?: VoiceId;
 }
 export interface CanvasPosition {
@@ -265,9 +279,9 @@ export interface CanvasPosition {
 }
 export interface GenerationProgressFrame {
   data: GenerationProgress;
-  protocol_version?: ProtocolVersion10;
+  protocol_version?: ProtocolVersion11;
   turn_id?: TurnId5;
-  type: Type9;
+  type: Type10;
 }
 export interface GenerationProgress {
   node_id: NodeId;
@@ -278,10 +292,10 @@ export interface GenerationProgress {
 export interface ToolPendingFrame {
   call_id: CallId2;
   name: Name2;
-  protocol_version?: ProtocolVersion11;
+  protocol_version?: ProtocolVersion12;
   summary?: Summary;
   turn_id: TurnId6;
-  type: Type10;
+  type: Type11;
 }
 export interface UserGateRequiredFrame {
   assets?: Assets;
@@ -292,9 +306,9 @@ export interface UserGateRequiredFrame {
   gate_type: GateType;
   phase?: Phase;
   prompt?: Prompt;
-  protocol_version?: ProtocolVersion12;
+  protocol_version?: ProtocolVersion13;
   turn_id: TurnId7;
-  type: Type11;
+  type: Type12;
 }
 export interface Assets {
   [k: string]: unknown;
@@ -302,15 +316,15 @@ export interface Assets {
 export interface BrowserBlockedFrame {
   conversation_id: ConversationId1;
   message: Message1;
-  protocol_version?: ProtocolVersion13;
+  protocol_version?: ProtocolVersion14;
   screenshot_url?: ScreenshotUrl;
   turn_id: TurnId8;
-  type: Type12;
+  type: Type13;
 }
 export interface BrowserFrameEvent {
   frame_b64: FrameB64;
   height: Height;
-  protocol_version?: ProtocolVersion14;
-  type: Type13;
+  protocol_version?: ProtocolVersion15;
+  type: Type14;
   width: Width;
 }

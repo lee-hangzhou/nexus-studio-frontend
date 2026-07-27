@@ -64,7 +64,10 @@ export interface CanvasMessageRecord {
   created_at: string;
 }
 
+export type { CanvasSessionView } from '../../../api/generated/canvas';
+
 export interface CanvasTurnBody {
+  session_id: number;
   request_id: string;
   content: string;
   model_key?: string;
@@ -74,6 +77,7 @@ export interface CanvasTurnBody {
 }
 
 export interface CanvasResumeBody {
+  session_id: number;
   request_id: string;
   tool_call_id: string;
   action: 'confirm' | 'reject';

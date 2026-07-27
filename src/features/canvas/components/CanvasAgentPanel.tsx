@@ -1,6 +1,6 @@
-import { CommentOutlined } from '@ant-design/icons';
-import { Button, Select, Spin } from 'antd';
-import { useCallback, useEffect, useRef } from 'react';
+import { CloseOutlined, CommentOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Popover, Select, Spin } from 'antd';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { ToolStepView } from '../../../api/chat';
@@ -10,9 +10,13 @@ import { StudioButton } from '../../../shared/ui/StudioButton';
 import { StudioChip } from '../../../shared/ui/StudioChip';
 import { StudioSegment } from '../../../shared/ui/StudioSegment';
 import { ToolRunTimeline } from '../../chat/components/ToolRunTimeline';
+import type { CanvasSessionView } from '../api/canvasTypes';
+import { CANVAS_DEFAULT_SESSION_TITLE } from '../constants';
 import { useChatModelCatalog } from '../context/ChatModelCatalogContext';
 import type { CanvasFeedMessage } from '../hooks/useCanvasMessages';
 import { stripPseudoToolMarkup } from '../utils/stripPseudoToolMarkup';
+import { CanvasAgentSessionList } from './CanvasAgentSessionList';
+import { useAgentPanelWidth } from './useAgentPanelWidth';
 
 function toolStepsFromMetadata(metadata: Record<string, unknown>): ToolStepView[] {
   const raw = metadata.tool_steps;
@@ -58,6 +62,14 @@ export function CanvasAgentPanel({
   onConfirmTool,
   onRejectTool,
   resumeLoading,
+  sessions,
+  activeSessionId,
+  onSessionChange,
+  onCreateSession,
+  onRenameSession,
+  onCloseSession,
+  sessionsLoading,
+  creatingSession,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -77,9 +89,25 @@ export function CanvasAgentPanel({
   onConfirmTool: () => void;
   onRejectTool: () => void;
   resumeLoading: boolean;
+  sessions: CanvasSessionView[];
+  activeSessionId: number | null;
+  onSessionChange: (sessionId: number) => void;
+  onCreateSession: () => void;
+  onRenameSession: (sessionId: number, title: string) => void | Promise<void>;
+  onCloseSession: (sessionId: number) => void | Promise<void>;
+  sessionsLoading: boolean;
+  creatingSession: boolean;
 }) {
   const feedRef = useRef<HTMLDivElement>(null);
   const chatModels = useChatModelCatalog();
+  const { width, onResizePointerDown } = useAgentPanelWidth();
+  const [sessionListOpen, setSessionListOpen] = useState(false);
+  const [sessionListEditing, setSessionListEditing] = useState(false);
+
+  const sessionTitle = useMemo(() => {
+    const active = sessions.find((s) => s.id === activeSessionId);
+    return active?.title?.trim() || CANVAS_DEFAULT_SESSION_TITLE;
+  }, [sessions, activeSessionId]);
 
   useEffect(() => {
     if (!open) return;
@@ -87,11 +115,28 @@ export function CanvasAgentPanel({
   }, [messages, liveToolSteps, open]);
 
   const handleSend = useCallback(() => {
-    if (!composer.trim() || busy || !modelKey) return;
+    if (!composer.trim() || busy || !modelKey || activeSessionId == null) return;
     onSend();
-  }, [composer, busy, modelKey, onSend]);
+  }, [composer, busy, modelKey, activeSessionId, onSend]);
 
-  const canSend = Boolean(composer.trim()) && !busy && Boolean(modelKey);
+  const handleSelectSession = useCallback(
+    (sessionId: number) => {
+      setSessionListOpen(false);
+      onSessionChange(sessionId);
+    },
+    [onSessionChange],
+  );
+
+  const canSend = Boolean(composer.trim()) && !busy && Boolean(modelKey) && activeSessionId != null;
+
+  const sessionOptions = useMemo(
+    () =>
+      sessions.map((session) => ({
+        value: session.id,
+        label: session.title?.trim() || CANVAS_DEFAULT_SESSION_TITLE,
+      })),
+    [sessions],
+  );
 
   if (!open) {
     return (
@@ -103,6 +148,18 @@ export function CanvasAgentPanel({
         >
           画布 Agent
         </StudioChip>
+        <Select
+          className="canvas-agent-float__session-select"
+          size="small"
+          popupMatchSelectWidth={false}
+          value={activeSessionId ?? undefined}
+          options={sessionOptions}
+          loading={sessionsLoading}
+          disabled={sessionsLoading || sessions.length === 0}
+          onChange={(sessionId) => onSessionChange(sessionId)}
+          placeholder={CANVAS_DEFAULT_SESSION_TITLE}
+          aria-label="切换会话"
+        />
         {busy ? (
           <StudioButton variant="primary" size="sm" onClick={onStop} aria-label="停止生成">
             停止
@@ -113,16 +170,71 @@ export function CanvasAgentPanel({
   }
 
   return (
-    <aside className="canvas-agent-float" aria-label="画布 Agent">
+    <aside className="canvas-agent-float" style={{ width }} aria-label="画布 Agent">
+      <div
+        className="canvas-agent-float__resize-handle"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="调整面板宽度"
+        onPointerDown={onResizePointerDown}
+      />
       <div className="workflow-canvas-agent-panel" id="canvas-agent-panel">
         <header className="workflow-canvas-agent-panel__head">
-          <div className="workflow-canvas-agent-panel__head-main">
-            <strong>画布 Agent</strong>
-            <span>消息可上滚查看历史</span>
+          <span className="workflow-canvas-agent-panel__title" title={sessionTitle}>
+            {sessionTitle}
+          </span>
+          <div className="workflow-canvas-agent-panel__head-actions">
+            <button
+              type="button"
+              className="workflow-canvas-agent-panel__icon-btn"
+              title="新建会话"
+              aria-label="新建会话"
+              disabled={busy || sessionsLoading || creatingSession}
+              onClick={onCreateSession}
+            >
+              <PlusOutlined />
+            </button>
+            <Popover
+              trigger="click"
+              placement="bottomRight"
+              destroyOnHidden
+              open={sessionListOpen}
+              onOpenChange={(next) => {
+                if (!next && sessionListEditing) return;
+                setSessionListOpen(next);
+              }}
+              content={
+                <CanvasAgentSessionList
+                  sessions={sessions}
+                  activeSessionId={activeSessionId}
+                  loading={sessionsLoading}
+                  onSelect={handleSelectSession}
+                  onRename={onRenameSession}
+                  onClose={onCloseSession}
+                  onEditingChange={setSessionListEditing}
+                />
+              }
+            >
+              <button
+                type="button"
+                className="workflow-canvas-agent-panel__icon-btn"
+                title="会话列表"
+                aria-label="会话列表"
+                aria-expanded={sessionListOpen}
+              >
+                <CommentOutlined />
+              </button>
+            </Popover>
+            <button
+              type="button"
+              className="workflow-canvas-agent-panel__icon-btn"
+              title="收起面板"
+              aria-label="收起面板"
+              onClick={() => onOpenChange(false)}
+            >
+              <CloseOutlined />
+            </button>
           </div>
-          <StudioChip size="sm" onClick={() => onOpenChange(false)}>
-            收起
-          </StudioChip>
         </header>
 
         <div className="workflow-canvas-agent-panel__feed" ref={feedRef}>

@@ -29,7 +29,8 @@ export type GenerationProgressPatch = {
   node_id: string;
   revision: number;
   status?: CanvasNodeStatus;
-  task_id?: number;
+  /** undefined=不改; null=清空本地旧 task_id */
+  task_id?: number | null;
 };
 
 function isRevisionConflictError(err: unknown): boolean {
@@ -85,18 +86,56 @@ export function useCanvasPatch(
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
   const commitQueueRef = useRef(Promise.resolve());
+  const seenOpIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     nodesRef.current = nodes;
     edgesRef.current = edges;
   }, [nodes, edges]);
 
-  const applyResult = useCallback(
+  const enqueue = useCallback(<T,>(run: () => Promise<T>): Promise<T> => {
+    const queued = commitQueueRef.current.then(run, run);
+    commitQueueRef.current = queued.then(
+      () => undefined,
+      () => undefined,
+    );
+    return queued;
+  }, []);
+
+  const applyResultNow = useCallback(
     (delta: CanvasPatchEvent | CanvasPatchResult) => {
+      const opId = 'op_id' in delta && delta.op_id != null ? String(delta.op_id) : null;
+      if (opId) {
+        if (seenOpIdsRef.current.has(opId)) return;
+        seenOpIdsRef.current.add(opId);
+        if (seenOpIdsRef.current.size > 200) {
+          const oldest = seenOpIdsRef.current.values().next().value;
+          if (oldest != null) seenOpIdsRef.current.delete(oldest);
+        }
+      }
       const prevNodes = nodesRef.current;
       const prevIds = new Set(prevNodes.map((n) => n.id));
+      const prevRev = new Map(prevNodes.map((n) => [n.id, n.data.revision]));
+      // 同 revision 不重复合并, 避免 HTTP 回写与 events 自回声双闪
+      const filteredNodes = (delta.nodes ?? []).filter((n) => {
+        const cur = prevRev.get(n.id);
+        return cur == null || n.revision > cur;
+      });
+      const prevEdgeRev = new Map(edgesRef.current.map((e) => [e.id, e.data?.revision]));
+      const filteredEdges = (delta.edges ?? []).filter((e) => {
+        const cur = prevEdgeRev.get(e.id);
+        return cur == null || e.revision > cur;
+      });
+      if (
+        filteredNodes.length === 0 &&
+        filteredEdges.length === 0 &&
+        !(delta.deleted_node_ids?.length) &&
+        !(delta.deleted_edge_ids?.length)
+      ) {
+        return;
+      }
       const merged = applyCanvasPatchDelta(prevNodes, edgesRef.current, {
-        nodes: delta.nodes ?? [],
-        edges: delta.edges ?? [],
+        nodes: filteredNodes,
+        edges: filteredEdges,
         deleted_node_ids: delta.deleted_node_ids ?? [],
         deleted_edge_ids: delta.deleted_edge_ids ?? [],
       });
@@ -114,37 +153,61 @@ export function useCanvasPatch(
     [setNodes, setEdges],
   );
 
-  const applyNodeProgress = useCallback(
+  const applyResult = useCallback(
+    (delta: CanvasPatchEvent | CanvasPatchResult) => {
+      void enqueue(async () => {
+        applyResultNow(delta);
+      });
+    },
+    [enqueue, applyResultNow],
+  );
+
+  const applyNodeProgressNow = useCallback(
     (progress: GenerationProgressPatch) => {
-      // 必须基于 nodesRef: 同次 hub 可能先 canvas_patch 再 progress, graphRef 常尚未跟上
-      const nextNodes = nodesRef.current.map((n) =>
-        n.id === progress.node_id
-          ? {
-              ...n,
-              data: {
-                ...n.data,
-                revision: progress.revision,
-                ...(progress.status ? { status: progress.status } : {}),
-                ...(progress.task_id != null ? { task_id: progress.task_id } : {}),
-              },
-            }
-          : n,
-      );
+      const current = nodesRef.current.find((n) => n.id === progress.node_id);
+      if (current && progress.revision < current.data.revision) return;
+      const nextNodes = nodesRef.current.map((n) => {
+        if (n.id !== progress.node_id) return n;
+        const nextData: CanvasNodeData = {
+          ...n.data,
+          revision: progress.revision,
+          ...(progress.status ? { status: progress.status } : {}),
+        };
+        if (progress.task_id !== undefined) {
+          nextData.task_id = progress.task_id ?? undefined;
+        }
+        return { ...n, data: nextData };
+      });
       nodesRef.current = nextNodes;
       setNodes(nextNodes);
     },
     [setNodes],
   );
 
+  const applyNodeProgress = useCallback(
+    (progress: GenerationProgressPatch) => {
+      void enqueue(async () => {
+        applyNodeProgressNow(progress);
+      });
+    },
+    [enqueue, applyNodeProgressNow],
+  );
+
   const patchNodeData = useCallback(
     (nodeId: string, data: Partial<CanvasNodeData>) => {
-      const nextNodes = nodesRef.current.map((n) =>
-        n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n,
-      );
-      nodesRef.current = nextNodes;
-      setNodes(nextNodes);
+      void enqueue(async () => {
+        const current = nodesRef.current.find((n) => n.id === nodeId);
+        if (current && data.revision != null && data.revision <= current.data.revision) {
+          return;
+        }
+        const nextNodes = nodesRef.current.map((n) =>
+          n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n,
+        );
+        nodesRef.current = nextNodes;
+        setNodes(nextNodes);
+      });
     },
-    [setNodes],
+    [enqueue, setNodes],
   );
 
   const replaceGraph = useCallback(
@@ -157,15 +220,24 @@ export function useCanvasPatch(
     [setNodes, setEdges],
   );
 
+  const replaceGraphQueued = useCallback(
+    (nextNodes: CanvasFlowNode[], nextEdges: CanvasFlowEdge[]) =>
+      enqueue(async () => {
+        replaceGraph(nextNodes, nextEdges);
+        return { nodes: nextNodes, edges: nextEdges };
+      }),
+    [enqueue, replaceGraph],
+  );
+
   const commitOps = useCallback(
     (ops: CanvasPatchOpInput[]): Promise<CanvasPatchResult | null> => {
       if (ops.length === 0) return Promise.resolve(null);
 
-      const run = async (): Promise<CanvasPatchResult | null> => {
+      return enqueue(async (): Promise<CanvasPatchResult | null> => {
         try {
           const enriched = withExpectedRevisions(ops, nodesRef.current, edgesRef.current);
           const result = await patchCanvas(episodeId, { ops: enriched });
-          applyResult(result);
+          applyResultNow(result);
           return result;
         } catch (err) {
           if (err instanceof MissingLocalRevisionError) {
@@ -173,7 +245,6 @@ export function useCanvasPatch(
             return null;
           }
           if (isRevisionConflictError(err)) {
-            // 必须 await 并同步写入 refs, 否则队列下一笔仍用旧 revision 自撞 409
             const refreshed = await onRevisionConflict();
             if (refreshed) {
               nodesRef.current = refreshed.nodes;
@@ -185,17 +256,17 @@ export function useCanvasPatch(
           message.error(msg || '保存画布失败');
           return null;
         }
-      };
-
-      const queued = commitQueueRef.current.then(run, run);
-      commitQueueRef.current = queued.then(
-        () => undefined,
-        () => undefined,
-      );
-      return queued;
+      });
     },
-    [episodeId, applyResult, onRevisionConflict],
+    [episodeId, applyResultNow, onRevisionConflict, enqueue],
   );
 
-  return { commitOps, applyResult, applyNodeProgress, patchNodeData, replaceGraph };
+  return {
+    commitOps,
+    applyResult,
+    applyNodeProgress,
+    patchNodeData,
+    replaceGraph,
+    replaceGraphQueued,
+  };
 }

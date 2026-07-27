@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { ToolStepView } from '../../../api/chat';
 import { listCanvasMessages } from '../api/canvas';
 import { stripPseudoToolMarkup } from '../utils/stripPseudoToolMarkup';
@@ -71,19 +71,44 @@ function buildFeed(rows: CanvasMessageRecord[]): CanvasFeedMessage[] {
     .filter((message) => message.role === 'user' || message.content.trim() || Array.isArray(message.metadata.tool_steps));
 }
 
-export function useCanvasMessages(episodeId: number) {
+/** 按 session 加载消息, 带 abort 与序号防串台 */
+export function useCanvasMessages(episodeId: number, sessionId: number | null) {
   const [messages, setMessages] = useState<CanvasFeedMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const seqRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const clearMessages = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    seqRef.current += 1;
+    setMessages([]);
+    setLoading(false);
+  }, []);
 
   const loadMessages = useCallback(async () => {
+    if (sessionId == null) {
+      clearMessages();
+      return;
+    }
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+    const seq = ++seqRef.current;
+    setMessages([]);
     setLoading(true);
     try {
-      const rows = await listCanvasMessages(episodeId, { limit: 50 });
+      const rows = await listCanvasMessages(episodeId, { session_id: sessionId, limit: 50 }, ac.signal);
+      if (ac.signal.aborted || seq !== seqRef.current) return;
       setMessages(buildFeed(rows));
+    } catch (err) {
+      if (ac.signal.aborted || seq !== seqRef.current) return;
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+      throw err;
     } finally {
-      setLoading(false);
+      if (!ac.signal.aborted && seq === seqRef.current) setLoading(false);
     }
-  }, [episodeId]);
+  }, [episodeId, sessionId, clearMessages]);
 
   const appendUser = useCallback((content: string, clientTurnId: string) => {
     const temp: CanvasFeedMessage = {
@@ -133,6 +158,7 @@ export function useCanvasMessages(episodeId: number) {
     setMessages,
     loading,
     loadMessages,
+    clearMessages,
     appendUser,
     appendAssistantStream,
     appendAssistantToken,
