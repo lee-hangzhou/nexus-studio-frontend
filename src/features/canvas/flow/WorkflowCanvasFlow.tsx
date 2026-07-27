@@ -12,7 +12,10 @@ import { useCallback, useMemo, useRef } from 'react';
 import type { CanvasNodeKind, CanvasPatchOpInput, CanvasPatchResult } from '../api/canvasTypes';
 import { CanvasAddNodeMenu } from '../storyflow/menus/CanvasAddNodeMenu';
 import { ConnectionDropMenu } from '../storyflow/menus/ConnectionDropMenu';
-import { CanvasHeader } from '../storyflow/components/CanvasHeader';
+import {
+  CanvasHeader,
+  type CanvasHeaderEpisode,
+} from '../storyflow/components/CanvasHeader';
 import { CanvasEmptyStateHost } from '../storyflow/components/CanvasEmptyStateHost';
 import { CanvasActionsContext } from '../storyflow/context/CanvasActionsContext';
 import { CanvasEdgeHoverContext } from '../storyflow/context/CanvasEdgeHoverContext';
@@ -31,6 +34,7 @@ type Props = {
   episodeId: number;
   projectName?: string;
   episodeName?: string;
+  episodes: CanvasHeaderEpisode[];
   busy: boolean;
   nodes: CanvasFlowNode[];
   edges: CanvasFlowEdge[];
@@ -48,6 +52,7 @@ export function WorkflowCanvasFlow({
   episodeId,
   projectName,
   episodeName,
+  episodes,
   busy,
   nodes,
   edges,
@@ -146,6 +151,7 @@ export function WorkflowCanvasFlow({
             episodeId={episodeId}
             projectName={projectName}
             episodeName={episodeName}
+            episodes={episodes}
             busy={busy}
           />
           <div className="workflow-canvas-flow__stage">

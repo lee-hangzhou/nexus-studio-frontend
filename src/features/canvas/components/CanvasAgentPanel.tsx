@@ -267,17 +267,24 @@ export function CanvasAgentPanel({
                 </article>
               );
             }
+            const body = stripPseudoToolMarkup(m.content || '');
             return (
               <article key={m.id} className="workflow-canvas-agent-panel__bubble is-assistant">
                 <span className="workflow-canvas-agent-panel__who">
                   Agent{m.streaming ? ' · 进行中' : ''}
                 </span>
                 {steps.length > 0 ? <ToolRunTimeline steps={steps} /> : null}
-                <div className="workflow-canvas-agent-panel__markdown">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {stripPseudoToolMarkup(m.content || '') || (m.streaming ? '…' : '')}
-                  </ReactMarkdown>
-                </div>
+                {!body && m.streaming ? (
+                  <div className="studio-bubble__typing" aria-label="Agent 正在回复">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                ) : body ? (
+                  <div className="workflow-canvas-agent-panel__markdown">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
+                  </div>
+                ) : null}
               </article>
             );
           })}

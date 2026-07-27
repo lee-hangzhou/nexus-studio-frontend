@@ -5,7 +5,7 @@ import { ReactFlowProvider, type OnNodeDrag, type OnNodesChange } from '@xyflow/
 import { message } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getProject } from '../../../api/projects';
+import { getProject, type EpisodeView } from '../../../api/projects';
 import type { ToolStepView } from '../../../api/chat';
 import { appendToolStepStart, updateToolStepResult } from '../../chat/toolStepUtils';
 import {
@@ -81,6 +81,7 @@ function CanvasPageInner() {
   const chatModelCatalog = useChatModelCatalog();
   const [projectName, setProjectName] = useState<string | undefined>();
   const [episodeName, setEpisodeName] = useState<string | undefined>();
+  const [episodes, setEpisodes] = useState<EpisodeView[]>([]);
   const [mode, setMode] = useState<'auto' | 'manual'>('auto');
   const [agentOpen, setAgentOpen] = useState(true);
   const [agentModelKey, setAgentModelKey] = useState<string | undefined>(undefined);
@@ -260,6 +261,7 @@ function CanvasPageInner() {
         if (!episode) throw new Error('episode not found');
         setProjectName(detail.project.name);
         setEpisodeName(episode.name);
+        setEpisodes(detail.episodes);
       })
       .catch((err) => {
         if (controller.signal.aborted || (err instanceof DOMException && err.name === 'AbortError')) return;
@@ -897,6 +899,7 @@ function CanvasPageInner() {
           episodeId={episodeId}
           projectName={projectName}
           episodeName={episodeName}
+          episodes={episodes}
           busy={busy}
           nodes={nodes}
           edges={edges}
