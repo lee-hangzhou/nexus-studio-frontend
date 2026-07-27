@@ -4,6 +4,8 @@ import type { StreamFrame } from './chat';
 export type StreamHandlers = {
   onFrame: (frame: StreamFrame & Record<string, unknown>) => void;
   onHttpError?: (status: number) => void;
+  /** HTTP 流已建立 (200 + body), 在读帧之前回调 */
+  onOpen?: () => void;
   /** SSE id: 行更新后回调, 供 Last-Event-ID 续传 */
   onEventId?: (eventId: string) => void;
 };
@@ -44,6 +46,8 @@ export async function consumeSSE(
     handlers.onHttpError?.(response.status);
     throw new Error(`stream failed: ${response.status}`);
   }
+
+  handlers.onOpen?.();
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();

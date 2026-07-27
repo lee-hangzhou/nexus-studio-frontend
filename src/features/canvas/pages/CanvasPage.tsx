@@ -194,10 +194,16 @@ function CanvasPageInner() {
     eventsAbortRef.current?.abort();
     const ac = new AbortController();
     eventsAbortRef.current = ac;
+    let attempt = 0;
+    let liveSession = false;
     const connect = async () => {
-      // 重连: 重新订阅 + 立刻整图 snapshot（增量只是加速）
-      await syncCanvasFromServer();
-      if (ac.signal.aborted) return;
+      // 首次进页，或上一轮已成功建流再断线：整图对齐。连不上时的重试不再 snapshot，避免拖线被整图替换打断。
+      if (attempt === 0 || liveSession) {
+        await syncCanvasFromServer();
+        if (ac.signal.aborted) return;
+        liveSession = false;
+      }
+      let opened = false;
       try {
         await streamCanvasEpisodeEvents(
           episodeId,
@@ -235,15 +241,24 @@ function CanvasPageInner() {
             }
           },
           ac.signal,
+          {
+            onOpen: () => {
+              opened = true;
+              liveSession = true;
+              setEventsError(null);
+            },
+          },
         );
         if (ac.signal.aborted) return;
         setEventsError(null);
       } catch (err) {
         if (ac.signal.aborted || (err instanceof Error && err.name === 'AbortError')) return;
         setEventsError(err instanceof Error ? err.message : '画布事件流中断');
+        if (!opened) liveSession = false;
       }
-      // 正常结束与失败均退避重连
-      await new Promise((r) => setTimeout(r, 800));
+      attempt += 1;
+      const delayMs = Math.min(800 * 2 ** Math.min(attempt - 1, 4), 8_000);
+      await new Promise((r) => setTimeout(r, delayMs));
       if (!ac.signal.aborted) void connect();
     };
     void connect();

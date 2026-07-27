@@ -224,12 +224,14 @@ export async function streamCanvasEpisodeEvents(
   episodeId: number,
   onFrame: (frame: CanvasStreamFrame) => void,
   signal?: AbortSignal,
+  hooks?: { onOpen?: () => void },
 ): Promise<void> {
   await consumeSSE(
     `/canvas/episodes/${episodeId}/events`,
     {},
     {
       onFrame: (f) => onFrame(f as CanvasStreamFrame),
+      onOpen: hooks?.onOpen,
     },
     signal,
   );

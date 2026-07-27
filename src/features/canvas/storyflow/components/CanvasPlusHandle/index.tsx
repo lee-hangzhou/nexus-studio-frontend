@@ -42,7 +42,7 @@ export function CanvasPlusHandle({
   const side = position === Position.Left ? 'left' : 'right';
   const orbRef = useRef<HTMLDivElement>(null);
   const plusRef = useRef<HTMLSpanElement>(null);
-  /** 进入加号后开始跟手，直到指针离开 orb */
+  /** 进入加号后开始跟手，直到指针离开 plus */
   const trackingRef = useRef(false);
 
   const resetPlusPosition = useCallback(() => {
@@ -75,8 +75,8 @@ export function CanvasPlusHandle({
     [followPointerInOrb],
   );
 
-  const handleOrbMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePlusMouseMove = useCallback(
+    (e: React.MouseEvent<HTMLSpanElement>) => {
       if (!trackingRef.current) return;
       followPointerInOrb(e.clientX, e.clientY);
     },
@@ -94,13 +94,13 @@ export function CanvasPlusHandle({
         ref={orbRef}
         className={`workflow-canvas-handle__orb workflow-canvas-handle__orb--${side}${hidden ? ' workflow-canvas-handle__orb--hidden' : ''}`}
         aria-hidden
-        onMouseMove={handleOrbMouseMove}
-        onMouseLeave={resetPlusPosition}
       >
         <span
           ref={plusRef}
           className="workflow-canvas-handle__plus"
           onMouseEnter={handlePlusMouseEnter}
+          onMouseMove={handlePlusMouseMove}
+          onMouseLeave={resetPlusPosition}
         >
           <PlusOutlined />
         </span>

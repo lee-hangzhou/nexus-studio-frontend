@@ -1,14 +1,16 @@
-/* 锚点中心落在节点左右边框；RF Handle 本体不可见，仅承担连线命中 */
+/* 锚点中心落在节点左右边框；Handle 保留可点命中区，可视「+」叠在上面 */
 .workflow-canvas-handle.react-flow__handle {
-  width: 0 !important;
-  height: 0 !important;
-  min-width: 0 !important;
-  min-height: 0 !important;
+  /* 0×0 会导致 RF 量不到 handleBounds / 点不中，连线直接起不来 */
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
   border: none !important;
   background: transparent !important;
   opacity: 1 !important;
   overflow: visible;
   z-index: 2;
+  pointer-events: auto !important;
 }
 
 .workflow-canvas-handle__orb {
@@ -17,6 +19,7 @@
   width: 56px;
   height: 56px;
   opacity: 0;
+  /* 命中交给外层 Handle；orb 只做可视与跟手，避免挡住 0 命中回退路径 */
   pointer-events: none;
   will-change: transform;
   transition:
@@ -26,16 +29,16 @@
     box-shadow 0.15s ease;
 }
 
-/* 左侧：圆钮以锚点为右缘，向左展开 */
+/* 左侧：圆钮以锚点为中心，向左展开 */
 .workflow-canvas-handle__orb--left {
-  right: 0;
-  transform: translateY(-50%) translateX(4px) scale(0.72);
+  left: 50%;
+  transform: translate(-50%, -50%) translateX(-4px) scale(0.72);
 }
 
-/* 右侧：圆钮以锚点为左缘，向右展开 */
+/* 右侧：圆钮以锚点为中心，向右展开 */
 .workflow-canvas-handle__orb--right {
-  left: 0;
-  transform: translateY(-50%) translateX(-4px) scale(0.72);
+  left: 50%;
+  transform: translate(-50%, -50%) translateX(4px) scale(0.72);
 }
 
 .workflow-canvas-handle__plus {
@@ -53,6 +56,8 @@
   color: #7a7a7a;
   border-radius: 50%;
   transform: translate(-50%, -50%);
+  /* 仅在圆钮可见时允许跟手；事件仍冒泡到 Handle 起拖线 */
+  pointer-events: none;
   transition:
     transform 0.12s ease-out,
     border-color 0.15s ease,
@@ -75,13 +80,13 @@
 .workflow-canvas-node--dragging .workflow-canvas-handle__orb--left,
 .workflow-canvas-handle__orb--hidden.workflow-canvas-handle__orb--left,
 .react-flow__node.dragging .workflow-canvas-handle__orb--left {
-  transform: translateY(-50%) translateX(4px) scale(0.72) !important;
+  transform: translate(-50%, -50%) translateX(-4px) scale(0.72) !important;
 }
 
 .workflow-canvas-node--dragging .workflow-canvas-handle__orb--right,
 .workflow-canvas-handle__orb--hidden.workflow-canvas-handle__orb--right,
 .react-flow__node.dragging .workflow-canvas-handle__orb--right {
-  transform: translateY(-50%) translateX(-4px) scale(0.72) !important;
+  transform: translate(-50%, -50%) translateX(4px) scale(0.72) !important;
 }
 
 /* 悬浮节点或选中时展示两个连接点 */
@@ -90,6 +95,12 @@
 .react-flow__node.connectingfrom .workflow-canvas-handle__orb:not(.workflow-canvas-handle__orb--hidden),
 .react-flow__node.connectingto .workflow-canvas-handle__orb:not(.workflow-canvas-handle__orb--hidden) {
   opacity: 1;
+}
+
+.react-flow__node:hover .workflow-canvas-handle__plus,
+.react-flow__node.selected .workflow-canvas-handle__plus,
+.react-flow__node.connectingfrom .workflow-canvas-handle__plus,
+.react-flow__node.connectingto .workflow-canvas-handle__plus {
   pointer-events: auto;
 }
 
@@ -97,26 +108,20 @@
 .react-flow__node.selected .workflow-canvas-handle__orb--left:not(.workflow-canvas-handle__orb--hidden),
 .react-flow__node.connectingfrom .workflow-canvas-handle__orb--left:not(.workflow-canvas-handle__orb--hidden),
 .react-flow__node.connectingto .workflow-canvas-handle__orb--left:not(.workflow-canvas-handle__orb--hidden) {
-  transform: translateY(-50%) translateX(0) scale(1);
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .react-flow__node:hover .workflow-canvas-handle__orb--right:not(.workflow-canvas-handle__orb--hidden),
 .react-flow__node.selected .workflow-canvas-handle__orb--right:not(.workflow-canvas-handle__orb--hidden),
 .react-flow__node.connectingfrom .workflow-canvas-handle__orb--right:not(.workflow-canvas-handle__orb--hidden),
 .react-flow__node.connectingto .workflow-canvas-handle__orb--right:not(.workflow-canvas-handle__orb--hidden) {
-  transform: translateY(-50%) translateX(0) scale(1);
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .workflow-canvas-handle__orb--left:hover {
-  transform: translateY(-50%) translateX(-6px) scale(1.04);
+  transform: translate(-50%, -50%) translateX(-6px) scale(1.04);
 }
 
 .workflow-canvas-handle__orb--right:hover {
-  transform: translateY(-50%) translateX(6px) scale(1.04);
-}
-
-/* 拖拽连线时保持圆钮可见 */
-.react-flow__node.connectingfrom .workflow-canvas-handle__orb,
-.react-flow__node.connectingto .workflow-canvas-handle__orb {
-  pointer-events: auto;
+  transform: translate(-50%, -50%) translateX(6px) scale(1.04);
 }
