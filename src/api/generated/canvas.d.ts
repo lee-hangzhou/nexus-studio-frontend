@@ -9,10 +9,12 @@ export type Canvas =
   | CanvasSnapshot
   | CanvasPatchRequest
   | CanvasPatchResponse
+  | CanvasRevisionConflictItem
   | GenerationProgress
   | (CreateNodeOp | UpdateNodeOp | DeleteNodeOp | ConnectNodesOp | DisconnectNodesOp);
 export type CanvasEdgeType = "dependency";
 export type Id = string;
+export type Revision = number;
 export type Source = string;
 export type CanvasSourcePort = "output_text" | "output_asset";
 export type Target = string;
@@ -32,14 +34,13 @@ export type X = number;
 export type Y = number;
 export type Ratio = string | null;
 export type Resolution = string | null;
+export type Revision1 = number;
 export type CanvasNodeStatus = "idle" | "waiting_inputs" | "ready" | "running" | "success" | "failed" | "cancelled";
 export type TaskId = number | null;
 export type Title = string;
 export type VoiceId = string | null;
 export type Nodes = CanvasNodeView[];
 export type ProjectId = number;
-export type Revision = number;
-export type ExpectedRevision = number;
 /**
  * @minItems 1
  */
@@ -63,6 +64,7 @@ export type TaskId1 = number | null;
 export type Title1 = string;
 export type VoiceId1 = string | null;
 export type Op = "create_node";
+export type ExpectedRevision = number;
 export type NodeId1 = string;
 export type Op1 = "update_node";
 export type DurationSec2 = number | null;
@@ -77,6 +79,7 @@ export type CanvasNodeStatus2 = "idle" | "waiting_inputs" | "ready" | "running" 
 export type TaskId2 = number | null;
 export type Title2 = string | null;
 export type VoiceId2 = string | null;
+export type ExpectedRevision1 = number;
 export type NodeId2 = string;
 export type Op2 = "delete_node";
 export type CanvasEdgeType2 = "dependency";
@@ -84,13 +87,17 @@ export type Source1 = string;
 export type Target1 = string;
 export type Op3 = "connect";
 export type EdgeId = string;
+export type ExpectedRevision2 = number;
 export type Op4 = "disconnect";
 export type DeletedEdgeIds = string[];
 export type DeletedNodeIds = string[];
 export type Edges1 = CanvasEdgeView[];
 export type Nodes1 = CanvasNodeView[];
 export type OpId = string | null;
-export type Revision1 = number;
+export type ActualRevision = number;
+export type ExpectedRevision3 = number;
+export type Id2 = string;
+export type Kind = "node" | "edge";
 export type NodeId3 = string;
 export type Revision2 = number;
 export type TaskId3 = number | null;
@@ -100,12 +107,12 @@ export interface CanvasSnapshot {
   episode_id: EpisodeId;
   nodes: Nodes;
   project_id: ProjectId;
-  revision: Revision;
 }
 export interface CanvasEdgeView {
   edge_type: CanvasEdgeType;
   id: Id;
   metadata?: Metadata;
+  revision: Revision;
   source: Source;
   source_port: CanvasSourcePort;
   target: Target;
@@ -127,6 +134,7 @@ export interface CanvasNodeView {
   position: CanvasPosition;
   ratio?: Ratio;
   resolution?: Resolution;
+  revision: Revision1;
   status?: CanvasNodeStatus;
   task_id?: TaskId;
   title?: Title;
@@ -137,7 +145,6 @@ export interface CanvasPosition {
   y: Y;
 }
 export interface CanvasPatchRequest {
-  expected_revision: ExpectedRevision;
   ops: Ops;
 }
 export interface CreateNodeOp {
@@ -176,6 +183,7 @@ export interface CreateNodePayload {
   voice_id?: VoiceId1;
 }
 export interface UpdateNodeOp {
+  expected_revision: ExpectedRevision;
   node_id: NodeId1;
   op: Op1;
   patch: UpdateNodePatch;
@@ -197,6 +205,7 @@ export interface UpdateNodePatch {
   voice_id?: VoiceId2;
 }
 export interface DeleteNodeOp {
+  expected_revision: ExpectedRevision1;
   node_id: NodeId2;
   op: Op2;
 }
@@ -217,6 +226,7 @@ export interface Metadata2 {
 }
 export interface DisconnectNodesOp {
   edge_id: EdgeId;
+  expected_revision: ExpectedRevision2;
   op: Op4;
 }
 export interface CanvasPatchResponse {
@@ -225,7 +235,12 @@ export interface CanvasPatchResponse {
   edges?: Edges1;
   nodes?: Nodes1;
   op_id?: OpId;
-  revision: Revision1;
+}
+export interface CanvasRevisionConflictItem {
+  actual_revision: ActualRevision;
+  expected_revision: ExpectedRevision3;
+  id: Id2;
+  kind: Kind;
 }
 export interface GenerationProgress {
   node_id: NodeId3;

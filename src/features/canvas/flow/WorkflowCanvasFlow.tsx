@@ -3,9 +3,13 @@ import {
   Controls,
   ReactFlow,
   SelectionMode,
+  type OnEdgesChange,
+  type OnNodeDrag,
+  type OnNodesChange,
   type ReactFlowInstance,
 } from '@xyflow/react';
 import { useCallback, useMemo, useRef } from 'react';
+import type { CanvasNodeKind, CanvasPatchOpInput, CanvasPatchResult } from '../api/canvasTypes';
 import { CanvasAddNodeMenu } from '../storyflow/menus/CanvasAddNodeMenu';
 import { ConnectionDropMenu } from '../storyflow/menus/ConnectionDropMenu';
 import { CanvasHeader } from '../storyflow/components/CanvasHeader';
@@ -19,7 +23,6 @@ import { useCanvasEdgeHover } from '../storyflow/hooks/useCanvasEdgeHover';
 import { useCanvasOverlayMenus } from '../storyflow/hooks/useCanvasOverlayMenus';
 import { useDreamCanvasConnections } from '../storyflow/hooks/useDreamCanvasConnections';
 import { useDreamCanvasSpawnMenus } from '../storyflow/hooks/useDreamCanvasSpawnMenus';
-import type { CanvasPatchOp } from '../api/canvasTypes';
 import type { NodeChangeInput } from '../storyflow/types';
 import type { CanvasFlowEdge, CanvasFlowNode } from '../schema/canvasSchema';
 
@@ -32,12 +35,12 @@ type Props = {
   nodes: CanvasFlowNode[];
   edges: CanvasFlowEdge[];
   loaded: boolean;
-  onNodesChange: import('@xyflow/react').OnNodesChange;
-  onEdgesChange: import('@xyflow/react').OnEdgesChange;
-  onNodeDragStop: import('@xyflow/react').OnNodeDrag;
-  commitOps: (ops: CanvasPatchOp[]) => Promise<import('../api/canvasTypes').CanvasPatchResult | null>;
+  onNodesChange: OnNodesChange<CanvasFlowNode>;
+  onEdgesChange: OnEdgesChange<CanvasFlowEdge>;
+  onNodeDragStop: OnNodeDrag<CanvasFlowNode>;
+  commitOps: (ops: CanvasPatchOpInput[]) => Promise<CanvasPatchResult | null>;
   onNodeChange: (input: NodeChangeInput) => void;
-  onQuickAdd: (kind: import('../api/canvasTypes').CanvasNodeKind, position: { x: number; y: number }) => void;
+  onQuickAdd: (kind: CanvasNodeKind, position: { x: number; y: number }) => void;
 };
 
 export function WorkflowCanvasFlow({
@@ -109,8 +112,8 @@ export function WorkflowCanvasFlow({
     connectTargetNodeId,
     nodes,
     edges,
-    onNodesChange,
-    onEdgesChange,
+    onNodesChange: onNodesChange as OnNodesChange,
+    onEdgesChange: onEdgesChange as OnEdgesChange,
   });
 
   const deleteEdge = useCallback(
@@ -163,7 +166,7 @@ export function WorkflowCanvasFlow({
               connectionRadius={80}
               onPaneClick={onPaneClick}
               onPaneContextMenu={onPaneContextMenu}
-              onNodeDragStop={onNodeDragStop}
+              onNodeDragStop={onNodeDragStop as OnNodeDrag}
               nodeTypes={workflowNodeTypes}
               edgeTypes={workflowEdgeTypes}
               elementsSelectable

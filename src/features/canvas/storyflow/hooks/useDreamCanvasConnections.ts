@@ -9,7 +9,7 @@ import type {
 } from '@xyflow/react';
 import { useReactFlow } from '@xyflow/react';
 import { useCallback, useRef, useState, type Dispatch, type SetStateAction } from 'react';
-import type { CanvasPatchOp } from '../../api/canvasTypes';
+import type { CanvasPatchOpInput, CanvasPatchResult } from '../../api/canvasTypes';
 import {
   buildNodePairConnection,
   buildDataDependencyPorts,
@@ -28,7 +28,7 @@ type Params = {
   nodes: Node[];
   nodesRef: React.MutableRefObject<Node[]>;
   edgesRef: React.MutableRefObject<Edge[]>;
-  commitOps: (ops: CanvasPatchOp[]) => Promise<import('../../api/canvasTypes').CanvasPatchResult | null>;
+  commitOps: (ops: CanvasPatchOpInput[]) => Promise<CanvasPatchResult | null>;
   setConnectMenu: Dispatch<SetStateAction<ConnectDropMenuState | null>>;
   setAddNodeMenu: Dispatch<SetStateAction<PaneAddNodeMenuState | null>>;
   markSkipNextPaneClick: () => void;

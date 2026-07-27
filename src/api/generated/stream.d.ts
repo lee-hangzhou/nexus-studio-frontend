@@ -81,6 +81,7 @@ export type DeletedEdgeIds = string[];
 export type DeletedNodeIds = string[];
 export type CanvasEdgeType = "dependency";
 export type Id = string;
+export type Revision = number;
 export type Source = string;
 export type CanvasSourcePort = "output_text" | "output_asset";
 export type Target = string;
@@ -99,18 +100,18 @@ export type X = number;
 export type Y = number;
 export type Ratio = string | null;
 export type Resolution = string | null;
+export type Revision1 = number;
 export type CanvasNodeStatus = "idle" | "waiting_inputs" | "ready" | "running" | "success" | "failed" | "cancelled";
 export type TaskId = number | null;
 export type Title1 = string;
 export type VoiceId = string | null;
 export type Nodes = CanvasNodeView[];
 export type OpId = string | null;
-export type Revision = number;
 export type ProtocolVersion9 = number;
 export type TurnId4 = string | null;
 export type Type8 = "canvas_patch";
 export type NodeId = string;
-export type Revision1 = number;
+export type Revision2 = number;
 export type CanvasNodeStatus1 = "idle" | "waiting_inputs" | "ready" | "running" | "success" | "failed" | "cancelled";
 export type TaskId1 = number | null;
 export type ProtocolVersion10 = number;
@@ -225,12 +226,12 @@ export interface CanvasPatchResponse {
   edges?: Edges;
   nodes?: Nodes;
   op_id?: OpId;
-  revision: Revision;
 }
 export interface CanvasEdgeView {
   edge_type: CanvasEdgeType;
   id: Id;
   metadata?: Metadata;
+  revision: Revision;
   source: Source;
   source_port: CanvasSourcePort;
   target: Target;
@@ -252,6 +253,7 @@ export interface CanvasNodeView {
   position: CanvasPosition;
   ratio?: Ratio;
   resolution?: Resolution;
+  revision: Revision1;
   status?: CanvasNodeStatus;
   task_id?: TaskId;
   title?: Title1;
@@ -269,7 +271,7 @@ export interface GenerationProgressFrame {
 }
 export interface GenerationProgress {
   node_id: NodeId;
-  revision: Revision1;
+  revision: Revision2;
   status: CanvasNodeStatus1;
   task_id?: TaskId1;
 }

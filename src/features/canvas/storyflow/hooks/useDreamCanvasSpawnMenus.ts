@@ -1,6 +1,6 @@
 import { useReactFlow, type Node } from '@xyflow/react';
 import { useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
-import type { CanvasPatchOp, CanvasNodeKind } from '../../api/canvasTypes';
+import type { CanvasPatchOpInput, CanvasNodeKind } from '../../api/canvasTypes';
 import { DEFAULT_NODE_META } from '../../schema/nodeDefaults';
 import {
   buildDataDependencyPorts,
@@ -14,7 +14,7 @@ type Params = {
   nodes: Node[];
   addNodeMenu: PaneAddNodeMenuState | null;
   connectMenu: ConnectDropMenuState | null;
-  commitOps: (ops: CanvasPatchOp[]) => Promise<CanvasPatchResult | null>;
+  commitOps: (ops: CanvasPatchOpInput[]) => Promise<CanvasPatchResult | null>;
   setAddNodeMenu: Dispatch<SetStateAction<PaneAddNodeMenuState | null>>;
   setConnectMenu: Dispatch<SetStateAction<ConnectDropMenuState | null>>;
 };
@@ -50,7 +50,7 @@ export function useDreamCanvasSpawnMenus({
       anchor?: { id: string; side: 'left' | 'right' },
     ) => {
       const meta = DEFAULT_NODE_META[type as CanvasNodeKind];
-      const createOp: CanvasPatchOp = {
+      const createOp: CanvasPatchOpInput = {
         op: 'create_node',
         node: {
           kind: type as CanvasNodeKind,

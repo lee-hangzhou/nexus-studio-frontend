@@ -14,14 +14,32 @@ import type {
 } from './canvasTypes';
 
 export async function getCanvasSnapshot(episodeId: number): Promise<CanvasSnapshot> {
-  return request<CanvasSnapshot>(`/canvas/episodes/${episodeId}`, { method: 'GET' });
+  return request<CanvasSnapshot>(`/canvas/episodes/${episodeId}/get`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 }
 
 export async function patchCanvas(episodeId: number, body: CanvasPatchRequest): Promise<CanvasPatchResult> {
-  return request<CanvasPatchResult>(`/canvas/episodes/${episodeId}`, {
-    method: 'PATCH',
+  const response = await fetchWithAuth(apiUrl(`/canvas/episodes/${episodeId}/patch`), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
+  const payload = (await response.json().catch(() => null)) as {
+    code: number;
+    data: CanvasPatchResult | Record<string, unknown> | null;
+    msg: string;
+  } | null;
+
+  if (!response.ok || payload === null || payload.code !== 0) {
+    throw new CanvasApiError(
+      payload?.msg ?? `请求失败: ${response.status}`,
+      payload?.code ?? response.status,
+      payload?.data && typeof payload.data === 'object' ? (payload.data as Record<string, unknown>) : null,
+    );
+  }
+  return payload.data as CanvasPatchResult;
 }
 
 export async function listCanvasMessages(

@@ -31,13 +31,13 @@
 
 | 原则 | 说明 |
 |------|------|
-| **服务端权威** | `revision`、节点 `id`、图数据以 API 为准；浏览器是副本 + 乐观 UI |
+| **服务端权威** | 节点/边 `revision`、节点 `id`、图数据以 API 为准；浏览器是副本 + 乐观 UI |
 | **行级合并** | Agent 改动画布只应用 SSE `canvas_patch` **delta**，不整图替换 |
 | **与 Chat 同构 SSE** | 复用 `web/src/api/chat.ts` 的 `StreamFrame` 解析模式，扩展画布帧 |
 | **生成统一 Agent 发起** | 节点「生成」不直调 `submitGenerate`；`task_id` / `status` 只由 SSE 回写（§11） |
 | **浅色品牌 UI** | 白卡片 + 淡阴影 + 层次留白，与创作页 / 对话页一致（§13） |
 | **参考 storyflow 交互** | `@xyflow/react` v12、自定义 node/edge、历史/剪贴板/连线等 UX |
-| **不复用 storyflow 存盘** | 不用「整段 canvas JSON 防抖 POST」；改 `PATCH` + `expected_revision` |
+| **不复用 storyflow 存盘** | 不用「整段 canvas JSON 防抖 POST」；改 `POST .../patch` + 实体 `expected_revision` |
 
 ---
 
@@ -96,9 +96,9 @@ features/canvas/
     edgeTypes.tsx
     constants.ts
   hooks/
-    useCanvasSnapshot.ts           # GET 加载 + revision
+    useCanvasSnapshot.ts           # POST get 加载图
     useCanvasGraph.ts              # RF 状态 + 连接规则
-    useCanvasPatch.ts              # 用户编辑 → PATCH（debounce 位置等）
+    useCanvasPatch.ts              # 用户编辑 → POST .../patch（debounce 位置等）
     useCanvasAgentTurn.ts          # POST turn + SSE 消费
     useCanvasMessages.ts           # Feed 列表 / 分页
     useCanvasRevisionConflict.ts   # 409 统一处理
@@ -116,8 +116,7 @@ features/canvas/
     nodes/                         # Text / Image / Video / Audio
     menus/                         # 添加节点、连线落点菜单
   context/
-    CanvasProjectContext.tsx       # projectId, revision, setRevision
-    CanvasActionsContext.tsx
+    CanvasProjectContext.tsx       # projectId / episodeId
     CanvasTaskContext.tsx
 ```
 
@@ -133,9 +132,10 @@ features/canvas/
 ### 5.1 API 契约（前端 TypeScript，与后端一致）
 
 ```typescript
-/** GET /canvas/{project_id} */
+/** POST /canvas/episodes/{id}/get */
 export interface CanvasSnapshot {
-  revision: number;
+  project_id: number;
+  episode_id: number;
   nodes: CanvasNodeRecord[];
   edges: CanvasEdgeRecord[];
 }
@@ -143,34 +143,34 @@ export interface CanvasSnapshot {
 export interface CanvasNodeRecord {
   id: string;              // UUID，服务端分配
   kind: 'text' | 'image' | 'video' | 'audio';
+  revision: number;        // 实体 CAS 版本
   position: { x: number; y: number };
   title: string;
-  summary: string;
-  prompt: string;
+  input_prompt: string;
+  output_text: string;
   status: 'idle' | 'running' | 'success' | 'failed';
   model_id?: string;
   ratio?: string;
   duration_sec?: number;
   resolution?: string;
   task_id?: number;
-  asset_keys?: string[];
+  output_asset_ids?: number[];
 }
 
 export interface CanvasEdgeRecord {
   id: string;
+  revision: number;
   source: string;
   target: string;
 }
 
-/** PATCH body：用户手动画布或批量提交 */
+/** POST .../patch body：用户手动画布或批量提交 */
 export interface CanvasPatchRequest {
-  expected_revision: number;
-  ops: CanvasPatchOp[];
+  ops: CanvasPatchOp[];  // update/delete/disconnect 带实体 expected_revision
 }
 
-/** SSE canvas_patch */
+/** SSE canvas_patch / POST .../patch 响应 delta（无顶层 revision） */
 export interface CanvasPatchEvent {
-  revision: number;
   op_id?: string;
   nodes?: CanvasNodeRecord[];
   edges?: CanvasEdgeRecord[];
@@ -184,14 +184,14 @@ export interface CanvasPatchEvent {
 - `toFlowNodes(snapshot.nodes)` / `toFlowEdges(snapshot.edges)` — 加载时一次
 - `fromFlowPosition(node)` — 用户拖拽结束时生成 `update_node` op
 - **禁止** `createNodeId('n-image-101')` 本地自增；新建节点必须来自：
-  - 用户菜单「添加节点」→ `PATCH` `create_node` → 响应/SSE 带回 **服务端 id** 再 `setNodes`
+  - 用户菜单「添加节点」→ `POST .../patch` `create_node` → 响应/SSE 带回 **服务端 id** 再 `setNodes`
   - 或 Agent `canvas_patch` delta 含新节点
 
 ### 5.3 三类状态（不要混在一个 hook 里）
 
 | 状态 | 来源 | 存放 |
 |------|------|------|
-| **图 + revision** | GET snapshot、PATCH、SSE `canvas_patch` | `CanvasProjectContext` + `useNodesState`/`useEdgesState` |
+| **图（含实体 revision）** | POST get / patch、SSE `canvas_patch` | `useNodesState`/`useEdgesState` + 节点/边 data.revision |
 | **Agent Feed** | `GET messages`、`canvas turn` SSE | `useCanvasMessages` / 面板本地列表 |
 | **生成任务展示** | 仅 SSE `canvas_patch` / `generation_progress`（§11） | `CanvasTaskContext` + 节点 `task_id` / `status` / 缩略图 |
 
@@ -202,7 +202,7 @@ export interface CanvasPatchEvent {
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ CanvasPage                                                   │
-│  CanvasProjectProvider(revision, projectId)                  │
+│  CanvasProjectProvider(projectId, episodeId)                  │
 │    ├─ CanvasAgentPanel  ←── useCanvasMessages + useCanvasTurn│
 │    └─ WorkflowCanvasFlow ←── useCanvasSnapshot + useCanvasGraph│
 │         CanvasTaskProvider ←── useCanvasGenerationSync       │
@@ -211,14 +211,14 @@ export interface CanvasPatchEvent {
 
 **revision 规则：**
 
-- 任何成功 PATCH 或 `canvas_patch` → `setRevision(newRevision)`
-- 所有写请求带 `expected_revision: revisionRef.current`
-- 409 / `revision_conflict` → `useCanvasRevisionConflict`：提示 + `refetchSnapshot()`（**不**用本地旧图硬写）
+- 节点/边各自携带 `revision`；`useCanvasPatch` 在提交时为 update/delete/disconnect 注入实体 `expected_revision`
+- 成功 patch / SSE `canvas_patch` → 用响应实体 revision 合并本地图
+- 409 / `revision_conflict` → refetch snapshot（**不**用本地旧图硬写）
 
 **加载：**
 
 ```
-mount → GET snapshot → setNodes/setEdges + setRevision
+mount → POST .../get snapshot → setNodes/setEdges
        → listMessages → Feed 初始历史
 ```
 
@@ -230,12 +230,12 @@ mount → GET snapshot → setNodes/setEdges + setRevision
 
 | 方法 | 函数 |
 |------|------|
-| GET snapshot | `getCanvasSnapshot(projectId)` |
-| PATCH | `patchCanvas(projectId, body)` |
-| 消息列表 | `listCanvasMessages(projectId, cursor?)` |
-| 发起 turn | `streamCanvasTurn(projectId, body, handlers)` |
-| resume | `resumeCanvasTurn(projectId, body)` |
-| cancel | `cancelCanvasTurn(projectId)` |
+| POST snapshot | `getCanvasSnapshot(episodeId)` → `.../episodes/{id}/get` |
+| POST patch | `patchCanvas(episodeId, body)` → `.../episodes/{id}/patch` |
+| 消息列表 | `listCanvasMessages(episodeId, cursor?)` |
+| 发起 turn | `streamCanvasTurn(episodeId, body, handlers)` |
+| resume | `resumeCanvasTurn(episodeId, body)` |
+| cancel | `cancelCanvasTurn(episodeId)` |
 
 ### 7.1 SSE 帧处理（扩展 `StreamFrame`）
 
@@ -297,30 +297,30 @@ const client_turn_id = crypto.randomUUID();
 |------|----------|
 | 自定义节点 | `nodeTypes`: text / image / video / audio；`NodeChrome` 显示 status、任务 overlay |
 | 自定义边 | `edgeTypes` + hover 删除（`useCanvasEdgeHover`） |
-| 连线 | `isValidConnection` + `onConnect` → 生成 `connect` op → PATCH |
+| 连线 | `isValidConnection` + `onConnect` → 生成 `connect` op → POST .../patch |
 | 拖拽 | `onNodeDragStop` → `update_node` position op（debounce 300ms，合并连续拖拽） |
 | 删除 | Delete 键 → `delete_node` + 关联边（或后端级联） |
-| 添加节点 | 左侧工具栏 / 画布右键 → **先 PATCH create** 再落节点（不用纯本地 append） |
+| 添加节点 | 左侧工具栏 / 画布右键 → **先 POST .../patch create** 再落节点（不用纯本地 append） |
 | 视口 | `fitView`、`MiniMap`、`Controls` |
 | 空状态 | 无节点时引导添加（参考 `CanvasEmptyStateHost`） |
 
 **本地 undo（`useCanvasHistory`）：**
 
-- 仅记录 **用户发起** 的 PATCH 前快照；Agent `canvas_patch` **不进入** undo 栈，避免与服务端权威冲突。
-- undo 执行：用栈顶快照调 PATCH（或 refetch + 提示「无法撤销 Agent 操作」— 产品二选一，v1 推荐 **仅撤销用户操作**）。
+- 仅记录 **用户发起** 的 patch 前快照；Agent `canvas_patch` **不进入** undo 栈，避免与服务端权威冲突。
+- undo 执行：用栈顶快照调 POST .../patch（或 refetch + 提示「无法撤销 Agent 操作」— 产品二选一，v1 推荐 **仅撤销用户操作**）。
 
 ---
 
 ## 9. 用户编辑 vs Agent 增量
 
-### 9.1 用户手动画布（PATCH）
+### 9.1 用户手动画布（POST .../patch）
 
 ```
 onNodeDragStop / onConnect / 属性表单 blur
-  → build ops[] + expected_revision
+  → build ops[]；useCanvasPatch 注入实体 expected_revision
   → patchCanvas()
-  → 200: 应用返回 delta（若有）并 revision++
-  → 409: revisionConflictHandler()
+  → 200: 应用返回 delta（实体 revision 写入本地图）
+  → 409 / code=40903 / details.conflicts: revisionConflictHandler() → refetch snapshot
 ```
 
 **不要** storyflow 式 `JSON.stringify(wholeGraph)` 防抖上传。
@@ -335,23 +335,25 @@ function applyCanvasPatchDelta(
   setNodes,
   setEdges,
 ) {
-  // upsert nodes by id
-  // upsert edges by id
+  // upsert nodes by id（含 node.revision）
+  // upsert edges by id（含 edge.revision）
   // remove deleted_*_ids
-  setRevision(event.revision);
+  // 无 episode 级 setRevision
 }
 ```
 
 - 只改 event 中出现的 id；其它节点保持
 - 若 patch 含新节点且当前 selection 需要跟进，可选聚焦第一个新节点
+- 畸形 SSE（实体缺 revision）fail closed，不合并进图
 
 ### 9.3 并发 UX
 
 | 场景 | UI |
 |------|-----|
-| Agent turn 进行中 | 侧栏 Composer 禁用；顶栏「停止」→ `cancelCanvasTurn`；画布可只读或允许 PATCH（与后端「边聊边改」一致则允许，冲突靠 revision） |
+| Agent turn 进行中 | 侧栏 Composer 禁用；顶栏「停止」→ `cancelCanvasTurn`；画布可只读或允许 POST .../patch（与后端「边聊边改」一致则允许，冲突靠实体 revision） |
 | 409 冲突 | Modal：「画布已被更新」→ 刷新 snapshot |
 | `CANVAS_EPISODE_BUSY` | Toast：「Agent 正在执行」 |
+| 同节点并发 commitOps | `useCanvasPatch` 串行队列，避免自撞 409 |
 
 ---
 
@@ -392,13 +394,13 @@ CanvasAgentPanel
 
 ### 11.1 原则：统一由 Agent 发起，单一回写来源
 
-**定稿**：画布上任意「生成」动作（节点工具栏按钮、侧栏针对某节点的指令等）**不得**在前端直接调用 `submitGenerate`（`web/src/api/generate.ts`），**不得**由前端 `PATCH` 写入 `task_id` / `status`。
+**定稿**：画布上任意「生成」动作（节点工具栏按钮、侧栏针对某节点的指令等）**不得**在前端直接调用 `submitGenerate`（`web/src/api/generate.ts`），**不得**由前端 `POST .../patch` 写入 `task_id` / `status`。
 
 | 层级 | 规则 |
 |------|------|
 | **服务端写入** | 仅 Agent 工具 `submit_node_generation`（内部再调 `GenerateService` / `generate_task`）更新 `canvas_nodes` |
 | **前端更新图** | **唯一**消费 SSE：`canvas_patch`（含节点 delta）、`generation_progress`（按 `node_id` 推送状态）；本地 React Flow 只做 merge，不自行改权威字段 |
-| **禁止** | 前端直调 `submitGenerate` + 再 PATCH 回写；与 Agent 双写会导致 `status` / `task_id` 打架 |
+| **禁止** | 前端直调 `submitGenerate` + 再 POST .../patch 回写；与 Agent 双写会导致 `status` / `task_id` 打架 |
 
 节点 UI（running / success / failed、缩略图、进度）只绑定上述 SSE 合并后的节点数据；与创作页**状态色语义**一致，**数据来源**不同（创作页列表直读 `generate_task` API，画布读 SSE）。
 
@@ -451,7 +453,7 @@ async function onNodeGenerateClick(nodeId: string) {
 | `generation_progress` | 按 `node_id` 更新对应节点 `status`（及可选进度字段） |
 | `done` / `error` | 清除按钮 loading；失败展示节点内错误文案 |
 
-**可选（只读、非回写）**：SSE 已给 `task_id` 但尚无预览图时，可 **只读** 调 `getTaskStatus(task_id)` 拉 `result_keys` 用于缩略图展示，**禁止**用轮询结果去 PATCH 节点或覆盖 SSE 已给的 `status`。若后端保证 `generation_progress` / `canvas_patch` 已带齐展示字段，则不必轮询。
+**可选（只读、非回写）**：SSE 已给 `task_id` 但尚无预览图时，可 **只读** 调 `getTaskStatus(task_id)` 拉 `result_keys` 用于缩略图展示，**禁止**用轮询结果去 POST .../patch 节点或覆盖 SSE 已给的 `status`。若后端保证 `generation_progress` / `canvas_patch` 已带齐展示字段，则不必轮询。
 
 ### 11.4 侧栏自然语言生成
 
@@ -558,7 +560,7 @@ CanvasToolConfirmCard
 | 整图 JSON 防抖保存 | 对标后端禁止 graph_json RMW |
 | 侧栏假 Agent 回复 | 必须 SSE + messages API |
 | **前端直调 `submitGenerate` 写节点** | 与 §11 定稿冲突；`status` 单一回写来源 |
-| **前端 PATCH 写 `task_id` / `status`** | 同上；仅 Agent 工具写服务端 |
+| **前端 POST .../patch 写 `task_id` / `status`** | 同上；仅 Agent 工具写服务端 |
 | 在前端维护 turn 状态机 | 无 `canvas_turns`；busy 看 409 + Redis 锁错误码 |
 | 双轨 checkpoint 对账 UI | 无用户可见「sync_seq」 |
 | 画布深色主题 / 灰底节点卡 | 与产品浅色品牌不一致 |
@@ -571,7 +573,7 @@ CanvasToolConfirmCard
 ### F0 — 权威画布（无 Agent）
 
 - [ ] `canvasTypes` + `canvasSchema` + `getCanvasSnapshot` / `patchCanvas`
-- [ ] 重构 `WorkflowCanvasFlow`：加载 snapshot、拖拽/连线 PATCH、409 刷新
+- [ ] 重构 `WorkflowCanvasFlow`：加载 snapshot、拖拽/连线 POST .../patch、409 刷新
 - [ ] **§13 浅色主题**（画布底、白节点卡、边、顶栏/侧栏分割）
 - [ ] 删除 mock `sendCanvasMessage` / fixtures 作初始数据
 - [ ] 验收：刷新后与服务端一致；单节点拖动仅发 position op
@@ -588,7 +590,7 @@ CanvasToolConfirmCard
 - [ ] 节点「生成」→ `streamCanvasGeneration` / 专用 turn（§11.2），**不**接 `submitGenerate`
 - [ ] `useCanvasGenerationSync`：`canvas_patch` + `generation_progress`
 - [ ] 节点 status / 缩略图 UI（状态色 §13，与创作页一致）
-- [ ] 验收：全程无前端 PATCH `task_id`；busy 时按钮 loading，终态仅由 SSE 更新
+- [ ] 验收：全程无前端 POST .../patch 写 `task_id`；busy 时按钮 loading，终态仅由 SSE 更新
 
 ### F3 — Manual + 体验
 
@@ -607,7 +609,7 @@ CanvasToolConfirmCard
 
 | 后端 § | 前端 |
 |--------|------|
-| 行级表 + revision | §5、§9 PATCH + SSE delta |
+| 行级表 + revision | §5、§9 POST .../patch + SSE delta |
 | §8.4 Redis 锁 | §9.3 `CANVAS_EPISODE_BUSY` |
 | §10 manual interrupt | §12 |
 | §11 协议 | §7 |

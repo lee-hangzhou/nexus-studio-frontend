@@ -1,7 +1,7 @@
 import '@xyflow/react/dist/style.css';
 import '../styles/workflow-canvas.entry.less';
 
-import { ReactFlowProvider } from '@xyflow/react';
+import { ReactFlowProvider, type OnNodeDrag, type OnNodesChange } from '@xyflow/react';
 import { message } from 'antd';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -18,14 +18,14 @@ import { CANVAS_API_CODE, isCanvasApiError } from '../api/canvasErrors';
 import type {
   CanvasNodeGenerateResponse,
   CanvasNodeKind,
-  CanvasPatchEvent,
-  CanvasPatchOp,
+  CanvasPatchOpInput,
+  CanvasPatchResult,
   CanvasStreamFrame,
   NodeGenerateBody,
 } from '../api/canvasTypes';
 import { CanvasAgentPanel } from '../components/CanvasAgentPanel';
 import { buildTurnId } from '../components/CanvasAgentPanel.utils';
-import { CanvasGenerateProvider } from '../context/CanvasGenerateContext';
+import { CanvasGenerateProvider, type NodeGenerateExtra } from '../context/CanvasGenerateContext';
 import { ChatModelCatalogProvider, useChatModelCatalog } from '../context/ChatModelCatalogContext';
 import { GenerateModelCatalogProvider } from '../context/GenerateModelCatalogContext';
 import { hasResolvedChatModelKey } from '../lib/chatModelKey';
@@ -39,7 +39,6 @@ import { useCanvasGenerationWatch } from '../hooks/useCanvasGenerationWatch';
 import { hasResolvedModelId } from '../lib/generateModelId';
 import { useGenerateModelCatalog } from '../context/GenerateModelCatalogContext';
 import { useCanvasSnapshot } from '../hooks/useCanvasSnapshot';
-import { applyCanvasPatchDelta } from '../lib/applyCanvasPatchDelta';
 import {
   canvasPatchFromFrame,
   generationProgressFromFrame,
@@ -57,7 +56,7 @@ import type { NodeChangeInput } from '../storyflow/types';
 
 function CanvasPageInner() {
   const navigate = useNavigate();
-  const { projectId, episodeId, setRevision, refetchSnapshot, loading: snapLoading } = useCanvasProject();
+  const { projectId, episodeId, refetchSnapshot, loading: snapLoading } = useCanvasProject();
   const { pendingNodeIds, setNodePending } = useCanvasTask();
   const modelCatalog = useGenerateModelCatalog();
   const chatModelCatalog = useChatModelCatalog();
@@ -77,36 +76,36 @@ function CanvasPageInner() {
   const activeTurnRef = useRef<string | null>(null);
   const streamRequestIdRef = useRef<string | null>(null);
   const graphRef = useRef<{ nodes: CanvasFlowNode[]; edges: CanvasFlowEdge[] }>({ nodes: [], edges: [] });
-  const commitOpsRef = useRef<(ops: CanvasPatchOp[]) => Promise<import('../api/canvasTypes').CanvasPatchResult | null>>(
+  const commitOpsRef = useRef<(ops: CanvasPatchOpInput[]) => Promise<CanvasPatchResult | null>>(
     async () => null,
   );
-  const pendingNodeIdsRef = useRef(pendingNodeIds);
-  pendingNodeIdsRef.current = pendingNodeIds;
 
   const graph = useCanvasGraph((ops) => commitOpsRef.current(ops));
   const { nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange, onNodeDragStop } = graph;
   graphRef.current = { nodes, edges };
 
   const syncCanvasFromServer = useCallback(async () => {
-    // 节点生成在途时，忽略 autosave 触发的 revision 冲突同步，避免覆盖 generate 结果
-    if (pendingNodeIdsRef.current.size > 0) return;
     const snap = await refetchSnapshot();
-    if (snap) {
-      setNodes(toFlowNodes(snap.nodes));
-      setEdges(toFlowEdges(snap.edges));
-    }
+    if (!snap) return null;
+    const nextNodes = toFlowNodes(snap.nodes);
+    const nextEdges = toFlowEdges(snap.edges);
+    setNodes(nextNodes);
+    setEdges(nextEdges);
+    return { nodes: nextNodes, edges: nextEdges };
   }, [refetchSnapshot, setNodes, setEdges]);
 
-  const { commitOps } = useCanvasPatch(nodes, edges, setNodes, setEdges, syncCanvasFromServer);
+  const { commitOps, applyResult, applyNodeProgress, patchNodeData } = useCanvasPatch(
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    syncCanvasFromServer,
+  );
   commitOpsRef.current = commitOps;
 
   useCanvasSnapshot(setNodes, setEdges);
   useCanvasGenerationWatch(nodes, setNodes, async () => {
-    const snap = await refetchSnapshot();
-    if (snap) {
-      setNodes(toFlowNodes(snap.nodes));
-      setEdges(toFlowEdges(snap.edges));
-    }
+    await syncCanvasFromServer();
   });
 
   useEffect(() => {
@@ -160,28 +159,6 @@ function CanvasPageInner() {
     if (resolved) setAgentModelKey(resolved);
   }, [agentModelKey, chatModelCatalog]);
 
-  const applyPatchEvent = useCallback(
-    (event: CanvasPatchEvent) => {
-      setRevision(event.revision);
-      const prev = graphRef.current;
-      const prevIds = new Set(prev.nodes.map((n) => n.id));
-      const merged = applyCanvasPatchDelta(prev.nodes, prev.edges, event);
-      const createdIds = new Set(merged.nodes.filter((n) => !prevIds.has(n.id)).map((n) => n.id));
-      if (createdIds.size > 0) {
-        setNodes(
-          merged.nodes.map((n) => ({
-            ...n,
-            selected: createdIds.has(n.id),
-          })),
-        );
-      } else {
-        setNodes(merged.nodes);
-      }
-      setEdges(merged.edges);
-    },
-    [setRevision, setNodes, setEdges],
-  );
-
   const handleStreamFrame = useCallback(
     (frame: CanvasStreamFrame, clientTurnId: string) => {
       if (frame.type === 'token' && frame.channel !== 'think' && frame.text) {
@@ -198,25 +175,17 @@ function CanvasPageInner() {
           updateToolStepResult(steps, frame.call_id ?? '', frame.name ?? 'tool', preview),
         );
       }
-      const patch = canvasPatchFromFrame(frame);
-      if (patch) applyPatchEvent(patch);
-      const progress = generationProgressFromFrame(frame);
-      if (progress) {
-        setNodes((nds) =>
-          nds.map((n) =>
-            n.id === progress.node_id
-              ? {
-                  ...n,
-                  data: {
-                    ...n.data,
-                    ...(progress.status ? { status: progress.status as CanvasFlowNode['data']['status'] } : {}),
-                    ...(progress.task_id != null ? { task_id: progress.task_id } : {}),
-                  },
-                }
-              : n,
-          ),
-        );
-        if (progress.revision != null) setRevision(progress.revision);
+      try {
+        const patch = canvasPatchFromFrame(frame);
+        if (patch) applyResult(patch);
+      } catch (err) {
+        message.error(err instanceof Error ? err.message : '画布增量无效');
+      }
+      try {
+        const progress = generationProgressFromFrame(frame);
+        if (progress) applyNodeProgress(progress);
+      } catch (err) {
+        message.error(err instanceof Error ? err.message : '生成进度无效');
       }
       const pending = toolPendingFromFrame(frame);
       if (pending) setToolPending({ call_id: pending.call_id, summary: pending.summary });
@@ -231,7 +200,7 @@ function CanvasPageInner() {
         setLiveToolSteps([]);
       }
     },
-    [appendAssistantToken, applyPatchEvent, finishAssistantStream, loadMessages, setNodes, setRevision],
+    [appendAssistantToken, applyResult, applyNodeProgress, finishAssistantStream, loadMessages],
   );
 
   const runStream = useCallback(
@@ -269,13 +238,9 @@ function CanvasPageInner() {
 
   const applyGenerateResult = useCallback(
     (result: CanvasNodeGenerateResponse) => {
-      setRevision(result.revision);
-      const nodeData = { ...recordToNodeData(result.node), generatePending: false };
-      setNodes((nds) =>
-        nds.map((n) => (n.id === result.node_id ? { ...n, data: { ...n.data, ...nodeData } } : n)),
-      );
+      patchNodeData(result.node_id, { ...recordToNodeData(result.node), generatePending: false });
     },
-    [setNodes, setRevision],
+    [patchNodeData],
   );
 
   const handleNodeGenerateError = useCallback(
@@ -359,7 +324,7 @@ function CanvasPageInner() {
   ]);
 
   const onNodeGenerate = useCallback(
-    async (nodeId: string, extra?: import('../context/CanvasGenerateContext').NodeGenerateExtra) => {
+    async (nodeId: string, extra?: NodeGenerateExtra) => {
       if (pendingNodeIds.has(nodeId)) return;
       const node = graphRef.current.nodes.find((n) => n.id === nodeId);
       if (!node) return;
@@ -532,9 +497,9 @@ function CanvasPageInner() {
           nodes={nodes}
           edges={edges}
           loaded={loaded}
-          onNodesChange={onNodesChange as import('@xyflow/react').OnNodesChange}
+          onNodesChange={onNodesChange as OnNodesChange<CanvasFlowNode>}
           onEdgesChange={onEdgesChange}
-          onNodeDragStop={onNodeDragStop as import('@xyflow/react').OnNodeDrag}
+          onNodeDragStop={onNodeDragStop as OnNodeDrag<CanvasFlowNode>}
           commitOps={commitOps}
           onNodeChange={onNodeChange}
           onQuickAdd={onQuickAdd}

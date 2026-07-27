@@ -4,6 +4,7 @@ import { DEFAULT_NODE_SIZE } from '../storyflow/constants';
 
 export type CanvasNodeData = {
   kind: CanvasNodeKind;
+  revision: number;
   title: string;
   input_prompt: string;
   output_text: string;
@@ -21,11 +22,19 @@ export type CanvasNodeData = {
 };
 
 export type CanvasFlowNode = Node<CanvasNodeData, CanvasNodeKind>;
-export type CanvasFlowEdge = Edge;
+export type CanvasFlowEdgeData = {
+  revision: number;
+  source_port: CanvasEdgeRecord['source_port'];
+  target_port: CanvasEdgeRecord['target_port'];
+  edge_type: CanvasEdgeRecord['edge_type'];
+  metadata: CanvasEdgeRecord['metadata'];
+};
+export type CanvasFlowEdge = Edge<CanvasFlowEdgeData>;
 
 export function recordToNodeData(r: CanvasNodeRecord): CanvasNodeData {
   return {
     kind: r.kind,
+    revision: r.revision,
     title: r.title,
     input_prompt: r.input_prompt,
     output_text: r.output_text,
@@ -76,6 +85,7 @@ export function toFlowEdges(records: CanvasEdgeRecord[]): CanvasFlowEdge[] {
     type: 'workflowCanvas',
     className: 'workflow-canvas-edge',
     data: {
+      revision: r.revision,
       source_port: r.source_port,
       target_port: r.target_port,
       edge_type: r.edge_type,

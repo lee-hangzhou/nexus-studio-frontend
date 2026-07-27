@@ -1,7 +1,7 @@
-import { useEdgesState, useNodesState, type NodeChange } from '@xyflow/react';
+import { useEdgesState, useNodesState, type Node, type NodeChange } from '@xyflow/react';
 import { message } from 'antd';
 import { useCallback, useEffect, useRef } from 'react';
-import type { CanvasNodeKind } from '../api/canvasTypes';
+import type { CanvasNodeKind, CanvasPatchOpInput, CanvasPatchResult } from '../api/canvasTypes';
 import { DEFAULT_NODE_META } from '../schema/nodeDefaults';
 import type { CanvasFlowEdge, CanvasFlowNode } from '../schema/canvasSchema';
 import { isCanvasTextEditingTarget } from '../storyflow/utils/canvasKeyboardGuards';
@@ -10,7 +10,7 @@ import { isConnectPreviewNodeId } from '../storyflow/utils/connectPreview';
 const POSITION_DEBOUNCE_MS = 300;
 
 export function useCanvasGraph(
-  commitOps: (ops: import('../api/canvasTypes').CanvasPatchOp[]) => Promise<import('../api/canvasTypes').CanvasPatchResult | null>,
+  commitOps: (ops: CanvasPatchOpInput[]) => Promise<CanvasPatchResult | null>,
 ) {
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasFlowNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasFlowEdge>([]);
@@ -36,7 +36,7 @@ export function useCanvasGraph(
   }, [commitOps]);
 
   const onNodeDragStop = useCallback(
-    (_: unknown, node: CanvasFlowNode | import('@xyflow/react').Node) => {
+    (_: unknown, node: CanvasFlowNode | Node) => {
       const n = node as CanvasFlowNode;
       pendingPosition.current = {
         nodeId: n.id,

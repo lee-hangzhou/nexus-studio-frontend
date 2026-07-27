@@ -28,7 +28,6 @@ export type CanvasEdgeRecord = CanvasEdgeView;
 export interface CanvasSnapshot {
   project_id: number;
   episode_id: number;
-  revision: number;
   nodes: CanvasNodeRecord[];
   edges: CanvasEdgeRecord[];
 }
@@ -39,6 +38,14 @@ export type CanvasPatchOp =
   | DeleteNodeOp
   | ConnectNodesOp
   | DisconnectNodesOp;
+
+/** 前端构造的 op；update/delete/disconnect 的 expected_revision 由 useCanvasPatch 注入 */
+export type CanvasPatchOpInput =
+  | CreateNodeOp
+  | ConnectNodesOp
+  | Omit<UpdateNodeOp, 'expected_revision'>
+  | Omit<DeleteNodeOp, 'expected_revision'>
+  | Omit<DisconnectNodesOp, 'expected_revision'>;
 
 export type CanvasPatchRequest = Omit<GeneratedCanvasPatchRequest, 'ops'> & {
   ops: CanvasPatchOp[];
@@ -110,7 +117,6 @@ export interface CanvasNodeGenerateResponse {
   kind: 'text' | 'image' | 'video' | 'audio';
   status: CanvasNodeStatus;
   task_id?: number | null;
-  revision: number;
   node: CanvasNodeRecord;
   error_message?: string | null;
 }
