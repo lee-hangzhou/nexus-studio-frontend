@@ -1,0 +1,92 @@
+.modal :global(.ant-modal-body) {
+  padding-top: 8px;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.2fr);
+  gap: var(--studio-space-3, 12px);
+  min-height: 360px;
+}
+
+.listPane,
+.editorPane {
+  min-width: 0;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius);
+  padding: var(--studio-space-2, 8px);
+}
+
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--studio-space-2, 8px);
+  margin-bottom: var(--studio-space-2, 8px);
+}
+
+.mkdirRow {
+  display: flex;
+  gap: var(--studio-space-1, 4px);
+}
+
+.fileList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.fileItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: var(--studio-space-1, 4px);
+  padding: 6px 4px;
+  border-radius: var(--studio-radius-sm);
+}
+
+.fileItem:hover {
+  background: var(--studio-control-hover-bg);
+}
+
+.fileMeta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.fileName {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filePath {
+  color: var(--studio-text-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint {
+  margin: 0;
+  color: var(--studio-text-muted);
+  font-size: 13px;
+}
+
+.editorActions {
+  display: flex;
+  gap: var(--studio-space-2, 8px);
+}
+
+@media (max-width: 640px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

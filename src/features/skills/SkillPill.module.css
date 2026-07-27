@@ -1,0 +1,42 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--studio-space-1, 4px);
+  max-width: 100%;
+  padding: 2px 8px;
+  border: 1px solid var(--studio-control-selected-border);
+  border-radius: var(--studio-radius-sm);
+  background: var(--studio-control-selected-bg);
+  color: var(--studio-control-selected-fg);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  border-radius: var(--studio-radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.remove:hover {
+  background: color-mix(in srgb, var(--studio-text) 10%, transparent);
+}
+
+.remove:focus-visible {
+  outline: 2px solid var(--studio-primary);
+  outline-offset: 1px;
+}
