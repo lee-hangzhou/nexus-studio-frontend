@@ -1,5 +1,5 @@
 import type { StreamFrame } from '../../../api/chat';
-import type { SkillWriteOperation, TurnContentBlock, TurnMaterialBlock, TurnUserInput } from '../../skills/types';
+import type { TurnContentBlock, TurnMaterialBlock, TurnUserInput } from '../../skills/types';
 import type {
   CanvasEdgeView,
   CanvasNodeKind,
@@ -12,17 +12,25 @@ import type {
   DeleteNodeOp,
   ConnectNodesOp,
   DisconnectNodesOp,
+  PendingCanvasPatchOperation,
+  PendingGenerateOperation,
+  PendingSkillWriteOperation,
 } from '../../../api/generated/canvas';
 
 export type { CanvasNodeKind, CanvasNodeStatus };
-
-export type CanvasNodeRecord = CanvasNodeView & {
-  title: string;
-  input_prompt: string;
-  output_text: string;
-  status: CanvasNodeStatus;
-  voice_id?: string | null;
+export type {
+  PendingCanvasPatchOperation,
+  PendingGenerateOperation,
+  PendingSkillWriteOperation,
 };
+
+/** 与后端 CanvasToolPendingOperation 同构（生成 schema 未单独导出命名别名） */
+export type CanvasToolPendingOperation =
+  | PendingCanvasPatchOperation
+  | PendingGenerateOperation
+  | PendingSkillWriteOperation;
+
+export type CanvasNodeRecord = CanvasNodeView;
 
 export type CanvasEdgeRecord = CanvasEdgeView;
 
@@ -40,11 +48,13 @@ export type CanvasPatchOp =
   | ConnectNodesOp
   | DisconnectNodesOp;
 
-/** 前端构造的 op；update/delete/disconnect 的 expected_revision 由 useCanvasPatch 注入 */
+/** 前端构造的 op；update 的 node.revision / delete/disconnect 的 expected_revision 由 useCanvasPatch 注入 */
 export type CanvasPatchOpInput =
   | CreateNodeOp
   | ConnectNodesOp
-  | Omit<UpdateNodeOp, 'expected_revision'>
+  | (Omit<UpdateNodeOp, 'node'> & {
+      node: Omit<UpdateNodeOp['node'], 'revision'> & { revision?: number };
+    })
   | Omit<DeleteNodeOp, 'expected_revision'>
   | Omit<DisconnectNodesOp, 'expected_revision'>;
 
@@ -96,7 +106,7 @@ export interface CanvasResumeBody {
   action: 'confirm' | 'reject';
   client_turn_id?: string;
   model_key?: string;
-  operation?: SkillWriteOperation | null;
+  operation?: CanvasToolPendingOperation | null;
 }
 
 export type CanvasPatchEvent = Omit<CanvasPatchResponse, 'nodes' | 'edges'> & {

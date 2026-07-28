@@ -1,5 +1,5 @@
 export type { TurnContentBlock, TurnMaterialBlock, TurnMediaBlock, TurnMediaOrigin, TurnMediaType, TurnNodeBlock, TurnSkillBlock, TurnTextBlock, TurnUserInput } from '../../api/turnContent';
-export type { SkillWriteOperation, ToolPendingState } from '../../api/toolPending';
+export type { SkillWriteOperation, ToolPendingState, ToolPendingOperation } from '../../api/toolPending';
 
 export type SkillSurface = 'chat' | 'canvas';
 

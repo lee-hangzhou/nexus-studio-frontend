@@ -16,6 +16,8 @@ import { SkillWritePendingCard } from '../../skills/SkillWritePendingCard';
 import { SKILL_WRITE_OPERATION_TYPE } from '../../skills/constants';
 import { UserMessageContent } from '../../skills/UserMessageContent';
 import type { SkillWriteOperation, ToolPendingState, TurnMaterialBlock } from '../../skills/types';
+import type { ToolPendingOperation } from '../../../api/toolPending';
+import { CanvasNodePendingCard } from './CanvasNodePendingCard';
 import { CanvasMaterialChipList } from './CanvasMaterialChipList';
 import type { CanvasSessionView } from '../api/canvasTypes';
 import { CANVAS_DEFAULT_SESSION_TITLE } from '../constants';
@@ -111,7 +113,7 @@ export function CanvasAgentPanel({
   onStop: () => void;
   liveToolSteps: ToolStepView[];
   toolPending: ToolPendingState | null;
-  onConfirmTool: (operation?: SkillWriteOperation | null) => void;
+  onConfirmTool: (operation?: ToolPendingOperation | SkillWriteOperation | null) => void;
   onRejectTool: () => void;
   resumeLoading: boolean;
   sessions: CanvasSessionView[];
@@ -321,8 +323,34 @@ export function CanvasAgentPanel({
 
           {toolPending ? (
             <div className="workflow-canvas-agent-panel__bubble is-assistant">
-              {toolPending.operation?.type === SKILL_WRITE_OPERATION_TYPE ? (
+              {toolPending.enrich_status === 'failed' || !toolPending.operation ? (
+                <>
+                  <p className="workflow-canvas-agent-panel__text">
+                    {toolPending.summary}
+                    {toolPending.enrich_status === 'failed'
+                      ? toolPending.parse_error === 'malformed_operation'
+                        ? '（操作载荷畸形，只能拒绝）'
+                        : '（操作解析失败，只能拒绝）'
+                      : ''}
+                  </p>
+                  <div className="workflow-canvas-agent-panel__gate">
+                    <Button size="small" disabled={resumeLoading} onClick={onRejectTool}>
+                      拒绝
+                    </Button>
+                  </div>
+                </>
+              ) : toolPending.operation.type === SKILL_WRITE_OPERATION_TYPE ? (
                 <SkillWritePendingCard
+                  summary={toolPending.summary}
+                  operation={toolPending.operation}
+                  loading={resumeLoading}
+                  onConfirm={(operation) => onConfirmTool(operation)}
+                  onReject={onRejectTool}
+                />
+              ) : toolPending.operation.type === 'create' ||
+                toolPending.operation.type === 'update' ||
+                toolPending.operation.type === 'generate' ? (
+                <CanvasNodePendingCard
                   summary={toolPending.summary}
                   operation={toolPending.operation}
                   loading={resumeLoading}
@@ -333,9 +361,6 @@ export function CanvasAgentPanel({
                 <>
                   <p className="workflow-canvas-agent-panel__text">{toolPending.summary}</p>
                   <div className="workflow-canvas-agent-panel__gate">
-                    <Button size="small" type="primary" loading={resumeLoading} onClick={() => onConfirmTool()}>
-                      确认
-                    </Button>
                     <Button size="small" disabled={resumeLoading} onClick={onRejectTool}>
                       拒绝
                     </Button>

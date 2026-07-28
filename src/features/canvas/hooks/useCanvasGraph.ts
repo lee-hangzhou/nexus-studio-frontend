@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import type { CanvasNodeKind, CanvasPatchOpInput, CanvasPatchResult } from '../api/canvasTypes';
 import { DEFAULT_NODE_META } from '../schema/nodeDefaults';
 import type { CanvasFlowEdge, CanvasFlowNode } from '../schema/canvasSchema';
+import { buildCreateNodeOpInput, buildUpdateNodeOpInput } from '../schema/patchOps';
 import { isCanvasTextEditingTarget } from '../storyflow/utils/canvasKeyboardGuards';
 import { isConnectPreviewNodeId } from '../storyflow/utils/connectPreview';
 
@@ -26,12 +27,13 @@ export function useCanvasGraph(
     const p = pendingPosition.current;
     pendingPosition.current = null;
     if (!p) return;
+    const node = nodesRef.current.find((n) => n.id === p.nodeId);
     void commitOps([
-      {
-        op: 'update_node',
-        node_id: p.nodeId,
-        patch: { position: { x: p.x, y: p.y } },
-      },
+      buildUpdateNodeOpInput(
+        p.nodeId,
+        { position: { x: p.x, y: p.y } },
+        { kind: node?.data.kind ?? 'text', existingPayload: node?.data.payload },
+      ),
     ]);
   }, [commitOps]);
 
@@ -56,19 +58,14 @@ export function useCanvasGraph(
     async (kind: CanvasNodeKind, position: { x: number; y: number }) => {
       const meta = DEFAULT_NODE_META[kind];
       const result = await commitOps([
-        {
-          op: 'create_node',
-          node: {
-            kind,
-            position,
-            title: meta.title,
-            input_prompt: '',
-            output_text: '',
-            model_id: meta.model_id,
-            ratio: meta.ratio,
-            duration_sec: meta.duration_sec,
-          },
-        },
+        buildCreateNodeOpInput(kind, position, {
+          title: meta.title,
+          input_prompt: '',
+          output_text: '',
+          model_id: meta.model_id,
+          ratio: meta.ratio,
+          duration_sec: meta.duration_sec,
+        }),
       ]);
       return result != null;
     },

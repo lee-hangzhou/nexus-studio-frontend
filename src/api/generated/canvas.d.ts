@@ -15,7 +15,11 @@ export type Canvas =
   | CanvasSessionView
   | CanvasSessionCreateRequest
   | CanvasSessionUpdateRequest
-  | CanvasSessionIdRequest;
+  | CanvasSessionIdRequest
+  | PendingCanvasPatchOperation
+  | PendingGenerateOperation
+  | PendingSkillWriteOperation
+  | (PendingCanvasPatchOperation | PendingGenerateOperation | PendingSkillWriteOperation);
 export type CanvasEdgeType = "dependency";
 export type Id = string;
 export type Revision = number;
@@ -25,24 +29,73 @@ export type Target = string;
 export type CanvasTargetPort = "prompt_input" | "reference_asset";
 export type Edges = CanvasEdgeView[];
 export type EpisodeId = number;
+export type AssetId = number | null;
+export type AspectRatio = string | null;
+export type Duration = string | null;
 export type DurationSec = number | null;
-export type ErrorMessage = string | null;
-export type Id1 = string;
-export type InputPrompt = string;
-export type CanvasNodeKind = "text" | "image" | "video" | "audio";
-export type ModelId = string | null;
+export type Emotion = string | null;
+export type ImageSize = string | null;
+export type ImgNum = number | null;
+export type Mode = string | null;
+export type Model = string | null;
+export type Pitch = number | null;
+export type Ratio = string | null;
+export type ReferenceMode = number | null;
+export type Resolution = string | null;
+export type Speed = number | null;
+export type TextNum = number | null;
+export type VoiceId = string | null;
+export type VoiceName = string | null;
+export type Vol = number | null;
+export type Content =
+  string | (WorkflowPromptTextSegment | WorkflowPromptMediaSegment | WorkflowPromptTextRefSegment)[] | null;
+export type Text = string;
+export type Type = "text";
+export type AssetId1 = number | null;
+export type Label = string | null;
+export type ReferenceType = string | null;
+export type Type1 = "image_url" | "video_url" | "audio_url";
+export type Url = string;
+export type Text1 = string;
+export type Type2 = "text_ref";
+export type GenerateCreatedAt = string | null;
+export type GenerateError = string | null;
+export type GenerateOperationType = string | null;
+export type GenerateTaskId = number | null;
+export type LibraryRefs = ImagePromptLibraryRef[] | null;
+export type AssetId2 = number;
+export type Name = string | null;
+export type ThumbUrl = string | null;
+export type Type3 = ("image" | "video" | "audio") | null;
+export type Url1 = string;
+export type Model1 = string | null;
 export type OutputAssetIds = number[] | null;
+export type OutputSource = ("upload" | "generated") | null;
+export type Path = string | null;
+export type Paths = CanvasNodeAssetPath[] | null;
+export type AssetId3 = number | null;
+export type ThumbUrl1 = string | null;
+export type Url2 = string | null;
+export type PreviewUrl = string | null;
+export type Prompt = string | null;
+export type PromptContent =
+  (WorkflowPromptTextSegment | WorkflowPromptMediaSegment | WorkflowPromptTextRefSegment)[] | null;
+export type Assets = CanvasTaskAsset[] | null;
+export type AssetId4 = number | null;
+export type ThumbUrl2 = string | null;
+export type Url3 = string | null;
+export type ErrorMessage = string | null;
+export type Status = "success" | "failed";
+export type CanvasNodeStatus = "idle" | "waiting_inputs" | "ready" | "running" | "success" | "failed" | "cancelled";
+export type Title = string | null;
+export type Height = number | null;
+export type Id1 = string;
+export type CanvasNodeKind = "text" | "image" | "video" | "audio";
 export type OutputAssetUrls = string[] | null;
-export type OutputText = string;
 export type X = number;
 export type Y = number;
-export type Ratio = string | null;
-export type Resolution = string | null;
 export type Revision1 = number;
-export type CanvasNodeStatus = "idle" | "waiting_inputs" | "ready" | "running" | "success" | "failed" | "cancelled";
-export type TaskId = number | null;
-export type Title = string;
-export type VoiceId = string | null;
+export type Width = number | null;
 export type Nodes = CanvasNodeView[];
 export type ProjectId = number;
 /**
@@ -55,43 +108,23 @@ export type Ops = [
 export type CanvasEdgeType1 = "dependency";
 export type NodeId = string;
 export type Side = "left" | "right";
-export type DurationSec1 = number | null;
-export type ErrorMessage1 = string | null;
-export type InputPrompt1 = string;
-export type ModelId1 = string | null;
-export type OutputAssetIds1 = number[] | null;
-export type OutputText1 = string;
-export type Ratio1 = string | null;
-export type Resolution1 = string | null;
-export type CanvasNodeStatus1 = "idle" | "waiting_inputs" | "ready" | "running" | "success" | "failed" | "cancelled";
-export type TaskId1 = number | null;
-export type Title1 = string;
-export type VoiceId1 = string | null;
+export type Height1 = number | null;
+export type Width1 = number | null;
 export type Op = "create_node";
+export type Height2 = number | null;
+export type Id2 = string;
+export type Revision2 = number;
+export type Width2 = number | null;
+export type Op1 = "update_node";
 export type ExpectedRevision = number;
 export type NodeId1 = string;
-export type Op1 = "update_node";
-export type DurationSec2 = number | null;
-export type ErrorMessage2 = string | null;
-export type InputPrompt2 = string | null;
-export type ModelId2 = string | null;
-export type OutputAssetIds2 = number[] | null;
-export type OutputText2 = string | null;
-export type Ratio2 = string | null;
-export type Resolution2 = string | null;
-export type CanvasNodeStatus2 = "idle" | "waiting_inputs" | "ready" | "running" | "success" | "failed" | "cancelled";
-export type TaskId2 = number | null;
-export type Title2 = string | null;
-export type VoiceId2 = string | null;
-export type ExpectedRevision1 = number;
-export type NodeId2 = string;
 export type Op2 = "delete_node";
 export type CanvasEdgeType2 = "dependency";
 export type Source1 = string;
 export type Target1 = string;
 export type Op3 = "connect";
 export type EdgeId = string;
-export type ExpectedRevision2 = number;
+export type ExpectedRevision1 = number;
 export type Op4 = "disconnect";
 export type DeletedEdgeIds = string[];
 export type DeletedNodeIds = string[];
@@ -99,23 +132,48 @@ export type Edges1 = CanvasEdgeView[];
 export type Nodes1 = CanvasNodeView[];
 export type OpId = string | null;
 export type ActualRevision = number;
-export type ExpectedRevision3 = number;
-export type Id2 = string;
+export type ExpectedRevision2 = number;
+export type Id3 = string;
 export type Kind = "node" | "edge";
-export type NodeId3 = string;
-export type Revision2 = number;
-export type TaskId3 = number | null;
+export type NodeId2 = string;
+export type Revision3 = number;
+export type TaskId = number | null;
 export type CreatedAt = string;
 export type EpisodeId1 = number;
-export type Id3 = number;
+export type Id4 = number;
 export type IsDefault = boolean;
 export type CanvasSessionStatus = 1 | 2;
-export type Title3 = string;
+export type Title1 = string;
 export type UpdatedAt = string;
-export type Title4 = string | null;
+export type Title2 = string | null;
 export type SessionId = number;
-export type Title5 = string;
+export type Title3 = string;
 export type SessionId1 = number;
+export type Edges2 = CanvasEdgeView[];
+export type Nodes2 = CanvasNodeView[];
+export type Type4 = "create" | "update";
+export type Count = number;
+export type Duration1 = number | null;
+export type ExpectedRevision3 = number | null;
+export type GenerationKind = "image" | "video" | "audio";
+export type ModelId = string;
+export type NodeId3 = string;
+export type Prompt1 = string;
+export type Ratio1 = string | null;
+export type RefAssetIds = number[];
+export type ReferenceMode1 = 1 | 2 | 3 | 4;
+export type Resolution1 = string | null;
+export type VoiceId1 = string | null;
+export type Type5 = "generate";
+export type Content1 = string;
+export type Description = string | null;
+export type Name1 = string;
+export type Path1 = string;
+export type Revision4 = number | null;
+export type RevisionInvalid = boolean | null;
+export type Scope = "user" | "project";
+export type Surface = "chat" | "canvas";
+export type Type6 = "skill_write";
 
 export interface CanvasSnapshot {
   edges: Edges;
@@ -137,23 +195,102 @@ export interface Metadata {
   [k: string]: unknown;
 }
 export interface CanvasNodeView {
-  duration_sec?: DurationSec;
-  error_message?: ErrorMessage;
+  data?: CanvasNodeData;
+  height?: Height;
   id: Id1;
-  input_prompt?: InputPrompt;
   kind: CanvasNodeKind;
-  model_id?: ModelId;
-  output_asset_ids?: OutputAssetIds;
   output_asset_urls?: OutputAssetUrls;
-  output_text?: OutputText;
   position: CanvasPosition;
-  ratio?: Ratio;
-  resolution?: Resolution;
   revision: Revision1;
-  status?: CanvasNodeStatus;
-  task_id?: TaskId;
+  width?: Width;
+}
+/**
+ * 节点业务字段；持久化在 canvas_nodes.data JSONB
+ *
+ * 语义（对齐参考）：
+ * - text：content=正文(str)；prompt_content=生成输入(segments)；prompt=派生纯文本
+ * - media：content=结构化 prompt(segments)；prompt=派生纯文本
+ */
+export interface CanvasNodeData {
+  asset_id?: AssetId;
+  config?: CanvasNodeConfig | null;
+  content?: Content;
+  generate_created_at?: GenerateCreatedAt;
+  generate_error?: GenerateError;
+  generate_operation_type?: GenerateOperationType;
+  generate_task_id?: GenerateTaskId;
+  library_refs?: LibraryRefs;
+  model?: Model1;
+  output_asset_ids?: OutputAssetIds;
+  output_source?: OutputSource;
+  path?: Path;
+  paths?: Paths;
+  preview_url?: PreviewUrl;
+  prompt?: Prompt;
+  prompt_content?: PromptContent;
+  results?: CanvasTaskResults | null;
+  status?: CanvasNodeStatus | null;
   title?: Title;
+}
+/**
+ * 节点生成配置（对齐参考可写集；不含未接入能力）
+ */
+export interface CanvasNodeConfig {
+  aspect_ratio?: AspectRatio;
+  duration?: Duration;
+  duration_sec?: DurationSec;
+  emotion?: Emotion;
+  image_size?: ImageSize;
+  img_num?: ImgNum;
+  mode?: Mode;
+  model?: Model;
+  pitch?: Pitch;
+  ratio?: Ratio;
+  reference_mode?: ReferenceMode;
+  resolution?: Resolution;
+  speed?: Speed;
+  text_num?: TextNum;
   voice_id?: VoiceId;
+  voice_name?: VoiceName;
+  vol?: Vol;
+}
+export interface WorkflowPromptTextSegment {
+  text: Text;
+  type: Type;
+}
+export interface WorkflowPromptMediaSegment {
+  asset_id?: AssetId1;
+  label?: Label;
+  reference_type?: ReferenceType;
+  type: Type1;
+  url: Url;
+}
+export interface WorkflowPromptTextRefSegment {
+  text: Text1;
+  type: Type2;
+}
+export interface ImagePromptLibraryRef {
+  asset_id: AssetId2;
+  name?: Name;
+  thumb_url?: ThumbUrl;
+  type?: Type3;
+  url: Url1;
+}
+export interface CanvasNodeAssetPath {
+  asset_id?: AssetId3;
+  thumb_url?: ThumbUrl1;
+  url?: Url2;
+}
+export interface CanvasTaskResults {
+  assets?: Assets;
+  error_message?: ErrorMessage;
+  raw?: unknown;
+  status: Status;
+}
+export interface CanvasTaskAsset {
+  asset_id?: AssetId4;
+  thumb_url?: ThumbUrl2;
+  url?: Url3;
 }
 export interface CanvasPosition {
   x: X;
@@ -168,7 +305,7 @@ export interface CreateNodeOp {
   op: Op;
 }
 /**
- * 拉线新建节点时，与锚点节点在同一事务内连边。
+ * 拉线新建节点时，与锚点节点在同一事务内连边
  */
 export interface CreateNodeConnectAnchor {
   edge_type?: CanvasEdgeType1;
@@ -182,46 +319,30 @@ export interface Metadata1 {
   [k: string]: unknown;
 }
 export interface CreateNodePayload {
-  duration_sec?: DurationSec1;
-  error_message?: ErrorMessage1;
-  input_prompt?: InputPrompt1;
+  data?: CanvasNodeData;
+  height?: Height1;
   kind: CanvasNodeKind;
-  model_id?: ModelId1;
-  output_asset_ids?: OutputAssetIds1;
-  output_text?: OutputText1;
   position: CanvasPosition;
-  ratio?: Ratio1;
-  resolution?: Resolution1;
-  status?: CanvasNodeStatus1;
-  task_id?: TaskId1;
-  title?: Title1;
-  voice_id?: VoiceId1;
+  width?: Width1;
 }
 export interface UpdateNodeOp {
-  expected_revision: ExpectedRevision;
-  node_id: NodeId1;
+  node: UpdateNodePayload;
   op: Op1;
-  patch: UpdateNodePatch;
 }
-export interface UpdateNodePatch {
-  duration_sec?: DurationSec2;
-  error_message?: ErrorMessage2;
-  input_prompt?: InputPrompt2;
-  kind?: CanvasNodeKind | null;
-  model_id?: ModelId2;
-  output_asset_ids?: OutputAssetIds2;
-  output_text?: OutputText2;
+/**
+ * update_node 载荷；revision 语义等同原 expected_revision
+ */
+export interface UpdateNodePayload {
+  data?: CanvasNodeData | null;
+  height?: Height2;
+  id: Id2;
   position?: CanvasPosition | null;
-  ratio?: Ratio2;
-  resolution?: Resolution2;
-  status?: CanvasNodeStatus2 | null;
-  task_id?: TaskId2;
-  title?: Title2;
-  voice_id?: VoiceId2;
+  revision: Revision2;
+  width?: Width2;
 }
 export interface DeleteNodeOp {
-  expected_revision: ExpectedRevision1;
-  node_id: NodeId2;
+  expected_revision: ExpectedRevision;
+  node_id: NodeId1;
   op: Op2;
 }
 export interface ConnectNodesOp {
@@ -241,7 +362,7 @@ export interface Metadata2 {
 }
 export interface DisconnectNodesOp {
   edge_id: EdgeId;
-  expected_revision: ExpectedRevision2;
+  expected_revision: ExpectedRevision1;
   op: Op4;
 }
 export interface CanvasPatchResponse {
@@ -253,15 +374,15 @@ export interface CanvasPatchResponse {
 }
 export interface CanvasRevisionConflictItem {
   actual_revision: ActualRevision;
-  expected_revision: ExpectedRevision3;
-  id: Id2;
+  expected_revision: ExpectedRevision2;
+  id: Id3;
   kind: Kind;
 }
 export interface GenerationProgress {
-  node_id: NodeId3;
-  revision: Revision2;
-  status: CanvasNodeStatus2;
-  task_id?: TaskId3;
+  node_id: NodeId2;
+  revision: Revision3;
+  status: CanvasNodeStatus;
+  task_id?: TaskId;
 }
 /**
  * 画布 Agent 会话视图
@@ -269,28 +390,75 @@ export interface GenerationProgress {
 export interface CanvasSessionView {
   created_at: CreatedAt;
   episode_id: EpisodeId1;
-  id: Id3;
+  id: Id4;
   is_default: IsDefault;
   status: CanvasSessionStatus;
-  title: Title3;
+  title: Title1;
   updated_at: UpdatedAt;
 }
 /**
  * 新建画布会话
  */
 export interface CanvasSessionCreateRequest {
-  title?: Title4;
+  title?: Title2;
 }
 /**
  * 更新画布会话标题
  */
 export interface CanvasSessionUpdateRequest {
   session_id: SessionId;
-  title: Title5;
+  title: Title3;
 }
 /**
  * 按 session_id 操作
  */
 export interface CanvasSessionIdRequest {
   session_id: SessionId1;
+}
+/**
+ * tool_pending 中展示的 create/update 画布操作
+ */
+export interface PendingCanvasPatchOperation {
+  edges?: Edges2;
+  nodes?: Nodes2;
+  type: Type4;
+}
+/**
+ * tool_pending 中展示的节点生成操作
+ */
+export interface PendingGenerateOperation {
+  node: CanvasNodeView;
+  submit_args: PendingGenerateSubmitArgs;
+  type: Type5;
+}
+/**
+ * generate pending 携带的 submit_node_generation 参数快照（结构化，禁止裸 dict）
+ */
+export interface PendingGenerateSubmitArgs {
+  count?: Count;
+  duration?: Duration1;
+  expected_revision?: ExpectedRevision3;
+  kind: GenerationKind;
+  model_id: ModelId;
+  node_id: NodeId3;
+  prompt: Prompt1;
+  ratio?: Ratio1;
+  ref_asset_ids?: RefAssetIds;
+  reference_mode?: ReferenceMode1 | null;
+  resolution?: Resolution1;
+  voice_id?: VoiceId1;
+}
+/**
+ * tool_pending 中展示的用户 skill 写入操作
+ */
+export interface PendingSkillWriteOperation {
+  content?: Content1;
+  description?: Description;
+  name?: Name1;
+  path: Path1;
+  revision?: Revision4;
+  revision_invalid?: RevisionInvalid;
+  scope?: Scope;
+  surface?: Surface;
+  type: Type6;
 }

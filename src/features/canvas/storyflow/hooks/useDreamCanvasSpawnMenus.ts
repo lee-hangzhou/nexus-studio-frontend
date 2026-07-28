@@ -2,6 +2,7 @@ import { useReactFlow, type Node } from '@xyflow/react';
 import { useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
 import type { CanvasPatchOpInput, CanvasNodeKind } from '../../api/canvasTypes';
 import { DEFAULT_NODE_META } from '../../schema/nodeDefaults';
+import { buildCreateNodeOpInput } from '../../schema/patchOps';
 import {
   buildDataDependencyPorts,
   getNodeWorkflowType,
@@ -50,19 +51,14 @@ export function useDreamCanvasSpawnMenus({
       anchor?: { id: string; side: 'left' | 'right' },
     ) => {
       const meta = DEFAULT_NODE_META[type as CanvasNodeKind];
-      const createOp: CanvasPatchOpInput = {
-        op: 'create_node',
-        node: {
-          kind: type as CanvasNodeKind,
-          position: flowPos,
-          title: meta.title,
-          input_prompt: '',
-          output_text: '',
-          model_id: meta.model_id,
-          ratio: meta.ratio,
-          duration_sec: meta.duration_sec,
-        },
-      };
+      const createOp = buildCreateNodeOpInput(type as CanvasNodeKind, flowPos, {
+        title: meta.title,
+        input_prompt: '',
+        output_text: '',
+        model_id: meta.model_id,
+        ratio: meta.ratio,
+        duration_sec: meta.duration_sec,
+      }) as CanvasPatchOpInput & { connect_anchor?: unknown };
 
       if (anchor) {
         const anchorType = getNodeWorkflowType(nodes.find((n) => n.id === anchor.id));

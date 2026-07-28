@@ -51,11 +51,11 @@ function withExpectedRevisions(
   const edgeRev = new Map(edges.map((e) => [e.id, e.data?.revision]));
   return ops.map((op): CanvasPatchOp => {
     if (op.op === 'update_node') {
-      const expected_revision = nodeRev.get(op.node_id);
-      if (expected_revision == null) {
-        throw new MissingLocalRevisionError(`missing node revision for ${op.node_id}`);
+      const revision = op.node.revision ?? nodeRev.get(op.node.id);
+      if (revision == null) {
+        throw new MissingLocalRevisionError(`missing node revision for ${op.node.id}`);
       }
-      return { ...op, expected_revision };
+      return { ...op, node: { ...op.node, revision } };
     }
     if (op.op === 'delete_node') {
       const expected_revision = nodeRev.get(op.node_id);
@@ -168,10 +168,18 @@ export function useCanvasPatch(
       if (current && progress.revision < current.data.revision) return;
       const nextNodes = nodesRef.current.map((n) => {
         if (n.id !== progress.node_id) return n;
+        const payload = {
+          ...(n.data.payload ?? {}),
+          ...(progress.status ? { status: progress.status } : {}),
+          ...(progress.task_id !== undefined
+            ? { generate_task_id: progress.task_id ?? null }
+            : {}),
+        };
         const nextData: CanvasNodeData = {
           ...n.data,
           revision: progress.revision,
           ...(progress.status ? { status: progress.status } : {}),
+          payload,
         };
         if (progress.task_id !== undefined) {
           nextData.task_id = progress.task_id ?? undefined;

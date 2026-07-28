@@ -48,6 +48,13 @@ import { WorkflowCanvasFlow } from '../flow/WorkflowCanvasFlow';
 import { useCanvasGraph } from '../hooks/useCanvasGraph';
 import { useCanvasMessages } from '../hooks/useCanvasMessages';
 import { useCanvasPatch, type CanvasRevisionSyncResult } from '../hooks/useCanvasPatch';
+import { buildCreateNodeOpInput, buildUpdateNodeOpInput } from '../schema/patchOps';
+import {
+  applyFlatToRfData,
+  flattenNodeData,
+  foldSubmitContentIntoNodeData,
+  type FlatNodeFields,
+} from '../schema/nodeFields';
 import { useCanvasGenerationWatch } from '../hooks/useCanvasGenerationWatch';
 import { hasResolvedModelId } from '../lib/generateModelId';
 import { useGenerateModelCatalog } from '../context/GenerateModelCatalogContext';
@@ -919,21 +926,40 @@ function CanvasPageInner() {
 
       const storedInputPrompt =
         extra?.input_prompt?.trim() || node.data.input_prompt?.trim() || prompt;
-      const nodePatch: Record<string, unknown> = { input_prompt: storedInputPrompt };
-      if (kind === 'text') {
-        nodePatch.model_id = body.model_key;
-      } else if (kind === 'audio') {
-        nodePatch.model_id = body.model_id;
-        if (body.voice_id != null) nodePatch.voice_id = body.voice_id;
-      } else if (kind === 'image' || kind === 'video') {
-        nodePatch.model_id = body.model_id;
-        if (body.ratio != null) nodePatch.ratio = body.ratio;
-        if (body.resolution != null) nodePatch.resolution = body.resolution;
-        if (body.duration != null) nodePatch.duration_sec = body.duration;
-      }
+      const submitContent = extra?.submit_content;
+      const nextPayload = foldSubmitContentIntoNodeData(
+        kind,
+        {
+          plain_prompt: storedInputPrompt,
+          submit_content: submitContent,
+          model_id:
+            kind === 'text'
+              ? body.model_key
+              : kind === 'audio' || kind === 'image' || kind === 'video'
+                ? body.model_id
+                : undefined,
+          voice_id: kind === 'audio' ? body.voice_id : undefined,
+          ratio: kind === 'image' || kind === 'video' ? body.ratio : undefined,
+          resolution: kind === 'image' || kind === 'video' ? body.resolution : undefined,
+          duration_sec: kind === 'image' || kind === 'video' ? body.duration : undefined,
+        },
+        node.data.payload,
+      );
 
       setNodes((nds) =>
-        nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, ...nodePatch } } : n)),
+        nds.map((n) => {
+          if (n.id !== nodeId) return n;
+          const flat = flattenNodeData(kind, nextPayload);
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              ...flat,
+              kind,
+              payload: nextPayload,
+            },
+          };
+        }),
       );
 
       nodeAbortRef.current.get(nodeId)?.abort();
@@ -942,7 +968,13 @@ function CanvasPageInner() {
       setNodePending(nodeId, true);
       setNodeGeneratePending(nodeId, true);
       try {
-        const saved = await commitOps([{ op: 'update_node', node_id: nodeId, patch: nodePatch }]);
+        const saved = await commitOps([
+          buildUpdateNodeOpInput(
+            nodeId,
+            { data: nextPayload },
+            { kind, existingPayload: node.data.payload },
+          ),
+        ]);
         if (!saved) return;
 
         const result = await submitCanvasNodeGenerate(episodeId, nodeId, body, ac.signal);
@@ -973,9 +1005,27 @@ function CanvasPageInner() {
   const onNodeChange = useCallback(
     (input: NodeChangeInput) => {
       const { nodeId, patch, persist } = input;
-      setNodes((nds) => nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, ...patch } } : n)));
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id !== nodeId) return n;
+          return {
+            ...n,
+            data: applyFlatToRfData(
+              (n.data.kind as CanvasNodeKind) ?? 'text',
+              n.data,
+              patch as Partial<FlatNodeFields>,
+            ),
+          };
+        }),
+      );
       if (persist === 'immediate') {
-        void commitOps([{ op: 'update_node', node_id: nodeId, patch }]);
+        const node = graphRef.current.nodes.find((n) => n.id === nodeId);
+        void commitOps([
+          buildUpdateNodeOpInput(nodeId, patch as Record<string, unknown>, {
+            kind: node?.data.kind ?? 'text',
+            existingPayload: node?.data.payload,
+          }),
+        ]);
       }
     },
     [commitOps, setNodes],
@@ -985,19 +1035,14 @@ function CanvasPageInner() {
     async (kind: CanvasNodeKind, position: { x: number; y: number }) => {
       const meta = DEFAULT_NODE_META[kind];
       await commitOps([
-        {
-          op: 'create_node',
-          node: {
-            kind,
-            position,
-            title: meta.title,
-            input_prompt: '',
-            output_text: '',
-            model_id: meta.model_id,
-            ratio: meta.ratio,
-            duration_sec: meta.duration_sec,
-          },
-        },
+        buildCreateNodeOpInput(kind, position, {
+          title: meta.title,
+          input_prompt: '',
+          output_text: '',
+          model_id: meta.model_id,
+          ratio: meta.ratio,
+          duration_sec: meta.duration_sec,
+        }),
       ]);
     },
     [commitOps],

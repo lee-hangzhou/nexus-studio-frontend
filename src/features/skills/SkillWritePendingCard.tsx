@@ -23,14 +23,14 @@ export function SkillWritePendingCard({
   onReject,
 }: SkillWritePendingCardProps) {
   const descriptionOmitted = operation.description == null;
-  const [name, setName] = useState(operation.name);
+  const [name, setName] = useState(operation.name ?? '');
   const [description, setDescription] = useState(operation.description ?? '');
-  const [content, setContent] = useState(operation.content);
+  const [content, setContent] = useState(operation.content ?? '');
 
   useEffect(() => {
-    setName(operation.name);
+    setName(operation.name ?? '');
     setDescription(operation.description ?? '');
-    setContent(operation.content);
+    setContent(operation.content ?? '');
   }, [operation]);
 
   const handleConfirm = () => {
@@ -38,9 +38,9 @@ export function SkillWritePendingCard({
       descriptionOmitted && description.trim() === '' ? null : description;
     onConfirm({
       ...operation,
-      name: name.trim() || operation.name,
+      name: (name ?? '').trim() || operation.name || '',
       description: nextDescription,
-      content,
+      content: content ?? '',
       revision: operation.revision ?? null,
     });
   };

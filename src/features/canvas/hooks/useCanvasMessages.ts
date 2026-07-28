@@ -34,8 +34,27 @@ function isToolStepRecord(m: CanvasMessageRecord): boolean {
   return m.metadata?.phase === 'tool_step' && typeof m.metadata.tool_step === 'object' && m.metadata.tool_step !== null;
 }
 
-function normalizeToolStep(raw: unknown, index: number): ToolStepView {
-  const step = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>;
+function normalizeToolStep(raw: unknown): ToolStepView | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    console.error('[canvas] malformed tool_step payload', raw);
+    return null;
+  }
+  const step = raw as Record<string, unknown>;
+  if (typeof step.call_id !== 'string' || !step.call_id) {
+    console.error('[canvas] tool_step missing call_id', raw);
+    return null;
+  }
+  if (typeof step.name !== 'string' || !step.name) {
+    console.error('[canvas] tool_step missing name', raw);
+    return null;
+  }
+  if (
+    step.args != null &&
+    (typeof step.args !== 'object' || step.args === null || Array.isArray(step.args))
+  ) {
+    console.error('[canvas] tool_step.args must be object', raw);
+    return null;
+  }
   const ok = step.ok !== false;
   const preview =
     typeof step.result_preview === 'string'
@@ -44,21 +63,23 @@ function normalizeToolStep(raw: unknown, index: number): ToolStepView {
         ? step.preview
         : '';
   return {
-    call_id: String(step.call_id ?? `tool-${index}`),
-    name: String(step.name ?? 'tool'),
-    args: (typeof step.args === 'object' && step.args !== null ? step.args : {}) as Record<string, unknown>,
+    call_id: step.call_id,
+    name: step.name,
+    args: (step.args ?? {}) as Record<string, unknown>,
     result_preview: ok ? preview : `失败: ${preview}`,
   };
 }
 
 function buildFeed(rows: CanvasMessageRecord[]): CanvasFeedMessage[] {
   const toolStepsByTurn = new Map<string, ToolStepView[]>();
-  rows.forEach((row, index) => {
+  rows.forEach((row) => {
     if (!isToolStepRecord(row)) return;
     const turnId = typeof row.metadata.turn_id === 'string' ? row.metadata.turn_id : '';
     if (!turnId) return;
+    const normalized = normalizeToolStep(row.metadata.tool_step);
+    if (!normalized) return;
     const steps = toolStepsByTurn.get(turnId) ?? [];
-    steps.push(normalizeToolStep(row.metadata.tool_step, index));
+    steps.push(normalized);
     toolStepsByTurn.set(turnId, steps);
   });
 

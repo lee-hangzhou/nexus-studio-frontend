@@ -94,45 +94,117 @@ export type CanvasSourcePort = "output_text" | "output_asset";
 export type Target = string;
 export type CanvasTargetPort = "prompt_input" | "reference_asset";
 export type Edges = CanvasEdgeView[];
+export type AssetId = number | null;
+export type AspectRatio = string | null;
+export type Duration = string | null;
 export type DurationSec = number | null;
-export type ErrorMessage = string | null;
-export type Id1 = string;
-export type InputPrompt = string;
-export type CanvasNodeKind = "text" | "image" | "video" | "audio";
-export type ModelId = string | null;
+export type Emotion = string | null;
+export type ImageSize = string | null;
+export type ImgNum = number | null;
+export type Mode = string | null;
+export type Model = string | null;
+export type Pitch = number | null;
+export type Ratio = string | null;
+export type ReferenceMode = number | null;
+export type Resolution = string | null;
+export type Speed = number | null;
+export type TextNum = number | null;
+export type VoiceId = string | null;
+export type VoiceName = string | null;
+export type Vol = number | null;
+export type Content =
+  string | (WorkflowPromptTextSegment | WorkflowPromptMediaSegment | WorkflowPromptTextRefSegment)[] | null;
+export type Text1 = string;
+export type Type9 = "text";
+export type AssetId1 = number | null;
+export type Label = string | null;
+export type ReferenceType = string | null;
+export type Type10 = "image_url" | "video_url" | "audio_url";
+export type Url = string;
+export type Text2 = string;
+export type Type11 = "text_ref";
+export type GenerateCreatedAt = string | null;
+export type GenerateError = string | null;
+export type GenerateOperationType = string | null;
+export type GenerateTaskId = number | null;
+export type LibraryRefs = ImagePromptLibraryRef[] | null;
+export type AssetId2 = number;
+export type Name2 = string | null;
+export type ThumbUrl = string | null;
+export type Type12 = ("image" | "video" | "audio") | null;
+export type Url1 = string;
+export type Model1 = string | null;
 export type OutputAssetIds = number[] | null;
+export type OutputSource = ("upload" | "generated") | null;
+export type Path = string | null;
+export type Paths = CanvasNodeAssetPath[] | null;
+export type AssetId3 = number | null;
+export type ThumbUrl1 = string | null;
+export type Url2 = string | null;
+export type PreviewUrl = string | null;
+export type Prompt = string | null;
+export type PromptContent =
+  (WorkflowPromptTextSegment | WorkflowPromptMediaSegment | WorkflowPromptTextRefSegment)[] | null;
+export type Assets = CanvasTaskAsset[] | null;
+export type AssetId4 = number | null;
+export type ThumbUrl2 = string | null;
+export type Url3 = string | null;
+export type ErrorMessage = string | null;
+export type Status = "success" | "failed";
+export type CanvasNodeStatus = "idle" | "waiting_inputs" | "ready" | "running" | "success" | "failed" | "cancelled";
+export type Title2 = string | null;
+export type Height = number | null;
+export type Id1 = string;
+export type CanvasNodeKind = "text" | "image" | "video" | "audio";
 export type OutputAssetUrls = string[] | null;
-export type OutputText = string;
 export type X = number;
 export type Y = number;
-export type Ratio = string | null;
-export type Resolution = string | null;
 export type Revision1 = number;
-export type CanvasNodeStatus = "idle" | "waiting_inputs" | "ready" | "running" | "success" | "failed" | "cancelled";
-export type TaskId = number | null;
-export type Title2 = string;
-export type VoiceId = string | null;
+export type Width = number | null;
 export type Nodes = CanvasNodeView[];
 export type OpId = string | null;
 export type ProtocolVersion10 = number;
 export type TurnId4 = string | null;
-export type Type9 = "canvas_patch";
+export type Type13 = "canvas_patch";
 export type NodeId = string;
 export type Revision2 = number;
-export type CanvasNodeStatus1 = "idle" | "waiting_inputs" | "ready" | "running" | "success" | "failed" | "cancelled";
-export type TaskId1 = number | null;
+export type TaskId = number | null;
 export type ProtocolVersion11 = number;
 export type TurnId5 = string | null;
-export type Type10 = "generation_progress";
+export type Type14 = "generation_progress";
 export type CallId2 = string;
-export type Name2 = string;
-export type Operation = {
-  [k: string]: unknown;
-} | null;
+export type EnrichStatus = ("ok" | "skipped" | "failed") | null;
+export type Name3 = string;
+export type Operation = (PendingCanvasPatchOperation | PendingGenerateOperation | PendingSkillWriteOperation) | null;
+export type Edges1 = CanvasEdgeView[];
+export type Nodes1 = CanvasNodeView[];
+export type Type15 = "create" | "update";
+export type Count = number;
+export type Duration1 = number | null;
+export type ExpectedRevision = number | null;
+export type GenerationKind = "image" | "video" | "audio";
+export type ModelId = string;
+export type NodeId1 = string;
+export type Prompt1 = string;
+export type Ratio1 = string | null;
+export type RefAssetIds = number[];
+export type ReferenceMode1 = 1 | 2 | 3 | 4;
+export type Resolution1 = string | null;
+export type VoiceId1 = string | null;
+export type Type16 = "generate";
+export type Content1 = string;
+export type Description = string | null;
+export type Name4 = string;
+export type Path1 = string;
+export type Revision3 = number | null;
+export type RevisionInvalid = boolean | null;
+export type Scope = "user" | "project";
+export type Surface = "chat" | "canvas";
+export type Type17 = "skill_write";
 export type ProtocolVersion12 = number;
 export type Summary = string | null;
 export type TurnId6 = string;
-export type Type11 = "tool_pending";
+export type Type18 = "tool_pending";
 export type Choices = {
   [k: string]: unknown;
 }[];
@@ -143,21 +215,21 @@ export type Fields = {
 export type GateId = string;
 export type GateType = string;
 export type Phase = string | null;
-export type Prompt = string;
+export type Prompt2 = string;
 export type ProtocolVersion13 = number;
 export type TurnId7 = string;
-export type Type12 = "user_gate_required";
+export type Type19 = "user_gate_required";
 export type ConversationId1 = number;
 export type Message1 = string;
 export type ProtocolVersion14 = number;
 export type ScreenshotUrl = string | null;
 export type TurnId8 = string;
-export type Type13 = "browser_blocked";
+export type Type20 = "browser_blocked";
 export type FrameB64 = string;
-export type Height = number;
+export type Height1 = number;
 export type ProtocolVersion15 = number;
-export type Type14 = "browser_frame";
-export type Width = number;
+export type Type21 = "browser_frame";
+export type Width1 = number;
 
 export interface TokenFrame {
   channel: TokenChannel;
@@ -235,7 +307,7 @@ export interface CanvasPatchFrame {
   data: CanvasPatchResponse;
   protocol_version?: ProtocolVersion10;
   turn_id?: TurnId4;
-  type: Type9;
+  type: Type13;
 }
 export interface CanvasPatchResponse {
   deleted_edge_ids?: DeletedEdgeIds;
@@ -258,23 +330,102 @@ export interface Metadata {
   [k: string]: unknown;
 }
 export interface CanvasNodeView {
-  duration_sec?: DurationSec;
-  error_message?: ErrorMessage;
+  data?: CanvasNodeData;
+  height?: Height;
   id: Id1;
-  input_prompt?: InputPrompt;
   kind: CanvasNodeKind;
-  model_id?: ModelId;
-  output_asset_ids?: OutputAssetIds;
   output_asset_urls?: OutputAssetUrls;
-  output_text?: OutputText;
   position: CanvasPosition;
-  ratio?: Ratio;
-  resolution?: Resolution;
   revision: Revision1;
-  status?: CanvasNodeStatus;
-  task_id?: TaskId;
+  width?: Width;
+}
+/**
+ * 节点业务字段；持久化在 canvas_nodes.data JSONB
+ *
+ * 语义（对齐参考）：
+ * - text：content=正文(str)；prompt_content=生成输入(segments)；prompt=派生纯文本
+ * - media：content=结构化 prompt(segments)；prompt=派生纯文本
+ */
+export interface CanvasNodeData {
+  asset_id?: AssetId;
+  config?: CanvasNodeConfig | null;
+  content?: Content;
+  generate_created_at?: GenerateCreatedAt;
+  generate_error?: GenerateError;
+  generate_operation_type?: GenerateOperationType;
+  generate_task_id?: GenerateTaskId;
+  library_refs?: LibraryRefs;
+  model?: Model1;
+  output_asset_ids?: OutputAssetIds;
+  output_source?: OutputSource;
+  path?: Path;
+  paths?: Paths;
+  preview_url?: PreviewUrl;
+  prompt?: Prompt;
+  prompt_content?: PromptContent;
+  results?: CanvasTaskResults | null;
+  status?: CanvasNodeStatus | null;
   title?: Title2;
+}
+/**
+ * 节点生成配置（对齐参考可写集；不含未接入能力）
+ */
+export interface CanvasNodeConfig {
+  aspect_ratio?: AspectRatio;
+  duration?: Duration;
+  duration_sec?: DurationSec;
+  emotion?: Emotion;
+  image_size?: ImageSize;
+  img_num?: ImgNum;
+  mode?: Mode;
+  model?: Model;
+  pitch?: Pitch;
+  ratio?: Ratio;
+  reference_mode?: ReferenceMode;
+  resolution?: Resolution;
+  speed?: Speed;
+  text_num?: TextNum;
   voice_id?: VoiceId;
+  voice_name?: VoiceName;
+  vol?: Vol;
+}
+export interface WorkflowPromptTextSegment {
+  text: Text1;
+  type: Type9;
+}
+export interface WorkflowPromptMediaSegment {
+  asset_id?: AssetId1;
+  label?: Label;
+  reference_type?: ReferenceType;
+  type: Type10;
+  url: Url;
+}
+export interface WorkflowPromptTextRefSegment {
+  text: Text2;
+  type: Type11;
+}
+export interface ImagePromptLibraryRef {
+  asset_id: AssetId2;
+  name?: Name2;
+  thumb_url?: ThumbUrl;
+  type?: Type12;
+  url: Url1;
+}
+export interface CanvasNodeAssetPath {
+  asset_id?: AssetId3;
+  thumb_url?: ThumbUrl1;
+  url?: Url2;
+}
+export interface CanvasTaskResults {
+  assets?: Assets;
+  error_message?: ErrorMessage;
+  raw?: unknown;
+  status: Status;
+}
+export interface CanvasTaskAsset {
+  asset_id?: AssetId4;
+  thumb_url?: ThumbUrl2;
+  url?: Url3;
 }
 export interface CanvasPosition {
   x: X;
@@ -284,37 +435,85 @@ export interface GenerationProgressFrame {
   data: GenerationProgress;
   protocol_version?: ProtocolVersion11;
   turn_id?: TurnId5;
-  type: Type10;
+  type: Type14;
 }
 export interface GenerationProgress {
   node_id: NodeId;
   revision: Revision2;
-  status: CanvasNodeStatus1;
-  task_id?: TaskId1;
+  status: CanvasNodeStatus;
+  task_id?: TaskId;
 }
 export interface ToolPendingFrame {
   call_id: CallId2;
-  name: Name2;
+  enrich_status?: EnrichStatus;
+  name: Name3;
   operation?: Operation;
   protocol_version?: ProtocolVersion12;
   summary?: Summary;
   turn_id: TurnId6;
-  type: Type11;
+  type: Type18;
+}
+/**
+ * tool_pending 中展示的 create/update 画布操作
+ */
+export interface PendingCanvasPatchOperation {
+  edges?: Edges1;
+  nodes?: Nodes1;
+  type: Type15;
+}
+/**
+ * tool_pending 中展示的节点生成操作
+ */
+export interface PendingGenerateOperation {
+  node: CanvasNodeView;
+  submit_args: PendingGenerateSubmitArgs;
+  type: Type16;
+}
+/**
+ * generate pending 携带的 submit_node_generation 参数快照（结构化，禁止裸 dict）
+ */
+export interface PendingGenerateSubmitArgs {
+  count?: Count;
+  duration?: Duration1;
+  expected_revision?: ExpectedRevision;
+  kind: GenerationKind;
+  model_id: ModelId;
+  node_id: NodeId1;
+  prompt: Prompt1;
+  ratio?: Ratio1;
+  ref_asset_ids?: RefAssetIds;
+  reference_mode?: ReferenceMode1 | null;
+  resolution?: Resolution1;
+  voice_id?: VoiceId1;
+}
+/**
+ * tool_pending 中展示的用户 skill 写入操作
+ */
+export interface PendingSkillWriteOperation {
+  content?: Content1;
+  description?: Description;
+  name?: Name4;
+  path: Path1;
+  revision?: Revision3;
+  revision_invalid?: RevisionInvalid;
+  scope?: Scope;
+  surface?: Surface;
+  type: Type17;
 }
 export interface UserGateRequiredFrame {
-  assets?: Assets;
+  assets?: Assets1;
   choices?: Choices;
   domain?: Domain;
   fields?: Fields;
   gate_id: GateId;
   gate_type: GateType;
   phase?: Phase;
-  prompt?: Prompt;
+  prompt?: Prompt2;
   protocol_version?: ProtocolVersion13;
   turn_id: TurnId7;
-  type: Type12;
+  type: Type19;
 }
-export interface Assets {
+export interface Assets1 {
   [k: string]: unknown;
 }
 export interface BrowserBlockedFrame {
@@ -323,12 +522,12 @@ export interface BrowserBlockedFrame {
   protocol_version?: ProtocolVersion14;
   screenshot_url?: ScreenshotUrl;
   turn_id: TurnId8;
-  type: Type13;
+  type: Type20;
 }
 export interface BrowserFrameEvent {
   frame_b64: FrameB64;
-  height: Height;
+  height: Height1;
   protocol_version?: ProtocolVersion15;
-  type: Type14;
-  width: Width;
+  type: Type21;
+  width: Width1;
 }

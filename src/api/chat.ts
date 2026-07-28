@@ -1,7 +1,7 @@
 import { apiOriginUrl, apiUrl, fetchWithAuth, getAccessToken, request } from './base';
 import type { Stream as GeneratedStreamFrame } from './generated/stream';
 import type { TurnContentBlock, TurnMaterialBlock, TurnUserInput } from './turnContent';
-import { toolPendingFromFrame, type SkillWriteOperation } from './toolPending';
+import { toolPendingFromFrame, type ToolPendingState } from './toolPending';
 
 export type StreamFrame = GeneratedStreamFrame;
 export type StreamFrameType = StreamFrame['type'];
@@ -256,12 +256,7 @@ type StreamHandlers = {
     message: string;
     conversation_id: number;
   }) => void;
-  onToolPending?: (payload: {
-    call_id: string;
-    name: string;
-    summary: string;
-    operation?: SkillWriteOperation | null;
-  }) => void;
+  onToolPending?: (payload: ToolPendingState) => void;
   onActivity?: () => void;
 };
 

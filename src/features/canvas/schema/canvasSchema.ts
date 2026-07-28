@@ -1,23 +1,15 @@
 import type { Edge, Node } from '@xyflow/react';
 import type { CanvasEdgeRecord, CanvasNodeKind, CanvasNodeRecord, CanvasNodeStatus } from '../api/canvasTypes';
+import type { CanvasNodeData as ApiCanvasNodeData } from '../../../api/generated/canvas';
 import { DEFAULT_NODE_SIZE } from '../storyflow/constants';
+import { flattenNodeData, type FlatNodeFields } from './nodeFields';
 
-export type CanvasNodeData = {
+export type CanvasNodeData = FlatNodeFields & {
   kind: CanvasNodeKind;
   revision: number;
-  title: string;
-  input_prompt: string;
-  output_text: string;
-  status: CanvasNodeStatus;
-  model_id?: string;
-  voice_id?: string;
-  ratio?: string;
-  duration_sec?: number;
-  resolution?: string;
-  task_id?: number;
-  output_asset_ids?: number[];
+  /** 产品契约 data blob（写 patch 时 fold） */
+  payload: ApiCanvasNodeData;
   output_asset_urls?: string[];
-  error_message?: string;
   generatePending?: boolean;
 };
 
@@ -32,22 +24,14 @@ export type CanvasFlowEdgeData = {
 export type CanvasFlowEdge = Edge<CanvasFlowEdgeData>;
 
 export function recordToNodeData(r: CanvasNodeRecord): CanvasNodeData {
+  const payload = r.data ?? {};
+  const flat = flattenNodeData(r.kind, payload);
   return {
     kind: r.kind,
     revision: r.revision,
-    title: r.title,
-    input_prompt: r.input_prompt,
-    output_text: r.output_text,
-    status: r.status,
-    model_id: r.model_id ?? undefined,
-    voice_id: r.voice_id ?? undefined,
-    ratio: r.ratio ?? undefined,
-    duration_sec: r.duration_sec ?? undefined,
-    resolution: r.resolution ?? undefined,
-    task_id: r.task_id ?? undefined,
-    output_asset_ids: r.output_asset_ids ?? undefined,
+    payload,
     output_asset_urls: r.output_asset_urls ?? undefined,
-    error_message: r.error_message ?? undefined,
+    ...flat,
   };
 }
 
@@ -62,8 +46,8 @@ export function toFlowNodes(records: CanvasNodeRecord[]): CanvasFlowNode[] {
       id: r.id,
       type: r.kind,
       position: { x: r.position.x, y: r.position.y },
-      width: size.width,
-      height: size.height,
+      width: r.width ?? size.width,
+      height: r.height ?? size.height,
       data: recordToNodeData(r),
     };
   });
@@ -101,3 +85,5 @@ export function recordToFlowNode(r: CanvasNodeRecord): CanvasFlowNode {
 export function recordToFlowEdge(r: CanvasEdgeRecord): CanvasFlowEdge {
   return toFlowEdges([r])[0];
 }
+
+export type { CanvasNodeStatus };

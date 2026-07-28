@@ -1,0 +1,37 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--studio-space-2, 8px);
+}
+
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--studio-space-2, 8px);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--studio-space-1, 4px);
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--studio-font-size-sm, 12px);
+  color: var(--studio-color-text-secondary, #666);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--studio-font-size-sm, 12px);
+  color: var(--studio-color-text-secondary, #666);
+}
+
+.narrow {
+  width: 7.5rem;
+}
+
+.actions {
+  margin-top: var(--studio-space-1, 4px);
+}

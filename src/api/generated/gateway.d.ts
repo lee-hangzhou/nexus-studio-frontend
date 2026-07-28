@@ -25,6 +25,7 @@ export type Videos = number;
 export type Ratios = string[];
 export type ReferenceModes = number[];
 export type Resolutions = string[];
+export type SupportsVideoInput = boolean;
 export type SupportsVision = boolean;
 export type GatewayModelTaskType = 1 | 2 | 3 | 8 | 9;
 export type Data = GatewayModelItem[];
@@ -97,6 +98,7 @@ export interface GatewayModelItem {
   id: Id;
   object: Object;
   parameters: GatewayModelParameters;
+  supports_video_input: SupportsVideoInput;
   supports_vision: SupportsVision;
   task_type: GatewayModelTaskType;
 }

@@ -21,6 +21,7 @@ export const MEMORY_TOOL_NAMES = new Set([
 const CANVAS_TOOL_NAMES = new Set([
   'query_canvas_nodes',
   'apply_canvas_patch',
+  'apply_canvas_edge_operation',
   'list_generate_models',
   'submit_node_generation',
   'list_node_generations',
@@ -92,6 +93,7 @@ function canvasPreview(toolName: string, output: string, ok: boolean): string {
     return '已读取画布';
   }
   if (toolName === 'apply_canvas_patch') return '已更新画布';
+  if (toolName === 'apply_canvas_edge_operation') return '已更新连线';
   if (toolName === 'list_generate_models') {
     if (data && Array.isArray(data.models)) return `已查询 ${data.models.length} 个可用模型`;
     return '已查询可用模型';

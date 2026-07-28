@@ -24,6 +24,7 @@ const TOOL_LABELS: Record<string, string> = {
   list_dir: '列出目录',
   query_canvas_nodes: '读取画布',
   apply_canvas_patch: '更新画布',
+  apply_canvas_edge_operation: '更新连线',
   list_generate_models: '查询生成模型',
   submit_node_generation: '提交生成任务',
   list_node_generations: '查询生成状态',
@@ -47,6 +48,7 @@ const TOOL_TAGS: Record<string, string> = {
   list_dir: 'File',
   query_canvas_nodes: 'Canvas',
   apply_canvas_patch: 'Canvas',
+  apply_canvas_edge_operation: 'Canvas',
   list_generate_models: 'Model',
   submit_node_generation: 'Generate',
   list_node_generations: 'Generate',
@@ -79,16 +81,17 @@ function stepTitle(step: ToolStepView): string {
     const kind = typeof args.kind === 'string' ? args.kind : '';
     return kind === 'video' ? '查询可用视频模型' : kind === 'image' ? '查询可用图片模型' : '查询可用生成模型';
   }
-  if (name === 'apply_canvas_patch') {
-    const ops = Array.isArray(args.ops) ? args.ops : [];
-    const first = ops[0] as Record<string, unknown> | undefined;
-    const op = typeof first?.op === 'string' ? first.op : '';
+  if (name === 'apply_canvas_patch' || name === 'apply_canvas_edge_operation') {
+    const operation =
+      args.operation && typeof args.operation === 'object'
+        ? (args.operation as Record<string, unknown>)
+        : null;
+    const op = typeof operation?.op === 'string' ? operation.op : '';
     if (op === 'create_node') return '创建画布节点';
     if (op === 'update_node') return '更新画布节点';
-    if (op === 'delete_node') return '删除画布节点';
     if (op === 'connect') return '连接画布节点';
     if (op === 'disconnect') return '断开画布连接';
-    return '更新画布';
+    return name === 'apply_canvas_edge_operation' ? '更新连线' : '更新画布';
   }
   if (name === 'submit_node_generation') {
     const kind = typeof args.kind === 'string' ? args.kind : '';
