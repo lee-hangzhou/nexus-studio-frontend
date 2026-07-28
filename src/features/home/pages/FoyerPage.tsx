@@ -3,6 +3,7 @@ import { Modal, message } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listChatModels, type ChatModelItem } from '../../../api/chat';
+import { DEFAULT_CHAT_MODEL_KEY } from '../../canvas/lib/chatModelKey';
 import { listGenerateTasks, type GenerateTaskListItem } from '../../../api/generate';
 import { createProject, listProjects, type ProjectView } from '../../../api/projects';
 import { useUser } from '../../../contexts/UserContext';
@@ -115,7 +116,10 @@ export function FoyerPage() {
     try {
       const items = await listChatModels();
       setAgentModels(items);
-      setAgentModel((current) => current || items[0]?.key || '');
+      setAgentModel((current) => {
+        if (current && items.some((m) => m.key === current)) return current;
+        return items.some((m) => m.key === DEFAULT_CHAT_MODEL_KEY) ? DEFAULT_CHAT_MODEL_KEY : '';
+      });
     } catch (err) {
       setAgentModels([]);
       setAgentModelsError(err instanceof Error ? err.message : '模型列表加载失败');

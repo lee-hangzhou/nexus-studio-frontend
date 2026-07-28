@@ -1,8 +1,9 @@
 import type { CanvasNodeKind, CanvasPatchOpInput } from '../api/canvasTypes';
 import type { CanvasNodeData as ApiCanvasNodeData } from '../../../api/generated/canvas';
 import {
-  CLIENT_WRITABLE_FLAT_KEYS,
+  PATCH_WRITABLE_FLAT_KEYS,
   foldFlatIntoNodeData,
+  stripNodeDataProjectionForPatch,
   type FlatNodeFields,
 } from './nodeFields';
 
@@ -27,7 +28,7 @@ export function buildUpdateNodeOpInput(
 ): CanvasPatchOpInput {
   const flat: Partial<FlatNodeFields> = {};
   for (const [key, value] of Object.entries(patch)) {
-    if (CLIENT_WRITABLE_FLAT_KEYS.has(key)) {
+    if (PATCH_WRITABLE_FLAT_KEYS.has(key)) {
       (flat as Record<string, unknown>)[key] = value;
     }
   }
@@ -36,8 +37,11 @@ export function buildUpdateNodeOpInput(
     throw new Error('update patch cannot mix data and flat fields');
   }
   const data =
-    patch.data ??
-    (hasFlat ? foldFlatIntoNodeData(options.kind, flat, options.existingPayload) : undefined);
+    patch.data != null
+      ? stripNodeDataProjectionForPatch(patch.data)
+      : hasFlat
+        ? foldFlatIntoNodeData(options.kind, flat, options.existingPayload)
+        : undefined;
   return {
     op: 'update_node',
     node: {

@@ -69,7 +69,7 @@ export function collectAssetIdsFromContent(content: WorkflowPromptContent): numb
     if (seg.type !== 'image_url' && seg.type !== 'video_url' && seg.type !== 'audio_url') {
       continue;
     }
-    const assetId = seg.assetId;
+    const assetId = seg.asset_id;
     if (typeof assetId !== 'number' || assetId <= 0 || seen.has(assetId)) {
       continue;
     }

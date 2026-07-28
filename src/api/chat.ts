@@ -73,7 +73,7 @@ export function listChatModels() {
   return request<ChatModelItem[]>('/chat/model/list', { method: 'POST', body: JSON.stringify({}) });
 }
 
-export function createConversation(body: { title?: string; model?: string }) {
+export function createConversation(body: { title?: string; model: string }) {
   return request<ConversationView>('/chat/conversation/create', {
     method: 'POST',
     body: JSON.stringify(body),

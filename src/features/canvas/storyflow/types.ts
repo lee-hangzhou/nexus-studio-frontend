@@ -41,7 +41,7 @@ export type SpawnTargetType = WorkflowNodeType;
 
 export type WorkflowPromptMediaContentSegment = {
   type: 'image_url' | 'video_url' | 'audio_url';
-  assetId?: number;
+  asset_id?: number;
   url: string;
 };
 

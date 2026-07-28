@@ -54,7 +54,7 @@ describe('nodeFields fold/flatten', () => {
         plain_prompt: 'a cat',
         submit_content: [
           { type: 'text', text: 'a cat' },
-          { type: 'image_url', url: 'https://ref', assetId: 9 },
+          { type: 'image_url', url: 'https://ref', asset_id: 9 },
         ],
       },
       { content: [] },
@@ -62,8 +62,33 @@ describe('nodeFields fold/flatten', () => {
     expect(data.prompt).toBe('a cat');
     expect(data.content).toEqual([
       { type: 'text', text: 'a cat' },
-      { type: 'image_url', url: 'https://ref', assetId: 9 },
+      { type: 'image_url', url: 'https://ref', asset_id: 9 },
     ]);
+  });
+
+  it('foldSubmitContent strips projection fields from existing payload', () => {
+    const data = foldSubmitContentIntoNodeData(
+      'video',
+      {
+        plain_prompt: 'x',
+        submit_content: [{ type: 'text', text: 'x' }],
+      },
+      {
+        status: 'failed',
+        generate_error: 'boom',
+        generate_task_id: 9,
+        asset_id: 1,
+        output_asset_ids: [1],
+        title: 'keep',
+      },
+    );
+    expect(data.title).toBe('keep');
+    expect(data.prompt).toBe('x');
+    expect(data).not.toHaveProperty('status');
+    expect(data).not.toHaveProperty('generate_error');
+    expect(data).not.toHaveProperty('generate_task_id');
+    expect(data).not.toHaveProperty('asset_id');
+    expect(data).not.toHaveProperty('output_asset_ids');
   });
 });
 

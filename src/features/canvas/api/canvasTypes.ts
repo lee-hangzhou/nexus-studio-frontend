@@ -83,7 +83,7 @@ export interface CanvasTurnBody {
   request_id: string;
   content: TurnContentBlock[];
   materials: TurnMaterialBlock[];
-  model_key?: string;
+  model_key: string;
   client_turn_id?: string;
   mode?: 'auto' | 'manual';
   enable_tools?: boolean;
@@ -104,8 +104,8 @@ export interface CanvasResumeBody {
   request_id: string;
   tool_call_id: string;
   action: 'confirm' | 'reject';
-  client_turn_id?: string;
-  model_key?: string;
+  client_turn_id: string;
+  model_key: string;
   operation?: CanvasToolPendingOperation | null;
 }
 

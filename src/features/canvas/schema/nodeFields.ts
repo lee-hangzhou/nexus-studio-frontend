@@ -9,6 +9,31 @@ import type { CanvasNodeData } from './canvasSchema';
 
 const NODE_STATUSES = new Set<CanvasNodeStatus>(['idle', 'running', 'success', 'failed']);
 
+/** 与后端禁止经 patch 写入的投影字段对齐（生成状态 / 产物等） */
+export const NODE_DATA_PATCH_FORBIDDEN_KEYS = new Set([
+  'status',
+  'generate_task_id',
+  'generate_created_at',
+  'generate_operation_type',
+  'generate_error',
+  'output_asset_ids',
+  'asset_id',
+  'path',
+  'preview_url',
+  'paths',
+  'results',
+  'output_source',
+]);
+
+/** 前端 patch data 出站前剥掉投影字段 */
+export function stripNodeDataProjectionForPatch(data: ApiCanvasNodeData): ApiCanvasNodeData {
+  const next: ApiCanvasNodeData = { ...data };
+  for (const key of NODE_DATA_PATCH_FORBIDDEN_KEYS) {
+    delete (next as Record<string, unknown>)[key];
+  }
+  return next;
+}
+
 /** UI 侧扁平字段（由 API data 派生，写回时再 fold 成 data） */
 export type FlatNodeFields = {
   title: string;
@@ -27,8 +52,8 @@ export type FlatNodeFields = {
   error_message?: string;
 };
 
-/** 客户端可写入 fold 的扁平键；投影字段不得经 fold 进 data */
-export const CLIENT_WRITABLE_FLAT_KEYS = new Set([
+/** 前端可经扁平 patch 写入的字段；投影字段不得经 fold 进 data */
+export const PATCH_WRITABLE_FLAT_KEYS = new Set([
   'title',
   'input_prompt',
   'output_text',
@@ -145,7 +170,7 @@ export function foldFlatIntoNodeData(
         : null;
   }
   base.config = Object.values(config).some((v) => v != null && v !== '') ? config : null;
-  return base;
+  return stripNodeDataProjectionForPatch(base);
 }
 
 /** 手动/节点生成前：把 rich submit_content 整包写入 data */
@@ -195,7 +220,7 @@ export function foldSubmitContentIntoNodeData(
           : null;
   }
   base.config = Object.values(config).some((v) => v != null && v !== '') ? config : null;
-  return base;
+  return stripNodeDataProjectionForPatch(base);
 }
 
 export function applyFlatToRfData(

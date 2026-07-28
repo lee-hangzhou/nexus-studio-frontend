@@ -44,19 +44,19 @@ function resolveMediaUrl(seg: {
 
 function buildMediaContentSegment(
   asset: WorkflowMentionItem & { type: 'image' | 'video' | 'audio' },
-  overrides?: { url?: string; assetId?: number }
+  overrides?: { url?: string; asset_id?: number }
 ) {
-  const assetId = overrides?.assetId ?? resolveMentionAssetId(asset);
+  const asset_id = overrides?.asset_id ?? resolveMentionAssetId(asset);
   return {
     type: MEDIA_URL_TYPE[asset.type],
-    ...(assetId > 0 ? { assetId } : {}),
+    ...(asset_id > 0 ? { asset_id } : {}),
     url: overrides?.url ?? asset.previewUrl ?? '',
   };
 }
 
 function buildReferenceContentSegment(
   asset: WorkflowMentionItem,
-  overrides?: { url?: string; text?: string; assetId?: number }
+  overrides?: { url?: string; text?: string; asset_id?: number }
 ): WorkflowPromptContentSegment {
   if (asset.type === 'text') {
     return {
@@ -66,11 +66,11 @@ function buildReferenceContentSegment(
   }
   return buildMediaContentSegment(
     asset as WorkflowMentionItem & { type: 'image' | 'video' | 'audio' },
-    { url: overrides?.url, assetId: overrides?.assetId }
+    { url: overrides?.url, asset_id: overrides?.asset_id }
   );
 }
 
-/** content 分段 → 可 @ 的引用项（优先 assetId，其次 url / 文本快照） */
+/** content 分段 → 可 @ 的引用项（优先 asset_id，其次 url / 文本快照） */
 function resolveAssetFromContentSegment(
   seg: Exclude<WorkflowPromptContentSegment, { type: 'text' }>,
   referenceAssets: WorkflowMentionItem[]
@@ -83,10 +83,10 @@ function resolveAssetFromContentSegment(
     return referenceAssets.find(a => a.type === 'text' && a.textContent === text);
   }
 
-  const assetId =
-    'assetId' in seg && typeof seg.assetId === 'number' && seg.assetId > 0 ? seg.assetId : undefined;
-  if (assetId) {
-    const byId = referenceAssets.find(a => resolveMentionAssetId(a) === assetId);
+  const asset_id =
+    typeof seg.asset_id === 'number' && seg.asset_id > 0 ? seg.asset_id : undefined;
+  if (asset_id) {
+    const byId = referenceAssets.find(a => resolveMentionAssetId(a) === asset_id);
     if (byId) {
       return byId;
     }
@@ -277,9 +277,7 @@ export function parseContentToDoc(
     const storedUrl = resolveMediaUrl(seg);
     const mentionType = asset?.type ?? URL_TYPE_TO_MEDIA[seg.type];
     const storedAssetId =
-      'assetId' in seg && typeof seg.assetId === 'number' && seg.assetId > 0
-        ? seg.assetId
-        : undefined;
+      typeof seg.asset_id === 'number' && seg.asset_id > 0 ? seg.asset_id : undefined;
     if (!asset && !storedUrl) {
       continue;
     }
@@ -495,7 +493,7 @@ export function serializeDocToContent(
             buildReferenceContentSegment(asset, {
               url: contentUrl,
               text: node.attrs.textContent || asset.textContent,
-              assetId: nodeAssetId ?? resolveMentionAssetId(asset),
+              asset_id: nodeAssetId ?? resolveMentionAssetId(asset),
             })
           );
         }
@@ -565,7 +563,7 @@ export function filterPromptContentByPreviewRefs(
       continue;
     }
     const segAssetId =
-      typeof seg.assetId === 'number' && seg.assetId > 0 ? seg.assetId : 0;
+      typeof seg.asset_id === 'number' && seg.asset_id > 0 ? seg.asset_id : 0;
     const asset = resolveAssetFromContentSegment(seg, referenceAssets);
     if (isPreviewRailMedia(asset, segAssetId)) {
       filtered.push(seg);

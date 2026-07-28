@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { listChatModels, type ChatModelItem } from '../../../api/chat';
-import { hasResolvedChatModelKey } from '../lib/chatModelKey';
+import { hasResolvedChatModelKey, pickChatModelKey } from '../lib/chatModelKey';
 
 type ChatModelCatalogValue = {
   items: ChatModelItem[];
@@ -62,12 +62,7 @@ export function ChatModelCatalogProvider({ children }: { children: ReactNode }) 
   );
 
   const resolveModelKey = useCallback(
-    (stored: string | undefined) => {
-      if (hasResolvedChatModelKey(stored) && items.some((m) => m.key === stored)) {
-        return stored;
-      }
-      return items[0]?.key;
-    },
+    (stored: string | undefined) => pickChatModelKey(items, stored),
     [items],
   );
 

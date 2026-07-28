@@ -11,6 +11,7 @@ import { useCallback, useEffect, useRef, useState, Fragment } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { DEFAULT_CHAT_MODEL_KEY } from '../../canvas/lib/chatModelKey';
 import {
   createConversation,
   getConversation,
@@ -671,9 +672,12 @@ export function ChatPage() {
 
   const ensureConversationId = useCallback(async (): Promise<number> => {
     if (activeConversationId != null) return activeConversationId;
+    if (!selectedModel) {
+      throw new Error('请先选择模型');
+    }
     const conv = await createConversation({
       title: DEFAULT_CONVERSATION_TITLE,
-      model: selectedModel || undefined,
+      model: selectedModel,
     });
     const items = await loadSessions();
     setSessions(items);
@@ -688,7 +692,8 @@ export function ChatPage() {
       try {
         const [modelList, items] = await Promise.all([listChatModels(), loadSessions()]);
         setModels(modelList);
-        if (modelList.length > 0) setSelectedModel(modelList[0].key);
+        const preferred = modelList.find((m) => m.key === DEFAULT_CHAT_MODEL_KEY);
+        if (preferred) setSelectedModel(preferred.key);
         if (items.length > 0) {
           const keep =
             activeConversationId != null && items.some((s) => s.id === activeConversationId)
@@ -837,12 +842,16 @@ export function ChatPage() {
 
   const newSession = async () => {
     try {
+      if (!selectedModel) {
+        antMessage.error('请先选择模型');
+        return;
+      }
       if (activeConversationId != null) {
         saveUiToCache(activeConversationId);
       }
       const conv = await createConversation({
         title: DEFAULT_CONVERSATION_TITLE,
-        model: selectedModel || undefined,
+        model: selectedModel,
       });
       const items = await loadSessions();
       setSessions(items);
@@ -1298,13 +1307,11 @@ export function ChatPage() {
 
     void (async () => {
       try {
-        const model = models.some((item) => item.key === handoff.model)
-          ? handoff.model
-          : (models[0]?.key ?? '');
-        if (!model) {
-          antMessage.error('暂无可用模型，无法从首页发起对话');
+        if (!models.some((item) => item.key === handoff.model)) {
+          antMessage.error('模型不可用，无法从首页发起对话');
           return;
         }
+        const model = handoff.model;
         setSelectedModel(model);
         if (activeConversationIdRef.current != null) {
           saveUiToCache(activeConversationIdRef.current);
