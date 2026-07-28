@@ -28,7 +28,7 @@
     "content": [{ "type": "text", "text": "混合引用" }],
     "storedPrompt": "混合引用",
     "connectedPromptTexts": [],
-    "manualRefs": [{ "assetId": 302, "materialId": 9001 }],
+    "manualRefs": [{ "assetId": 302 }],
     "previewMediaRefs": [
       {
         "id": "00000000-0000-4000-8000-0000000000i4",

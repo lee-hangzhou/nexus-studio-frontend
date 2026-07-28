@@ -1,5 +1,5 @@
 import type { StreamFrame } from '../../../api/chat';
-import type { SkillWriteOperation, TurnContentBlock, TurnUserInput } from '../../skills/types';
+import type { SkillWriteOperation, TurnContentBlock, TurnMaterialBlock, TurnUserInput } from '../../skills/types';
 import type {
   CanvasEdgeView,
   CanvasNodeKind,
@@ -72,11 +72,21 @@ export interface CanvasTurnBody {
   session_id: number;
   request_id: string;
   content: TurnContentBlock[];
-  materials?: [];
+  materials: TurnMaterialBlock[];
   model_key?: string;
   client_turn_id?: string;
   mode?: 'auto' | 'manual';
   enable_tools?: boolean;
+}
+
+export interface CanvasAgentAssetView {
+  id: number;
+  project_id: number | null;
+  filename: string;
+  mime_type: string;
+  asset_type: string;
+  source_type: string;
+  preview_url: string;
 }
 
 export interface CanvasResumeBody {
@@ -97,8 +107,7 @@ export type CanvasPatchEvent = Omit<CanvasPatchResponse, 'nodes' | 'edges'> & {
 export type CanvasStreamFrame = StreamFrame;
 
 export type SubmitManualRef = {
-  asset_id?: number;
-  material_id?: number;
+  asset_id: number;
 };
 
 export interface NodeGenerateBody {
@@ -113,7 +122,6 @@ export interface NodeGenerateBody {
   count?: number;
   duration?: number;
   reference_mode?: number;
-  ref_attachment_ids?: number[];
   ref_asset_ids?: number[];
   submit_content?: import('../storyflow/types').WorkflowPromptContent;
   manual_refs?: SubmitManualRef[];

@@ -9,7 +9,6 @@ export type NodeGenerateExtra = Partial<
     | 'ratio'
     | 'resolution'
     | 'model_id'
-    | 'ref_attachment_ids'
     | 'ref_asset_ids'
     | 'prompt'
     | 'submit_content'

@@ -15,7 +15,8 @@ import { SkillPill } from '../../skills/SkillPill';
 import { SkillWritePendingCard } from '../../skills/SkillWritePendingCard';
 import { SKILL_WRITE_OPERATION_TYPE } from '../../skills/constants';
 import { UserMessageContent } from '../../skills/UserMessageContent';
-import type { SkillWriteOperation, ToolPendingState } from '../../skills/types';
+import type { SkillWriteOperation, ToolPendingState, TurnMaterialBlock } from '../../skills/types';
+import { CanvasMaterialChipList } from './CanvasMaterialChipList';
 import type { CanvasSessionView } from '../api/canvasTypes';
 import { CANVAS_DEFAULT_SESSION_TITLE } from '../constants';
 import { useChatModelCatalog } from '../context/ChatModelCatalogContext';
@@ -67,6 +68,10 @@ export function CanvasAgentPanel({
   onComposerChange,
   selectedSkillPaths,
   onSelectedSkillPathsChange,
+  materials,
+  materialPreviewUrls,
+  onMaterialsChange,
+  onUploadFile,
   projectId,
   onSend,
   onStop,
@@ -97,6 +102,10 @@ export function CanvasAgentPanel({
   onComposerChange: (v: string) => void;
   selectedSkillPaths: string[];
   onSelectedSkillPathsChange: (paths: string[]) => void;
+  materials: TurnMaterialBlock[];
+  materialPreviewUrls: ReadonlyMap<number, string>;
+  onMaterialsChange: (materials: TurnMaterialBlock[]) => void;
+  onUploadFile: (file: File) => Promise<void>;
   projectId: number;
   onSend: () => void;
   onStop: () => void;
@@ -340,7 +349,7 @@ export function CanvasAgentPanel({
         <div className="workflow-canvas-agent-panel__composer">
           <ComposerShell
             top={
-              selectedSkillPaths.length > 0 ? (
+              selectedSkillPaths.length > 0 || materials.length > 0 ? (
                 <div className="workflow-canvas-agent-panel__skill-chips">
                   {selectedSkillPaths.map((path) => (
                     <SkillPill
@@ -351,6 +360,11 @@ export function CanvasAgentPanel({
                       }
                     />
                   ))}
+                  <CanvasMaterialChipList
+                    materials={materials}
+                    previewUrlsByAssetId={materialPreviewUrls}
+                    onRemove={(index) => onMaterialsChange(materials.filter((_, i) => i !== index))}
+                  />
                 </div>
               ) : null
             }
@@ -375,6 +389,7 @@ export function CanvasAgentPanel({
               <>
                 <ComposerPlusMenu
                   disabled={busy}
+                  onUploadFile={onUploadFile}
                   skills={{
                     surface: 'canvas',
                     projectId,

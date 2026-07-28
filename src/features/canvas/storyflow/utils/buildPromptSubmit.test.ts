@@ -28,7 +28,7 @@ type FixtureEdge = {
   data?: { source_port?: string; target_port?: string };
 };
 
-type ManualRef = { assetId?: number; materialId?: number };
+type ManualRef = { assetId?: number };
 
 type NodeSubmitFixture = {
   name: string;
@@ -47,7 +47,6 @@ type NodeSubmitFixture = {
 
 type ExpectedRefs = {
   ref_asset_ids: number[];
-  ref_attachment_ids: number[];
 };
 
 function loadFixtures(): NodeSubmitFixture[] {
@@ -72,7 +71,7 @@ function runFixture(fixture: NodeSubmitFixture): ExpectedRefs {
     fixture.submit.connectedPromptTexts ??
     pickConnectedPromptInputTexts(fixture.target_node_id, nodes, edges);
 
-  const { ref_asset_ids, ref_attachment_ids } = buildSubmitPromptAndRefs({
+  const { ref_asset_ids } = buildSubmitPromptAndRefs({
     content: fixture.submit.content,
     storedPrompt: fixture.submit.storedPrompt,
     referenceAssets: fixture.submit.referenceAssets ?? [],
@@ -82,7 +81,7 @@ function runFixture(fixture: NodeSubmitFixture): ExpectedRefs {
     previewMediaRefs: fixture.submit.previewMediaRefs,
   });
 
-  return { ref_asset_ids, ref_attachment_ids };
+  return { ref_asset_ids };
 }
 
 const UPDATE_EXPECTED = process.env.UPDATE_NODE_SUBMIT_EXPECTED === '1';

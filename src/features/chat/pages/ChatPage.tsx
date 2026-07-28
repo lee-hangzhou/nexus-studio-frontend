@@ -61,6 +61,7 @@ import {
   type ConversationMessagePagination,
 } from '../messageList';
 import { isImageMime } from '../hooks/useAttachmentUrl';
+import { buildMaterialsFromUploads, isVisionMime } from '../buildUploadMaterials';
 import { buildTurnUserInput, compileHumanTextFromBlocks } from '../../skills/serializeTurnContent';
 import { UserMessageContent } from '../../skills/UserMessageContent';
 
@@ -518,9 +519,9 @@ export function ChatPage() {
     setSelectedModel(modelKey);
     const next = models.find((item) => item.key === modelKey);
     const nextSupportsVision = next?.supports_vision === true;
-    const hasImageAttachments = attachments.some((item) => isImageMime(item.mime_type));
-    if (!nextSupportsVision && hasImageAttachments) {
-      setModelVisionHint('当前模型不支持识图，已上传的图片将不会被发送');
+    const hasVisionAttachments = attachments.some((item) => isVisionMime(item.mime_type));
+    if (!nextSupportsVision && hasVisionAttachments) {
+      setModelVisionHint('当前模型不支持识图，已上传的图片和视频将不会被发送');
     } else {
       setModelVisionHint(null);
     }
@@ -876,8 +877,8 @@ export function ChatPage() {
     }
     const currentAttachments = options?.attachments ?? attachments;
     const modelSupportsVision = models.find((item) => item.key === model)?.supports_vision === true;
-    if (currentAttachments.some((item) => isImageMime(item.mime_type)) && !modelSupportsVision) {
-      antMessage.error('当前模型不支持识图，无法发送图片');
+    if (currentAttachments.some((item) => isVisionMime(item.mime_type)) && !modelSupportsVision) {
+      antMessage.error('当前模型不支持识图，无法发送图片或视频');
       return;
     }
 
@@ -917,11 +918,9 @@ export function ChatPage() {
       streamsByConversationRef.current.get(conversationId)?.turnId === turnId;
     const isActiveConversation = () => activeConversationIdRef.current === conversationId;
 
-    const sentAttachmentIds = modelSupportsVision
-      ? currentAttachments.map((item) => item.attachment_id)
-      : currentAttachments
-          .filter((item) => !isImageMime(item.mime_type))
-          .map((item) => item.attachment_id);
+    const sentMaterials = buildMaterialsFromUploads(currentAttachments, {
+      supportsVision: modelSupportsVision,
+    });
     const sentAttachments: MessageAttachment[] = currentAttachments.map((item) => ({
       attachment_id: item.attachment_id,
       filename: item.filename,
@@ -929,7 +928,7 @@ export function ChatPage() {
       preview_url: item.preview_url,
     }));
     queuePreviewUrlForDelayedRevoke(sentAttachments.map((item) => item.preview_url));
-    const userInput = buildTurnUserInput(text, skillPaths);
+    const userInput = buildTurnUserInput(text, skillPaths, sentMaterials);
     const turnContent = userInput.content;
     if (isActiveConversation()) {
       setInput('');
@@ -1197,8 +1196,8 @@ export function ChatPage() {
           request_id: crypto.randomUUID(),
           conversation_id: conversationId,
           content: turnContent,
+          materials: sentMaterials,
           model: model,
-          attachment_ids: sentAttachmentIds,
           enable_tools: true,
           client_turn_id: turnId,
         },
@@ -1519,7 +1518,7 @@ export function ChatPage() {
       antMessage.warning('请选择图片文件');
       return Upload.LIST_IGNORE;
     }
-    if (!imageOnly && isImageMime(file.type) && !supportsVision) {
+    if (!imageOnly && isVisionMime(file.type) && !supportsVision) {
       antMessage.warning('当前模型不支持识图');
       return Upload.LIST_IGNORE;
     }
@@ -1573,6 +1572,7 @@ export function ChatPage() {
           <UserMessageContent
             content={message.content}
             input={message.input ?? (message.metadata.input as Record<string, unknown> | undefined)}
+            hideMaterials={msgAttachments.length > 0}
           />
         ) : null}
         {msgAttachments.length > 0 && <MessageAttachmentList attachments={msgAttachments} />}

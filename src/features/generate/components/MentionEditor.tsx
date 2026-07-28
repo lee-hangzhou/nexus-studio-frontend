@@ -52,7 +52,7 @@ function createChipElement(material: RefImage): HTMLSpanElement {
   chip.className = CHIP_CLASS;
   chip.contentEditable = 'false';
   chip.dataset.mentionName = material.name;
-  chip.dataset.mentionId = String(material.materialId ?? material.assetId ?? material.id);
+  chip.dataset.mentionId = String(material.assetId ?? material.id);
   chip.dataset.url = material.url;
   chip.dataset.kind = kind;
 

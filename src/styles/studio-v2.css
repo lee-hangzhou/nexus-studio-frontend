@@ -18,6 +18,14 @@
   --studio-text-muted: #646c78;
   --studio-radius: 6px;
   --studio-radius-sm: 4px;
+  --studio-control-size-sm: 20px;
+  --studio-thumb-size-sm: 24px;
+  --studio-chip-min-height: 28px;
+  --studio-space-1: 4px;
+  --studio-space-2: 8px;
+  --studio-space-3: 12px;
+  --studio-space-half: 2px;
+  --studio-font-size-xs: 12px;
   --studio-topbar-h: 60px;
   --studio-rail-w: 72px;
   --chat-sidebar-bg: #101216;

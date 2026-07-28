@@ -1,18 +1,26 @@
-/** Turn content blocks — aligned with generated turn_content.d.ts (type required for wire). */
+export type {
+  TurnMediaType,
+  TurnMediaOrigin,
+  TurnTextBlock,
+  TurnSkillBlock,
+  TurnMediaBlock,
+  TurnNodeBlock,
+  TurnUserInput,
+} from './generated/turn_content';
 
-export type TurnTextBlock = {
-  type: 'text';
-  text: string;
-};
+import type {
+  TurnTextBlock,
+  TurnSkillBlock,
+  TurnMediaBlock,
+  TurnNodeBlock,
+} from './generated/turn_content';
 
-export type TurnSkillBlock = {
-  type: 'skill';
-  path: string;
-};
+/** 内容块联合；成员形状以 generated/turn_content 为唯一源 */
+export type TurnContentBlock =
+  | TurnTextBlock
+  | TurnSkillBlock
+  | TurnMediaBlock
+  | TurnNodeBlock;
 
-export type TurnContentBlock = TurnTextBlock | TurnSkillBlock;
-
-export type TurnUserInput = {
-  content: TurnContentBlock[];
-  materials: [];
-};
+/** 素材块联合；成员形状以 generated/turn_content 为唯一源 */
+export type TurnMaterialBlock = TurnMediaBlock | TurnNodeBlock;

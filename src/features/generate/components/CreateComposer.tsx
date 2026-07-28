@@ -512,9 +512,8 @@ export function CreateComposer({
       const uploaded = await Promise.all(selected.map(async (file) => {
         const material = await uploadGenerateMaterial(file);
         return {
-          id: `ref-${material.material_id}`,
-          materialId: material.material_id,
-          assetId: material.asset_id ?? undefined,
+          id: `ref-${material.asset_id}`,
+          assetId: material.asset_id,
           url: material.url,
           name: material.filename || file.name,
           mimeType: material.mime_type || file.type,
@@ -543,7 +542,6 @@ export function CreateComposer({
   const handleMentionMaterialSelect = useCallback((material: RefImage) => {
     setRefImages((prev) => {
       if (material.assetId != null && prev.some((item) => item.assetId === material.assetId)) return prev;
-      if (material.materialId != null && prev.some((item) => item.materialId === material.materialId)) return prev;
       return [...prev, material];
     });
   }, []);

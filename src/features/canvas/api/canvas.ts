@@ -2,6 +2,7 @@ import { apiUrl, fetchWithAuth, request } from '../../../api/base';
 import { consumeSSE } from '../../../api/stream';
 import { CanvasApiError } from './canvasErrors';
 import type {
+  CanvasAgentAssetView,
   CanvasMessageRecord,
   CanvasNodeGenerateResponse,
   CanvasPatchRequest,
@@ -13,6 +14,54 @@ import type {
   CanvasTurnBody,
   NodeGenerateBody,
 } from './canvasTypes';
+
+export async function uploadCanvasAgentAsset(
+  episodeId: number,
+  file: File,
+  signal?: AbortSignal,
+): Promise<CanvasAgentAssetView> {
+  const body = new FormData();
+  body.append('file', file);
+  const response = await fetchWithAuth(apiUrl(`/canvas/episodes/${episodeId}/agent-upload`), {
+    method: 'POST',
+    body,
+    signal,
+  });
+  const payloadText = await response.text();
+  let payload: {
+    code: number;
+    data: CanvasAgentAssetView | null;
+    msg: string;
+  };
+  try {
+    payload = JSON.parse(payloadText) as {
+      code: number;
+      data: CanvasAgentAssetView | null;
+      msg: string;
+    };
+  } catch {
+    throw new CanvasApiError(
+      `上传响应不是 JSON: ${response.status}`,
+      response.status,
+      null,
+    );
+  }
+  if (!response.ok || payload.code !== 0 || payload.data == null) {
+    throw new CanvasApiError(
+      payload.msg || `上传失败: ${response.status}`,
+      payload.code ?? response.status,
+      null,
+    );
+  }
+  const data = payload.data;
+  if (!Number.isFinite(data.id) || data.id < 1) {
+    throw new CanvasApiError('上传成功但缺少有效 asset id', payload.code, null);
+  }
+  if (typeof data.filename !== 'string' || typeof data.mime_type !== 'string') {
+    throw new CanvasApiError('上传响应缺少文件元数据', payload.code, null);
+  }
+  return data;
+}
 
 export async function getCanvasSnapshot(episodeId: number): Promise<CanvasSnapshot> {
   return request<CanvasSnapshot>(`/canvas/episodes/${episodeId}/get`, {
@@ -298,7 +347,7 @@ export async function streamCanvasTurn(
           session_id: body.session_id,
           request_id: body.request_id,
           content: body.content,
-          materials: body.materials ?? [],
+          materials: body.materials,
           model_key: body.model_key,
           client_turn_id: body.client_turn_id,
           mode: body.mode ?? 'auto',

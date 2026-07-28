@@ -20,6 +20,7 @@ import {
   streamCanvasTurn,
   submitCanvasNodeGenerate,
   updateCanvasSession,
+  uploadCanvasAgentAsset,
 } from '../api/canvas';
 import { CANVAS_API_CODE, isCanvasApiError } from '../api/canvasErrors';
 import type {
@@ -33,7 +34,8 @@ import type {
   NodeGenerateBody,
 } from '../api/canvasTypes';
 import { buildTurnUserInput, compileHumanTextFromBlocks } from '../../skills/serializeTurnContent';
-import type { ToolPendingState } from '../../skills/types';
+import type { ToolPendingState, TurnMaterialBlock } from '../../skills/types';
+import { toWireMaterials, turnMaterialFromAgentAsset } from '../lib/turnMaterialFromAsset';
 import { CanvasAgentPanel } from '../components/CanvasAgentPanel';
 import { buildTurnId } from '../components/CanvasAgentPanel.utils';
 import { CanvasGenerateProvider, type NodeGenerateExtra } from '../context/CanvasGenerateContext';
@@ -68,6 +70,8 @@ import type { NodeChangeInput } from '../storyflow/types';
 type SessionUiCache = {
   composer: string;
   selectedSkillPaths: string[];
+  materials: TurnMaterialBlock[];
+  materialPreviewUrls: Map<number, string>;
   mode: 'auto' | 'manual';
   agentModelKey?: string;
   clientTurnId?: string | null;
@@ -91,6 +95,80 @@ function CanvasPageInner() {
   const [busySessionIds, setBusySessionIds] = useState<Set<number>>(() => new Set());
   const [composer, setComposer] = useState('');
   const [selectedSkillPaths, setSelectedSkillPaths] = useState<string[]>([]);
+  const [materials, setMaterials] = useState<TurnMaterialBlock[]>([]);
+  const [materialPreviewUrls, setMaterialPreviewUrls] = useState<Map<number, string>>(
+    () => new Map(),
+  );
+  const materialPreviewUrlsRef = useRef(materialPreviewUrls);
+  materialPreviewUrlsRef.current = materialPreviewUrls;
+  const uiBySessionRef = useRef<Map<number, SessionUiCache>>(new Map());
+  useEffect(() => {
+    return () => {
+      for (const url of materialPreviewUrlsRef.current.values()) {
+        URL.revokeObjectURL(url);
+      }
+      for (const cached of uiBySessionRef.current.values()) {
+        for (const url of cached.materialPreviewUrls.values()) {
+          URL.revokeObjectURL(url);
+        }
+      }
+      uiBySessionRef.current.clear();
+    };
+  }, []);
+
+  const restoreSessionMaterials = useCallback((cached: SessionUiCache | undefined) => {
+    setMaterialPreviewUrls(
+      cached?.materialPreviewUrls ? new Map(cached.materialPreviewUrls) : new Map(),
+    );
+    setMaterials(cached?.materials ?? []);
+  }, []);
+
+  const handleMaterialsChange = useCallback((next: TurnMaterialBlock[]) => {
+    const nextAssetIds = new Set(
+      next.flatMap((item) => (item.type === 'node' ? [] : [item.assetId])),
+    );
+    setMaterialPreviewUrls((prev) => {
+      let changed = false;
+      const nextMap = new Map(prev);
+      for (const [assetId, url] of prev.entries()) {
+        if (!nextAssetIds.has(assetId)) {
+          URL.revokeObjectURL(url);
+          nextMap.delete(assetId);
+          changed = true;
+        }
+      }
+      return changed ? nextMap : prev;
+    });
+    setMaterials(next);
+  }, []);
+
+  const handleUploadFile = useCallback(
+    async (file: File) => {
+      try {
+        const asset = await uploadCanvasAgentAsset(episodeId, file);
+        if (!Number.isFinite(asset.id) || asset.id < 1) {
+          throw new Error('上传成功但缺少有效 asset id');
+        }
+        const localPreviewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
+        if (localPreviewUrl) {
+          setMaterialPreviewUrls((prev) => {
+            const next = new Map(prev);
+            const existing = next.get(asset.id);
+            if (existing) {
+              URL.revokeObjectURL(existing);
+            }
+            next.set(asset.id, localPreviewUrl);
+            return next;
+          });
+        }
+        setMaterials((prev) => [...prev, turnMaterialFromAgentAsset(asset)]);
+      } catch (err) {
+        message.error(err instanceof Error ? err.message : '上传失败');
+      }
+    },
+    [episodeId],
+  );
+
   const [loaded, setLoaded] = useState(false);
   const [liveToolSteps, setLiveToolSteps] = useState<ToolStepView[]>([]);
   const [toolPending, setToolPending] = useState<ToolPendingState | null>(null);
@@ -110,7 +188,6 @@ function CanvasPageInner() {
   /** 切会话掐本地流时记 switch, 避免 finally 误清 busy */
   const streamAbortReasonRef = useRef<Map<number, 'switch' | 'replace'>>(new Map());
   const streamingSessionRef = useRef<number | null>(null);
-  const uiBySessionRef = useRef<Map<number, SessionUiCache>>(new Map());
   const graphRef = useRef<{ nodes: CanvasFlowNode[]; edges: CanvasFlowEdge[] }>({ nodes: [], edges: [] });
   const commitOpsRef = useRef<(ops: CanvasPatchOpInput[]) => Promise<CanvasPatchResult | null>>(
     async () => null,
@@ -389,6 +466,8 @@ function CanvasPageInner() {
       uiBySessionRef.current.set(sessionId, {
         composer: '',
         selectedSkillPaths: [],
+        materials: [],
+        materialPreviewUrls: new Map(),
         mode: 'auto',
         lastEventId: eventId,
       });
@@ -540,8 +619,9 @@ function CanvasPageInner() {
     if (modelKey !== agentModelKey) {
       setAgentModelKey(modelKey);
     }
-    const userInput = buildTurnUserInput(text, selectedSkillPaths);
+    const userInput = buildTurnUserInput(text, selectedSkillPaths, toWireMaterials(materials));
     const content = userInput.content;
+    const sentMaterials = userInput.materials;
     const clientTurnId = buildTurnId();
     const requestId = crypto.randomUUID();
     activeTurnRef.current = clientTurnId;
@@ -550,6 +630,8 @@ function CanvasPageInner() {
     uiBySessionRef.current.set(activeSessionId, {
       composer: '',
       selectedSkillPaths: [],
+      materials: [],
+      materialPreviewUrls: new Map(),
       mode,
       agentModelKey: modelKey,
       clientTurnId,
@@ -559,6 +641,7 @@ function CanvasPageInner() {
     });
     setComposer('');
     setSelectedSkillPaths([]);
+    handleMaterialsChange([]);
     appendUser(compileHumanTextFromBlocks(content), clientTurnId, userInput);
     appendAssistantStream(clientTurnId);
     setLiveToolSteps([]);
@@ -569,7 +652,7 @@ function CanvasPageInner() {
           session_id: activeSessionId,
           request_id: requestId,
           content,
-          materials: [],
+          materials: sentMaterials,
           model_key: modelKey,
           client_turn_id: clientTurnId,
           mode,
@@ -582,12 +665,14 @@ function CanvasPageInner() {
   }, [
     composer,
     selectedSkillPaths,
+    materials,
     busy,
     activeSessionId,
     episodeId,
     mode,
     agentModelKey,
     chatModelCatalog,
+    handleMaterialsChange,
     appendUser,
     appendAssistantStream,
     runStream,
@@ -622,6 +707,8 @@ function CanvasPageInner() {
         uiBySessionRef.current.set(activeSessionId, {
           composer,
           selectedSkillPaths,
+          materials,
+          materialPreviewUrls: new Map(materialPreviewUrls),
           mode,
           agentModelKey,
           clientTurnId: activeTurnRef.current ?? prevCache?.clientTurnId ?? null,
@@ -639,6 +726,7 @@ function CanvasPageInner() {
       setActiveSessionId(nextSessionId);
       setComposer(cached?.composer ?? '');
       setSelectedSkillPaths(cached?.selectedSkillPaths ?? []);
+      restoreSessionMaterials(cached);
       setMode(cached?.mode ?? 'auto');
       // 无 cache 时不沿用上一会话 modelKey
       setAgentModelKey(cached?.agentModelKey);
@@ -658,8 +746,11 @@ function CanvasPageInner() {
       clearMessages,
       composer,
       selectedSkillPaths,
+      materials,
+      materialPreviewUrls,
       mode,
       reattachSessionStream,
+      restoreSessionMaterials,
       toolPending,
     ],
   );
@@ -699,6 +790,16 @@ function CanvasPageInner() {
     async (sessionId: number) => {
       try {
         await deleteCanvasSession(episodeId, sessionId);
+        const closingCache = uiBySessionRef.current.get(sessionId);
+        if (activeSessionId === sessionId) {
+          for (const url of materialPreviewUrlsRef.current.values()) {
+            URL.revokeObjectURL(url);
+          }
+        } else if (closingCache) {
+          for (const url of closingCache.materialPreviewUrls.values()) {
+            URL.revokeObjectURL(url);
+          }
+        }
         uiBySessionRef.current.delete(sessionId);
         setSessionBusy(sessionId, false);
         if (streamingSessionRef.current === sessionId) {
@@ -713,6 +814,9 @@ function CanvasPageInner() {
         if (nextId == null) {
           setActiveSessionId(null);
           setComposer('');
+          setMaterials([]);
+          setMaterialPreviewUrls(new Map());
+          setSelectedSkillPaths([]);
           setToolPending(null);
           activeTurnRef.current = null;
           streamRequestIdRef.current = null;
@@ -722,6 +826,8 @@ function CanvasPageInner() {
         const cached = uiBySessionRef.current.get(nextId);
         setActiveSessionId(nextId);
         setComposer(cached?.composer ?? '');
+        setSelectedSkillPaths(cached?.selectedSkillPaths ?? []);
+        restoreSessionMaterials(cached);
         setMode(cached?.mode ?? 'auto');
         setAgentModelKey(cached?.agentModelKey);
         setLiveToolSteps([]);
@@ -742,6 +848,7 @@ function CanvasPageInner() {
       clearMessages,
       episodeId,
       reattachSessionStream,
+      restoreSessionMaterials,
       setSessionBusy,
     ],
   );
@@ -796,7 +903,6 @@ function CanvasPageInner() {
         body.resolution = extra?.resolution ?? node.data.resolution;
         body.duration = extra?.duration ?? node.data.duration_sec;
         body.reference_mode = extra?.reference_mode;
-        body.ref_attachment_ids = extra?.ref_attachment_ids;
         body.ref_asset_ids = extra?.ref_asset_ids;
         if (extra?.submit_content?.length) {
           body.submit_content = extra.submit_content;
@@ -958,6 +1064,10 @@ function CanvasPageInner() {
           onComposerChange={setComposer}
           selectedSkillPaths={selectedSkillPaths}
           onSelectedSkillPathsChange={setSelectedSkillPaths}
+          materials={materials}
+          materialPreviewUrls={materialPreviewUrls}
+          onMaterialsChange={handleMaterialsChange}
+          onUploadFile={handleUploadFile}
           projectId={projectId}
           onSend={() => void sendTurn()}
           onStop={onStop}

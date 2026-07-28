@@ -29,8 +29,7 @@ import './VideoPrompt.less';
 
 type RefThumb = {
   id: string;
-  materialId: number;
-  assetId: number | null;
+  assetId: number;
   url: string;
   type: 'image' | 'video' | 'audio';
 };
@@ -138,9 +137,8 @@ export function VideoNodePrompt({
             setRefs((prev) => [
               ...prev,
               {
-                id: String(asset.material_id),
-                materialId: asset.material_id,
-                assetId: asset.asset_id ?? null,
+                id: String(asset.asset_id),
+                assetId: asset.asset_id,
                 url: asset.url,
                 type,
               },
@@ -162,11 +160,10 @@ export function VideoNodePrompt({
   const handleSubmit = useCallback(async () => {
     if (submitting || isGenerating) return;
     const manualRefs = refs.map((item) => ({
-      materialId: item.materialId,
-      assetId: item.assetId ?? undefined,
+      assetId: item.assetId,
     }));
     const content = promptContentRef.current;
-    const { prompt: submitPrompt, ref_asset_ids, ref_attachment_ids } = buildSubmitPromptAndRefs({
+    const { prompt: submitPrompt, ref_asset_ids } = buildSubmitPromptAndRefs({
       content,
       storedPrompt: promptDraftRef.current,
       referenceAssets: mentionProvider.getReferenceAssets(),
@@ -180,7 +177,7 @@ export function VideoNodePrompt({
       manualRefs,
       previewMediaRefs,
     });
-    if (!submitPrompt.trim() && ref_asset_ids.length === 0 && ref_attachment_ids.length === 0) {
+    if (!submitPrompt.trim() && ref_asset_ids.length === 0) {
       message.warning('请输入描述或添加参考素材');
       return;
     }
@@ -197,7 +194,6 @@ export function VideoNodePrompt({
         ratio,
         resolution,
         duration,
-        ref_attachment_ids: ref_attachment_ids.length > 0 ? ref_attachment_ids : undefined,
         ref_asset_ids: ref_asset_ids.length > 0 ? ref_asset_ids : undefined,
         ...refValidation,
       });

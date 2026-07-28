@@ -37,7 +37,6 @@ export interface GenerateResultMedia {
 
 export interface GenerateRefImage {
   id: string;
-  materialId?: number;
   assetId?: number;
   url: string;
   name: string;

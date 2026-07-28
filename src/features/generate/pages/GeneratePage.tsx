@@ -298,9 +298,6 @@ export function GeneratePage() {
           count: payload.params.count,
           duration: payload.kind === 'video' ? payload.params.duration : undefined,
           reference_mode: payload.params.referenceMode,
-          ref_attachment_ids: payload.refImages
-            .map((item) => item.materialId)
-            .filter((id): id is number => id != null),
           ref_asset_ids: payload.refImages
             .map((item) => item.assetId)
             .filter((id): id is number => id != null),

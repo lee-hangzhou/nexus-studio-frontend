@@ -17,10 +17,10 @@ import { AssetGrid } from '../components/AssetGrid';
 import { AssetToolbar } from '../components/AssetToolbar';
 
 const ASSET_SOURCE_TO_BACKEND: Record<AssetSourceFilter, string> = {
-  all: 'all',
+  all: 'library',
   generate: 'generate_result',
   chat: 'chat_upload',
-  canvas: 'canvas_node_output',
+  canvas: 'agent_upload',
   import: 'manual_upload',
 };
 

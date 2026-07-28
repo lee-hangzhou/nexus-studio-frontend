@@ -5,35 +5,66 @@
  * and run json-schema-to-typescript to regenerate this file.
  */
 
-export type TurnContent = TurnUserInput | TurnTextBlock | TurnSkillBlock;
-/**
- * @minItems 1
- */
-export type Content = [TurnTextBlock | TurnSkillBlock, ...(TurnTextBlock | TurnSkillBlock)[]];
+export type TurnContent = TurnUserInput | TurnTextBlock | TurnSkillBlock | TurnMediaBlock | TurnNodeBlock;
 export type Text = string;
 export type Type = "text";
 export type Path = string;
 export type Type1 = "skill";
-export type Materials = unknown[];
+export type Assetid = number;
+/**
+ * 媒体类型
+ */
+export type TurnMediaType = "image" | "video" | "audio" | "file";
+export type Name = string | null;
+/**
+ * 媒体块语义来源, 不映射第二张资源表
+ */
+export type TurnMediaOrigin = "library" | "upload";
+export type Previewurl = string | null;
+export type Type2 = "image" | "video" | "audio" | "file";
+export type Url = string | null;
+export type Nodeid = string;
+export type Type3 = "node";
+export type Content = (TurnTextBlock | TurnSkillBlock | TurnMediaBlock | TurnNodeBlock)[];
+export type Materials = (TurnMediaBlock | TurnNodeBlock)[];
 
 /**
  * 结构化 turn 用户输入
  */
 export interface TurnUserInput {
   content: Content;
-  materials?: Materials;
+  materials: Materials;
 }
 /**
  * 文本内容块
  */
 export interface TurnTextBlock {
   text: Text;
-  type?: Type;
+  type: Type;
 }
 /**
  * 技能引用内容块
  */
 export interface TurnSkillBlock {
   path: Path;
-  type?: Type1;
+  type: Type1;
+}
+/**
+ * 图片 / 视频 / 音频 / 文件块; url 由 BFF enrich 写入
+ */
+export interface TurnMediaBlock {
+  assetId: Assetid;
+  mediaType?: TurnMediaType | null;
+  name?: Name;
+  origin: TurnMediaOrigin;
+  previewUrl?: Previewurl;
+  type: Type2;
+  url?: Url;
+}
+/**
+ * 画布节点引用块
+ */
+export interface TurnNodeBlock {
+  nodeId: Nodeid;
+  type: Type3;
 }

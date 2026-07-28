@@ -34,9 +34,11 @@ export interface ListAssetsParams {
 
 const SOURCE_MAP: Record<string, AssetSource> = {
   generate_result: 'generate',
-  canvas_node_output: 'canvas',
   chat_upload: 'chat',
+  agent_upload: 'canvas',
   manual_upload: 'import',
+  assistant_output: 'chat',
+  generate_material: 'generate',
 };
 
 function toAssetKind(assetType: string): AssetKind {
@@ -84,7 +86,7 @@ export async function listAssets(
       page_size: params.page_size ?? 40,
       query: params.query ?? '',
       asset_type: params.asset_type ?? 'all',
-      source_type: params.source_type ?? 'all',
+      source_type: params.source_type ?? 'library',
       favorites_only: params.favorites_only ?? false,
       created_from: params.created_from ?? null,
       created_to: params.created_to ?? null,

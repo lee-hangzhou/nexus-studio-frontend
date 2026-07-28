@@ -7,13 +7,11 @@ import type { WorkflowPromptContent } from '../types';
 import { mergeConnectedTextIntoSubmitContent } from './mergePredecessorTextForSubmit';
 
 export type ManualMaterialRef = {
-  materialId?: number;
-  assetId?: number;
+  assetId: number;
 };
 
 export type SubmitMaterialRefs = {
   ref_asset_ids: number[];
-  ref_attachment_ids: number[];
 };
 
 /** API 提交用纯文本：展开 text / text_ref，不发 @文本1 token */
@@ -98,15 +96,15 @@ export function collectAssetIdsFromMentionItems(items: WorkflowMentionItem[]): n
   return ids;
 }
 
-function pushUniqueId(target: number[], seen: Set<number>, value: number | undefined) {
-  if (typeof value !== 'number' || value <= 0 || seen.has(value)) {
+function pushUniqueId(target: number[], seen: Set<number>, value: number) {
+  if (value <= 0 || seen.has(value)) {
     return;
   }
   seen.add(value);
   target.push(value);
 }
 
-/** 与创作页 submitGenerate 一致：分别收集 asset_id 与 material_id */
+/** 与创作页 submitGenerate 一致：只收集 ref_asset_ids */
 export function collectSubmitMaterialRefs(params: {
   content: WorkflowPromptContent;
   connectedAssetIds: number[];
@@ -114,9 +112,7 @@ export function collectSubmitMaterialRefs(params: {
   previewMediaRefs?: WorkflowMentionItem[];
 }): SubmitMaterialRefs {
   const ref_asset_ids: number[] = [];
-  const ref_attachment_ids: number[] = [];
   const seenAssets = new Set<number>();
-  const seenAttachments = new Set<number>();
 
   for (const id of params.connectedAssetIds) {
     pushUniqueId(ref_asset_ids, seenAssets, id);
@@ -128,11 +124,13 @@ export function collectSubmitMaterialRefs(params: {
     pushUniqueId(ref_asset_ids, seenAssets, id);
   }
   for (const ref of params.manualRefs ?? []) {
+    if (typeof ref.assetId !== 'number' || ref.assetId < 1) {
+      throw new Error('manualRefs 每项必须带有效 assetId');
+    }
     pushUniqueId(ref_asset_ids, seenAssets, ref.assetId);
-    pushUniqueId(ref_attachment_ids, seenAttachments, ref.materialId);
   }
 
-  return { ref_asset_ids, ref_attachment_ids };
+  return { ref_asset_ids };
 }
 
 export function buildSubmitPromptAndRefs(params: {
@@ -145,7 +143,7 @@ export function buildSubmitPromptAndRefs(params: {
   /** @deprecated 用 manualRefs */
   manualAssetIds?: number[];
   previewMediaRefs?: WorkflowMentionItem[];
-}): { prompt: string; ref_asset_ids: number[]; ref_attachment_ids: number[] } {
+}): { prompt: string; ref_asset_ids: number[] } {
   const prompt = buildPlainSubmitPrompt({
     content: params.content,
     storedPrompt: params.storedPrompt,
@@ -174,15 +172,17 @@ export function buildSubmitRefValidationPayload(params: {
   previewMediaRefs?: WorkflowMentionItem[];
 }): {
   submit_content: WorkflowPromptContent;
-  manual_refs: { asset_id?: number; material_id?: number }[];
+  manual_refs: { asset_id: number }[];
   preview_media_asset_ids: number[];
 } {
   return {
     submit_content: params.content,
-    manual_refs: (params.manualRefs ?? []).map((ref) => ({
-      asset_id: ref.assetId,
-      material_id: ref.materialId,
-    })),
+    manual_refs: (params.manualRefs ?? []).map((ref) => {
+      if (typeof ref.assetId !== 'number' || ref.assetId < 1) {
+        throw new Error('manualRefs 每项必须带有效 assetId');
+      }
+      return { asset_id: ref.assetId };
+    }),
     preview_media_asset_ids: (params.previewMediaRefs ?? [])
       .map((item) => item.assetId)
       .filter((id): id is number => typeof id === 'number' && id > 0),

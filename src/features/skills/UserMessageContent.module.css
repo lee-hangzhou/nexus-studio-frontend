@@ -1,14 +1,36 @@
 .root {
   display: flex;
   flex-direction: column;
-  gap: var(--studio-space-2, 8px);
+  gap: var(--studio-space-2);
   min-width: 0;
 }
 
 .skills {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--studio-space-1, 4px);
+  gap: var(--studio-space-1);
+}
+
+.refs,
+.materials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--studio-space-1);
+}
+
+.refChip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: var(--studio-space-half) var(--studio-space-2);
+  border-radius: var(--studio-radius-sm);
+  background: var(--studio-surface-muted, rgba(255, 255, 255, 0.08));
+  color: var(--studio-text-secondary);
+  font-size: var(--studio-font-size-xs);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .text {

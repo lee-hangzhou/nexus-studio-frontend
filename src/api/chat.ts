@@ -1,6 +1,6 @@
 import { apiOriginUrl, apiUrl, fetchWithAuth, getAccessToken, request } from './base';
 import type { Stream as GeneratedStreamFrame } from './generated/stream';
-import type { TurnContentBlock } from './turnContent';
+import type { TurnContentBlock, TurnMaterialBlock, TurnUserInput } from './turnContent';
 import { toolPendingFromFrame, type SkillWriteOperation } from './toolPending';
 
 export type StreamFrame = GeneratedStreamFrame;
@@ -30,7 +30,7 @@ export interface ChatMessageView {
   id: number;
   role: string;
   content: string;
-  input?: Record<string, unknown> | null;
+  input?: TurnUserInput | Record<string, unknown> | null;
   metadata: Record<string, unknown>;
   created_at: string;
 }
@@ -55,6 +55,7 @@ export interface ToolStepView {
 
 export interface UploadedAttachment {
   attachment_id: number;
+  asset_id: number;
   filename: string;
   mime_type: string;
   preview_url?: string;
@@ -390,8 +391,8 @@ export async function streamMessage(
     request_id: string;
     conversation_id: number;
     content: TurnContentBlock[];
+    materials: TurnMaterialBlock[];
     model: string;
-    attachment_ids?: number[];
     enable_tools?: boolean;
     client_turn_id?: string;
     project_id?: number;
@@ -418,7 +419,7 @@ export async function streamResume(
   await consumeChatSSE('/chat/turn/resume', body, handlers, signal);
 }
 
-export async function uploadAttachment(conversationId: number, file: File) {
+export async function uploadAttachment(conversationId: number, file: File): Promise<UploadedAttachment> {
   const form = new FormData();
   form.append('conversation_id', String(conversationId));
   form.append('file', file);
@@ -426,11 +427,52 @@ export async function uploadAttachment(conversationId: number, file: File) {
     method: 'POST',
     body: form,
   });
-  const payload = await response.json();
-  if (!response.ok || payload.code !== 0) {
-    throw new Error(payload.msg ?? 'upload failed');
+  let payload: { code?: unknown; msg?: unknown; data?: unknown } | null = null;
+  try {
+    payload = (await response.json()) as { code?: unknown; msg?: unknown; data?: unknown };
+  } catch {
+    throw new Error(`上传响应不是 JSON: ${response.status}`);
   }
-  return payload.data as UploadedAttachment;
+  if (!response.ok || payload.code !== 0) {
+    throw new Error(typeof payload.msg === 'string' ? payload.msg : 'upload failed');
+  }
+  const data = payload.data;
+  if (!isRecord(data)) {
+    throw new Error('上传响应缺少 data');
+  }
+  const attachmentId = data.attachment_id;
+  const assetId = data.asset_id;
+  const filename = data.filename;
+  const mimeType = data.mime_type;
+  if (typeof attachmentId !== 'number' || !Number.isFinite(attachmentId) || attachmentId < 1) {
+    throw new Error('上传成功但缺少有效 attachment_id');
+  }
+  if (typeof assetId !== 'number' || !Number.isFinite(assetId) || assetId < 1) {
+    throw new Error('上传成功但缺少有效 asset_id');
+  }
+  if (typeof filename !== 'string' || filename.length === 0) {
+    throw new Error('上传响应缺少 filename');
+  }
+  if (typeof mimeType !== 'string' || mimeType.length === 0) {
+    throw new Error('上传响应缺少 mime_type');
+  }
+  const uploaded: UploadedAttachment = {
+    attachment_id: attachmentId,
+    asset_id: assetId,
+    filename,
+    mime_type: mimeType,
+  };
+  if (typeof data.preview_url === 'string') {
+    uploaded.preview_url = data.preview_url;
+  }
+  if (typeof data.source === 'string') {
+    uploaded.source = data.source;
+  }
+  return uploaded;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 export function getAttachmentPreviewUrl(attachmentId: number) {

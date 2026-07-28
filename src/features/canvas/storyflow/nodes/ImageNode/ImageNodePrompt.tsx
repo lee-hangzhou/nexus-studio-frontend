@@ -61,7 +61,6 @@ export function ImageNodePrompt({
   const promptContentRef = useRef<WorkflowPromptContent>([]);
   const promptDraftRef = useRef(data.input_prompt ?? '');
   const [refUrl, setRefUrl] = useState<string | null>(null);
-  const [refMaterialId, setRefMaterialId] = useState<number | null>(null);
   const [refAssetId, setRefAssetId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -95,8 +94,7 @@ export function ImageNodePrompt({
       void uploadGenerateMaterial(file)
         .then((asset) => {
           setRefUrl(asset.url);
-          setRefMaterialId(asset.material_id);
-          setRefAssetId(asset.asset_id ?? null);
+          setRefAssetId(asset.asset_id);
         })
         .catch(() => message.error('参考图上传失败'));
     };
@@ -111,11 +109,9 @@ export function ImageNodePrompt({
   const handleSubmit = useCallback(async () => {
     if (submitting || isGenerating) return;
     const manualRefs =
-      refMaterialId != null || refAssetId != null
-        ? [{ materialId: refMaterialId ?? undefined, assetId: refAssetId ?? undefined }]
-        : [];
+      refAssetId != null ? [{ assetId: refAssetId }] : [];
     const content = promptContentRef.current;
-    const { prompt: submitPrompt, ref_asset_ids, ref_attachment_ids } = buildSubmitPromptAndRefs({
+    const { prompt: submitPrompt, ref_asset_ids } = buildSubmitPromptAndRefs({
       content,
       storedPrompt: promptDraftRef.current,
       referenceAssets: mentionProvider.getReferenceAssets(),
@@ -129,7 +125,7 @@ export function ImageNodePrompt({
       manualRefs,
       previewMediaRefs,
     });
-    if (!submitPrompt.trim() && ref_asset_ids.length === 0 && ref_attachment_ids.length === 0) {
+    if (!submitPrompt.trim() && ref_asset_ids.length === 0) {
       message.warning('请输入描述或添加参考');
       return;
     }
@@ -144,7 +140,6 @@ export function ImageNodePrompt({
         input_prompt: promptDraftRef.current,
         ratio,
         resolution,
-        ref_attachment_ids: ref_attachment_ids.length > 0 ? ref_attachment_ids : undefined,
         ref_asset_ids: ref_asset_ids.length > 0 ? ref_asset_ids : undefined,
         ...refValidation,
       });
@@ -164,7 +159,6 @@ export function ImageNodePrompt({
     ratio,
     resolution,
     refAssetId,
-    refMaterialId,
     submitting,
   ]);
 
@@ -192,7 +186,6 @@ export function ImageNodePrompt({
             aria-label="移除参考图"
             onClick={() => {
               setRefUrl(null);
-              setRefMaterialId(null);
               setRefAssetId(null);
             }}
           >

@@ -61,16 +61,13 @@ export function toFeedItem(view: GenerateTaskView): GenerateFeedItem | null {
     })),
     favorite: view.is_favorited,
     errorMessage: view.error_message ?? undefined,
-    refImages: view.ref_materials
-      ?.filter((m) => typeof m.attachment_id === 'number' || typeof m.asset_id === 'number')
-      .map((m) => ({
-        id: typeof m.attachment_id === 'number' ? `ref-${m.attachment_id}` : `asset-${m.asset_id}`,
-        materialId: m.attachment_id ?? undefined,
-        assetId: m.asset_id ?? undefined,
-        url: m.url,
-        name: m.filename,
-        mimeType: m.mime_type,
-      })),
+    refImages: view.ref_materials?.map((m) => ({
+      id: `asset-${m.asset_id}`,
+      assetId: m.asset_id,
+      url: m.url,
+      name: m.filename,
+      mimeType: m.mime_type,
+    })),
     ratio: view.ratio ?? undefined,
     resolution: view.resolution ?? undefined,
     duration: view.duration ?? undefined,

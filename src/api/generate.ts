@@ -26,8 +26,7 @@ export interface GenerateTaskView {
   duration?: number | null;
   reference_mode?: number | null;
   ref_materials?: {
-    attachment_id?: number | null;
-    asset_id?: number | null;
+    asset_id: number;
     filename: string;
     mime_type: string;
     url: string;
@@ -54,13 +53,11 @@ export interface SubmitGenerateParams {
   count?: number;
   duration?: number | null;
   reference_mode?: number;
-  ref_attachment_ids?: number[];
   ref_asset_ids?: number[];
 }
 
 export interface GenerateMaterialUploadResult {
-  material_id: number;
-  asset_id?: number | null;
+  asset_id: number;
   filename: string;
   mime_type: string;
   url: string;

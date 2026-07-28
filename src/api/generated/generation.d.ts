@@ -19,7 +19,6 @@ export type ModelId = string;
 export type Prompt = string;
 export type Ratio = string | null;
 export type RefAssetIds = number[];
-export type RefAttachmentIds = number[];
 export type ReferenceMode = 1 | 2 | 3 | 4;
 export type Resolution = string | null;
 export type VoiceId = string | null;
@@ -33,8 +32,7 @@ export type Prompt1 = string;
 export type QueuePosition = number | null;
 export type QueueTotal = number | null;
 export type Ratio1 = string | null;
-export type AssetId = number | null;
-export type AttachmentId = number | null;
+export type AssetId = number;
 export type Filename = string;
 export type MimeType = string;
 export type SourceType = string | null;
@@ -102,7 +100,6 @@ export interface SubmitGenerateRequest {
   prompt: Prompt;
   ratio?: Ratio;
   ref_asset_ids?: RefAssetIds;
-  ref_attachment_ids?: RefAttachmentIds;
   reference_mode?: ReferenceMode | null;
   resolution?: Resolution;
   voice_id?: VoiceId;
@@ -131,8 +128,7 @@ export interface GenerateTaskView {
   [k: string]: unknown;
 }
 export interface GenerateRefMaterial {
-  asset_id?: AssetId;
-  attachment_id?: AttachmentId;
+  asset_id: AssetId;
   filename: Filename;
   mime_type: MimeType;
   source_type?: SourceType;
