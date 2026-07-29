@@ -10,11 +10,11 @@ import {
   StarFilled,
   StarOutlined,
 } from '@ant-design/icons';
-import { Modal } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GenerateFeedItem, GenerateResultMedia } from '../types';
 import { isTaskInProgress, TASK_STATUS } from '../../../domains/task/types';
 import { StudioButton } from '../../../shared/ui/StudioButton';
+import { useStudioApp } from '../../../shared/ui/useStudioApp';
 import { buildPreviewSlides, findPreviewIndex } from '../utils/previewGallery';
 import { CreateResultPreview } from './CreateResultPreview';
 import { PromptWithMentions } from './PromptWithMentions';
@@ -66,7 +66,7 @@ export function CreateStage({
           <div className="studio-create__stage-glow" aria-hidden />
           <h1 className="studio-create__stage-title">把想象变成画面</h1>
           <p className="studio-create__stage-lead">
-            在下方写一句描述，或点选灵感快速开始。一起开始探索吧
+            在下方写一句描述，或点选灵感快速开始
           </p>
         </div>
       </div>
@@ -335,6 +335,7 @@ function StageResults({
   onEdit?: () => void;
   onDelete?: () => void;
 }) {
+  const { modal } = useStudioApp();
   const media: GenerateResultMedia[] = item.resultImages ?? [];
   const total = Math.max(media.length, 1);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -511,9 +512,9 @@ function StageResults({
               className="studio-create__viewer-action"
               title="删除"
               onClick={() => {
-                Modal.confirm({
+                modal.confirm({
                   title: '删除这条生成记录？',
-                  content: '删除后无法恢复，进行中的任务会先尝试取消。',
+                  content: '删除后无法恢复，进行中的任务会先尝试取消',
                   okText: '删除',
                   okType: 'danger',
                   cancelText: '取消',

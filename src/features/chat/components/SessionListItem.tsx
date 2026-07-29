@@ -3,6 +3,7 @@ import { Dropdown, Input, Modal, message as antMessage } from 'antd';
 import type { MenuProps } from 'antd';
 
 import { updateConversation, deleteConversation, type ConversationView } from '../../../api/chat';
+import { useStudioApp } from '../../../shared/ui/useStudioApp';
 import { formatConversationTime } from '../utils/formatConversationTime';
 
 export interface SessionListItemProps {
@@ -15,6 +16,7 @@ export interface SessionListItemProps {
 }
 
 export function SessionListItem({ session, active, busy = false, onSelect, onRenamed, onDeleted }: SessionListItemProps) {
+  const { modal } = useStudioApp();
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState(session.title);
 
@@ -40,9 +42,9 @@ export function SessionListItem({ session, active, busy = false, onSelect, onRen
   };
 
   const confirmDelete = () => {
-    Modal.confirm({
+    modal.confirm({
       title: '删除此会话？',
-      content: '删除后无法恢复。',
+      content: '删除后无法恢复',
       okText: '删除',
       okType: 'danger',
       cancelText: '取消',

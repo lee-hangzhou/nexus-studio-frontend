@@ -30,14 +30,17 @@ server {
     try_files $uri =404;
   }
 
-  # HTML entry must always revalidate, or browsers keep serving an old shell
-  # that still points at previous JS/CSS bundles.
+  # HTML must revalidate every time. Prefer no-cache over no-store: no-store
+  # can leave a previously heuristic-cached index.html in the browser disk
+  # cache, so a new tab keeps the old shell until a manual refresh.
   location = /index.html {
-    add_header Cache-Control "no-cache, no-store, must-revalidate";
+    add_header Cache-Control "no-cache, must-revalidate" always;
+    add_header Pragma "no-cache" always;
   }
 
   location / {
-    add_header Cache-Control "no-cache, no-store, must-revalidate";
+    add_header Cache-Control "no-cache, must-revalidate" always;
+    add_header Pragma "no-cache" always;
     try_files $uri $uri/ /index.html;
   }
 }

@@ -8,13 +8,14 @@ import {
   PictureOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
-import { Dropdown, Input, Modal, Spin } from 'antd';
+import { Dropdown, Input, Spin } from 'antd';
 import type { MenuProps } from 'antd';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
 import type { GenerateFeedItem, GenerateFilterType, GenerateStatusFilter, GenerateTimePreset, HistoryFilters } from '../types';
 import { StudioChip } from '../../../shared/ui/StudioChip';
+import { useStudioApp } from '../../../shared/ui/useStudioApp';
 import { PromptWithMentions } from './PromptWithMentions';
 import { isTaskInProgress, isTaskQueued, TASK_STATUS } from '../../../domains/task/types';
 
@@ -121,6 +122,7 @@ function HistoryRow({
   onCancel?: () => void;
   onDelete: () => void;
 }) {
+  const { modal } = useStudioApp();
   const { label, cls } = statusInfo(item.status);
   const timeAgo = dayjs(item.createdAt).fromNow();
 
@@ -141,9 +143,9 @@ function HistoryRow({
       danger: true,
       onClick: ({ domEvent }) => {
         domEvent.stopPropagation();
-        Modal.confirm({
+        modal.confirm({
           title: '删除这条生成记录？',
-          content: '删除后无法恢复，进行中的任务会先尝试取消。',
+          content: '删除后无法恢复，进行中的任务会先尝试取消',
           okText: '删除',
           okType: 'danger',
           cancelText: '取消',

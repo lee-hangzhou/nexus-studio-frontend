@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { SkillFileDetail, SkillFileMeta, SkillScope, SkillSurface } from './types';
 import { useUserSkills } from './useUserSkills';
+import { useStudioApp } from '../../shared/ui/useStudioApp';
 
 import styles from './SkillManageModal.module.css';
 
@@ -63,6 +64,7 @@ function filesForScope(
 }
 
 export function SkillManageModal({ open, onClose, surface, projectId }: SkillManageModalProps) {
+  const { modal } = useStudioApp();
   const skills = useUserSkills({ surface, projectId, enabled: open });
   const [activeScope, setActiveScope] = useState<SkillScope>('user');
   const [editor, setEditor] = useState<EditorState | null>(null);
@@ -130,9 +132,9 @@ export function SkillManageModal({ open, onClose, surface, projectId }: SkillMan
   };
 
   const handleDelete = (file: SkillFileMeta) => {
-    Modal.confirm({
+    modal.confirm({
       title: '删除技能',
-      content: `确定删除「${file.name}」（${file.path}）？此操作不可撤销。`,
+      content: `确定删除「${file.name}」（${file.path}）？此操作不可撤销`,
       okText: '删除',
       okType: 'danger',
       cancelText: '取消',

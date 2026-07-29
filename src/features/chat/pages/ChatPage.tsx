@@ -1722,7 +1722,7 @@ export function ChatPage() {
             >
               {activeConversationId == null && (
                 <div className="studio-chat__empty">
-                  <p>点击「新会话」或直接输入发送以开始</p>
+                  <p>一起开始探索吧</p>
                 </div>
               )}
               {visibleMessages(messages).map((m) => {

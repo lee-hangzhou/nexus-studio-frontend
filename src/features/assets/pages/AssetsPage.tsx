@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Input, Modal, Pagination, Spin, message } from 'antd';
+import { Button, Input, Pagination, Spin, message } from 'antd';
 import {
   deleteAssets,
   getAsset,
@@ -11,6 +11,7 @@ import {
 } from '../../../api/assets';
 import type { AssetBase } from '../../../domains/asset/types';
 import type { Dayjs } from 'dayjs';
+import { useStudioApp } from '../../../shared/ui/useStudioApp';
 import type { AssetKindFilter, AssetSourceFilter } from '../constants';
 import { AssetBatchBar } from '../components/AssetBatchBar';
 import { AssetGrid } from '../components/AssetGrid';
@@ -28,6 +29,7 @@ const ASSET_SOURCE_TO_BACKEND: Record<AssetSourceFilter, string> = {
 const ASSET_PAGE_SIZE = 40;
 
 export function AssetsPage() {
+  const { modal } = useStudioApp();
   const [searchParams, setSearchParams] = useSearchParams();
   const fromGenerate = searchParams.get('source') === 'generate';
 
@@ -172,9 +174,9 @@ export function AssetsPage() {
 
   const handleDelete = async (ids: string[]) => {
     if (ids.length === 0) return;
-    Modal.confirm({
+    modal.confirm({
       title: ids.length === 1 ? '删除这个资源？' : `删除选中的 ${ids.length} 个资源？`,
-      content: '删除后不会在资源库中显示。',
+      content: '删除后不会在资源库中显示',
       okText: '删除',
       okButtonProps: { danger: true },
       cancelText: '取消',

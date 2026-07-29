@@ -13,6 +13,7 @@ import {
   type EpisodeView,
 } from '../../../api/episodes';
 import { getProject, updateProject, type ProjectView } from '../../../api/projects';
+import { useStudioApp } from '../../../shared/ui/useStudioApp';
 import { CoverPicker } from '../components/CoverPicker';
 import { CoverThumb } from '../components/CoverThumb';
 import styles from './ProjectDetailPage.module.css';
@@ -28,6 +29,7 @@ type CoverTarget =
 
 export function ProjectDetailPage() {
   const navigate = useNavigate();
+  const { modal } = useStudioApp();
   const { projectId: rawProjectId } = useParams();
   const projectId = Number(rawProjectId);
   const [project, setProject] = useState<ProjectView | null>(null);
@@ -142,9 +144,9 @@ export function ProjectDetailPage() {
 
   const confirmDeleteEpisode = useCallback(
     (episode: EpisodeView) => {
-      Modal.confirm({
+      modal.confirm({
         title: '删除集',
-        content: `确定删除「${episode.name}」吗？删除后该集画布数据会被清理。`,
+        content: `确定删除「${episode.name}」吗？删除后该集画布数据会被清理`,
         okText: '删除',
         okButtonProps: { danger: true },
         cancelText: '取消',
@@ -159,7 +161,7 @@ export function ProjectDetailPage() {
         },
       });
     },
-    [refreshAfterMutation],
+    [modal, refreshAfterMutation],
   );
 
   if (!Number.isFinite(projectId) || projectId <= 0) {

@@ -3,6 +3,7 @@ import { Input, Modal } from 'antd';
 import { useEffect, useState } from 'react';
 import type { CanvasSessionView } from '../api/canvasTypes';
 import { CANVAS_DEFAULT_SESSION_TITLE, CANVAS_SESSION_TITLE_MAX_LEN } from '../constants';
+import { useStudioApp } from '../../../shared/ui/useStudioApp';
 
 export function CanvasAgentSessionList({
   sessions,
@@ -21,6 +22,7 @@ export function CanvasAgentSessionList({
   onClose: (sessionId: number) => void | Promise<void>;
   onEditingChange?: (editing: boolean) => void;
 }) {
+  const { modal } = useStudioApp();
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
   const [renaming, setRenaming] = useState(false);
@@ -56,7 +58,7 @@ export function CanvasAgentSessionList({
   };
 
   const confirmClose = (session: CanvasSessionView) => {
-    Modal.confirm({
+    modal.confirm({
       title: '关闭会话',
       content: `关闭「${session.title?.trim() || CANVAS_DEFAULT_SESSION_TITLE}」后将无法继续发送，历史仍可读`,
       okText: '关闭',

@@ -30,6 +30,12 @@ export default function App() {
             borderRadiusLG: 8,
             paddingLG: 16,
           },
+          Modal: {
+            contentBg: '#1C2026',
+            headerBg: '#1C2026',
+            footerBg: '#1C2026',
+            titleColor: '#F2F3F5',
+          },
           Button: {
             borderRadius: 999,
             controlHeight: 36,
