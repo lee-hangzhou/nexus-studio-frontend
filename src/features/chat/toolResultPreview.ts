@@ -22,9 +22,13 @@ const CANVAS_TOOL_NAMES = new Set([
   'query_canvas_nodes',
   'apply_canvas_patch',
   'apply_canvas_edge_operation',
+  'apply_canvas_arrange',
   'list_generate_models',
   'submit_node_generation',
   'list_node_generations',
+  'inspect_node_media',
+  'inspect_turn_media',
+  'read_canvas_skill',
 ]);
 
 export function isMemoryTool(name: string): boolean {
@@ -94,12 +98,15 @@ function canvasPreview(toolName: string, output: string, ok: boolean): string {
   }
   if (toolName === 'apply_canvas_patch') return '已更新画布';
   if (toolName === 'apply_canvas_edge_operation') return '已更新连线';
+  if (toolName === 'apply_canvas_arrange') return '已整理画布布局';
   if (toolName === 'list_generate_models') {
-    if (data && Array.isArray(data.models)) return `已查询 ${data.models.length} 个可用模型`;
+    if (data && Array.isArray(data.items)) return `已查询 ${data.items.length} 个可用模型`;
     return '已查询可用模型';
   }
   if (toolName === 'submit_node_generation') return '已提交生成任务';
   if (toolName === 'list_node_generations') return '已查询生成状态';
+  if (toolName === 'inspect_node_media' || toolName === 'inspect_turn_media') return '已完成视觉理解';
+  if (toolName === 'read_canvas_skill') return '已读取画布技能';
   return '已完成';
 }
 
