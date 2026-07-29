@@ -6,6 +6,10 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    build: {
+      // Avoid colliding with the SPA route `/assets` (资源库).
+      assetsDir: 'static',
+    },
     css: {
       preprocessorOptions: {
         less: {
