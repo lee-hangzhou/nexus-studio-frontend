@@ -50,30 +50,13 @@ Contract changes should be delivered as a dedicated frontend change tied to a ba
 
 ## Container
 
-Build the same-origin image:
-
 ```bash
-docker build -t dream-drama-frontend .
+make docker-build
+# 或独立 API 域：
+# make docker-build VITE_API_ORIGIN=https://api.example.com
 ```
 
-For a separate API domain, pass the public build-time origin:
-
-```bash
-docker build --build-arg VITE_API_ORIGIN=https://api.example.com -t dream-drama-frontend .
-```
-
-Run the same-origin topology on the shared deployment network:
-
-```bash
-docker run -d \
-  --name dream-drama-frontend \
-  --network dream-drama-network \
-  -e BACKEND_UPSTREAM=dream-drama-backend:8000 \
-  -p 127.0.0.1:82:80 \
-  dream-drama-frontend
-```
-
-`BACKEND_UPSTREAM` is a Docker DNS name and port without a scheme or path. It defaults to `backend:8000`. The Nginx proxy preserves the existing 100 MB upload limit, long-lived SSE timeouts, disabled response buffering, and SPA route fallback.
+镜像名默认 `nexus-studio-prod-frontend`，与后端 Compose 一致。生产由后端仓 `make docker-up` 拉起；Nginx 默认把 `/api/` 反代到 `backend:8000`。
 
 ## Deployment Checks
 
