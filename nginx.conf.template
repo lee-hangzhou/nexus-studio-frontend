@@ -24,7 +24,20 @@ server {
     proxy_buffering off;
   }
 
+  # Vite hashed assets — cache forever; filename changes on each build.
+  location /assets/ {
+    add_header Cache-Control "public, max-age=31536000, immutable";
+    try_files $uri =404;
+  }
+
+  # HTML entry must always revalidate, or browsers keep serving an old shell
+  # that still points at previous JS/CSS bundles.
+  location = /index.html {
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
+  }
+
   location / {
+    add_header Cache-Control "no-cache, no-store, must-revalidate";
     try_files $uri $uri/ /index.html;
   }
 }

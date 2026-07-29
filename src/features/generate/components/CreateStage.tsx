@@ -66,7 +66,7 @@ export function CreateStage({
           <div className="studio-create__stage-glow" aria-hidden />
           <h1 className="studio-create__stage-title">把想象变成画面</h1>
           <p className="studio-create__stage-lead">
-            在下方写一句描述，或点选灵感快速开始。生成结果会出现在这里，而不是挤在列表里。
+            在下方写一句描述，或点选灵感快速开始。一起开始探索吧
           </p>
         </div>
       </div>
