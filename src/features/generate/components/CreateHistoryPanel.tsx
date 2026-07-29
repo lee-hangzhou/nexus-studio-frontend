@@ -256,6 +256,8 @@ interface CreateHistoryPanelProps {
   onLoadMore?: () => void;
   loadingMore?: boolean;
   initialLoading?: boolean;
+  /** 关闭侧栏；面板已打开时不在外侧再挂「最近生成」浮钮 */
+  onClose?: () => void;
 }
 
 export function CreateHistoryPanel({
@@ -271,6 +273,7 @@ export function CreateHistoryPanel({
   onLoadMore,
   loadingMore = false,
   initialLoading = false,
+  onClose,
 }: CreateHistoryPanelProps) {
   const patchFilters = (patch: Partial<HistoryFilters>) => {
     onFiltersChange({ ...filters, ...patch });
@@ -279,7 +282,20 @@ export function CreateHistoryPanel({
   return (
     <div className="studio-create-history-panel">
       <div className="studio-create-history-panel__header">
-        <div className="studio-create-history-panel__title">生成历史</div>
+        <div className="studio-create-history-panel__title-row">
+          <div className="studio-create-history-panel__title">生成历史</div>
+          {onClose ? (
+            <button
+              type="button"
+              className="studio-create-history-panel__close"
+              aria-label="关闭生成历史"
+              title="关闭"
+              onClick={onClose}
+            >
+              <CloseOutlined />
+            </button>
+          ) : null}
+        </div>
         <Input
           className="studio-create-history-panel__search"
           prefix={<SearchOutlined style={{ color: 'var(--studio-text-secondary)', fontSize: 13 }} />}

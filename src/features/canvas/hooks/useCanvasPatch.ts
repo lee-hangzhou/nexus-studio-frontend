@@ -220,20 +220,26 @@ export function useCanvasPatch(
 
   const replaceGraph = useCallback(
     (nextNodes: CanvasFlowNode[], nextEdges: CanvasFlowEdge[]) => {
-      nodesRef.current = nextNodes;
+      // SSE/snapshot 整图替换不得丢掉本地选中，否则节点 Prompt/参数 Popover 会随卸载「过一会儿自己消失」
+      const selectedIds = new Set(
+        nodesRef.current.filter((node) => node.selected).map((node) => node.id),
+      );
+      const mergedNodes = nextNodes.map((node) => ({
+        ...node,
+        selected: selectedIds.has(node.id),
+      }));
+      nodesRef.current = mergedNodes;
       edgesRef.current = nextEdges;
-      setNodes(nextNodes);
+      setNodes(mergedNodes);
       setEdges(nextEdges);
+      return { nodes: mergedNodes, edges: nextEdges };
     },
     [setNodes, setEdges],
   );
 
   const replaceGraphQueued = useCallback(
     (nextNodes: CanvasFlowNode[], nextEdges: CanvasFlowEdge[]) =>
-      enqueue(async () => {
-        replaceGraph(nextNodes, nextEdges);
-        return { nodes: nextNodes, edges: nextEdges };
-      }),
+      enqueue(async () => replaceGraph(nextNodes, nextEdges)),
     [enqueue, replaceGraph],
   );
 

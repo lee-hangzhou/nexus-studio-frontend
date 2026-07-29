@@ -138,9 +138,14 @@ export async function fetchWithAuth(
   });
 
   if (response.status === 401 && retry) {
+    const hadSession = Boolean(getAccessToken() || getRefreshToken());
     const newToken = await refreshAccessToken();
     if (newToken) {
       return fetchWithAuth(url, init, false);
+    }
+    // Guest browsing public pages: surface 401 without forcing a login redirect.
+    if (!hadSession) {
+      return response;
     }
     return redirectToLoginOnAuthFailure();
   }

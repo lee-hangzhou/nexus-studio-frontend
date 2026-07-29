@@ -2,6 +2,7 @@ import { apiOriginUrl, apiUrl, fetchWithAuth, getAccessToken, request } from './
 import type { Stream as GeneratedStreamFrame } from './generated/stream';
 import type { TurnContentBlock, TurnMaterialBlock, TurnUserInput } from './turnContent';
 import { toolPendingFromFrame, type ToolPendingState } from './toolPending';
+import { filterSelectableModels } from '../shared/utils/hiddenSelectableModels';
 
 export type StreamFrame = GeneratedStreamFrame;
 export type StreamFrameType = StreamFrame['type'];
@@ -69,8 +70,12 @@ export interface MessageAttachment {
   preview_url?: string;
 }
 
-export function listChatModels() {
-  return request<ChatModelItem[]>('/chat/model/list', { method: 'POST', body: JSON.stringify({}) });
+export async function listChatModels() {
+  const items = await request<ChatModelItem[]>('/chat/model/list', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+  return filterSelectableModels(items, (item) => [item.key, item.display_name]);
 }
 
 export function createConversation(body: { title?: string; model: string }) {

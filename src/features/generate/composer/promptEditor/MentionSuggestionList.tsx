@@ -10,7 +10,7 @@ import type { MenuProps } from 'antd';
 import {
   parseAssetIdFromMentionId,
   resolveMentionDisplayLabel,
-} from '../../providers/canvasMentionProvider';
+} from '../mentionProvider';
 import type { WorkflowMentionItem, WorkflowMentionMediaType } from './types';
 
 export const AT_POPOVER_MENU_STYLE = {

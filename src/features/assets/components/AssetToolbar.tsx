@@ -1,9 +1,10 @@
 import { SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import { Input } from 'antd';
 import type { Dayjs } from 'dayjs';
+import type { ReactNode } from 'react';
 import { StudioChip } from '../../../shared/ui/StudioChip';
-import type { AssetKindFilter, AssetSourceFilter } from '../constants';
-import { ASSET_KIND_OPTIONS, ASSET_SOURCE_OPTIONS } from '../constants';
+import type { AssetDomainFilter, AssetKindFilter, AssetSourceFilter } from '../constants';
+import { ASSET_DOMAIN_OPTIONS, ASSET_KIND_OPTIONS } from '../constants';
 import { AssetDateRangeFilter } from './AssetDateRangeFilter';
 
 interface AssetToolbarProps {
@@ -25,6 +26,20 @@ interface AssetToolbarProps {
   onSelectModeChange: (v: boolean) => void;
 }
 
+function FilterGroup({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="studio-assets__filter-group" role="group" aria-label={label}>
+      <div className="studio-assets__filter-chips">{children}</div>
+    </div>
+  );
+}
+
 export function AssetToolbar({
   query,
   kind,
@@ -43,18 +58,15 @@ export function AssetToolbar({
   onUploadClick,
   onSelectModeChange,
 }: AssetToolbarProps) {
+  const domainActive: AssetDomainFilter | null =
+    source === 'import' ? null : (source as AssetDomainFilter);
+
   return (
-    <header className="studio-assets__toolbar">
+    <header className="studio-assets__toolbar" aria-label="资源库">
       <div className="studio-assets__toolbar-row">
-        <div className="studio-assets__toolbar-title">
-          <div>
-            <span className="studio-assets__eyebrow">LIBRARY</span>
-            <h1 className="studio-assets__title">资源</h1>
-          </div>
-          <span className="studio-assets__count">
-            {filteredCount === total ? `${total} 项` : `${filteredCount} / ${total}`}
-          </span>
-        </div>
+        <span className="studio-assets__count">
+          {filteredCount === total ? `${total} 项` : `${filteredCount} / ${total}`}
+        </span>
 
         <div className="studio-assets__toolbar-actions">
           <Input
@@ -84,38 +96,64 @@ export function AssetToolbar({
         </div>
       </div>
 
-      <div className="studio-assets__filter-scroll" role="toolbar" aria-label="筛选">
-        {ASSET_KIND_OPTIONS.map((opt) => (
-          <StudioChip
-            key={`k-${opt.value}`}
-            size="sm"
-            active={kind === opt.value}
-            onClick={() => onKindChange(opt.value)}
-          >
-            {opt.label}
-          </StudioChip>
-        ))}
-        <span className="studio-assets__filter-sep" aria-hidden />
-        {ASSET_SOURCE_OPTIONS.map((opt) => (
-          <StudioChip
-            key={`s-${opt.value}`}
-            size="sm"
-            active={source === opt.value}
-            onClick={() => onSourceChange(opt.value)}
-          >
-            {opt.label}
-          </StudioChip>
-        ))}
-        <StudioChip
-          size="sm"
-          active={favoritesOnly}
-          onClick={() => onFavoritesOnlyChange(!favoritesOnly)}
-        >
-          收藏
-        </StudioChip>
-      </div>
+      <div className="studio-assets__filters">
+        <FilterGroup label="类型">
+          {ASSET_KIND_OPTIONS.map((opt) => (
+            <StudioChip
+              key={`k-${opt.value}`}
+              size="sm"
+              active={kind === opt.value}
+              onClick={() => onKindChange(opt.value)}
+            >
+              {opt.label}
+            </StudioChip>
+          ))}
+        </FilterGroup>
 
-      <AssetDateRangeFilter value={dateRange} onChange={onDateRangeChange} />
+        <FilterGroup label="来源域">
+          {ASSET_DOMAIN_OPTIONS.map((opt) => (
+            <StudioChip
+              key={`d-${opt.value}`}
+              size="sm"
+              active={domainActive === opt.value}
+              onClick={() => onSourceChange(opt.value)}
+            >
+              {opt.label}
+            </StudioChip>
+          ))}
+        </FilterGroup>
+
+        <FilterGroup label="方式">
+          <StudioChip
+            size="sm"
+            active={source !== 'import' && !favoritesOnly}
+            onClick={() => {
+              if (source === 'import') onSourceChange('all');
+              if (favoritesOnly) onFavoritesOnlyChange(false);
+            }}
+          >
+            全部
+          </StudioChip>
+          <StudioChip
+            size="sm"
+            active={source === 'import'}
+            onClick={() => onSourceChange(source === 'import' ? 'all' : 'import')}
+          >
+            导入
+          </StudioChip>
+          <StudioChip
+            size="sm"
+            active={favoritesOnly}
+            onClick={() => onFavoritesOnlyChange(!favoritesOnly)}
+          >
+            仅收藏
+          </StudioChip>
+        </FilterGroup>
+
+        <FilterGroup label="时间">
+          <AssetDateRangeFilter value={dateRange} onChange={onDateRangeChange} />
+        </FilterGroup>
+      </div>
     </header>
   );
 }

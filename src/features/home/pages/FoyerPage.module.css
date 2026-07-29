@@ -48,9 +48,9 @@
   min-width: 0;
 }
 
-/* 对齐预览稿 mode-switch：深底轨道 + 选中主色浅底/描边 */
+/* 对齐预览稿 mode-switch：深底轨道 + 选中主色浅底/描边；水平居中 */
 .modeSwitch {
-  align-self: flex-start;
+  align-self: center;
   padding: 4px;
   gap: 2px;
   border: 1px solid color-mix(in srgb, var(--studio-text) 8%, transparent);
@@ -142,34 +142,6 @@
   min-height: calc(var(--studio-create-ref-size, 40px) + 14px);
 }
 
-.createCanvasBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  align-self: flex-start;
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1px solid var(--studio-border);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--studio-bg) 40%, var(--studio-surface));
-  color: var(--studio-text);
-  font-size: 13px;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.createCanvasBtn:hover,
-.createCanvasBtn:focus-visible {
-  border-color: color-mix(in srgb, var(--studio-primary) 45%, var(--studio-border));
-  color: var(--studio-primary);
-  outline: none;
-}
-
-.createCanvasBtn:focus-visible {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--studio-primary) 35%, transparent);
-}
-
 .section {
   min-width: 0;
 }
@@ -232,23 +204,32 @@
 }
 
 .primaryAction {
-  background: var(--studio-primary);
-  border-color: transparent;
-  color: var(--studio-on-primary);
+  border-color: var(--studio-control-selected-border);
+  background: var(--studio-control-selected-bg);
+  color: var(--studio-control-selected-fg);
   font-weight: 650;
 }
 
 .textAction:hover,
-.textAction:focus-visible,
+.textAction:focus-visible {
+  outline: none;
+  color: var(--studio-control-hover-fg);
+  border-color: var(--studio-control-hover-border);
+  background: var(--studio-control-hover-bg);
+  filter: none;
+}
+
 .primaryAction:hover,
 .primaryAction:focus-visible {
   outline: none;
-  filter: brightness(1.05);
+  border-color: color-mix(in srgb, var(--studio-primary) 55%, transparent);
+  background: color-mix(in srgb, var(--studio-primary) 16%, transparent);
+  filter: none;
 }
 
 .canvasGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -269,6 +250,34 @@
 .canvasCard:focus-visible {
   border-color: color-mix(in srgb, var(--studio-primary) 40%, var(--studio-border));
   outline: none;
+}
+
+.canvasCreateCard {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--studio-text) 18%, transparent);
+  background: color-mix(in srgb, var(--studio-bg) 55%, var(--studio-surface));
+}
+
+.canvasCreateCard:hover,
+.canvasCreateCard:focus-visible {
+  border-color: color-mix(in srgb, var(--studio-primary) 45%, var(--studio-border));
+  color: var(--studio-primary);
+}
+
+.canvasCreateIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  color: var(--studio-text-secondary);
+  font-size: 28px;
+  background: color-mix(in srgb, var(--studio-text) 4%, transparent);
+}
+
+.canvasCreateCard:hover .canvasCreateIcon,
+.canvasCreateCard:focus-visible .canvasCreateIcon {
+  color: var(--studio-primary);
 }
 
 .canvasThumb {
@@ -424,7 +433,7 @@
   }
 
   .canvasGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -435,6 +444,10 @@
 
   .title {
     font-size: 24px;
+  }
+
+  .canvasGrid {
+    grid-template-columns: 1fr;
   }
 
   .taskLink {
@@ -453,8 +466,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .canvasCard,
-  .taskLink,
-  .createCanvasBtn {
+  .taskLink {
     transition: none;
   }
 }

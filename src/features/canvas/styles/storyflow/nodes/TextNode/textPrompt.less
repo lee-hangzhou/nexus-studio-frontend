@@ -37,16 +37,17 @@
     justify-content: center;
     width: 36px;
     height: 36px;
-    border: none;
+    border: 1px solid var(--studio-control-selected-border);
     border-radius: 18px;
-    background: linear-gradient(135deg, #3d4556 0%, #2a2e38 100%);
-    color: #fff;
+    background: var(--studio-control-selected-bg);
+    color: var(--studio-control-selected-fg);
     font-size: 14px;
     cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+    box-shadow: none;
 
     &:hover {
-      filter: brightness(1.08);
+      border-color: color-mix(in srgb, var(--studio-primary) 55%, transparent);
+      background: color-mix(in srgb, var(--studio-primary) 16%, transparent);
     }
   }
 }

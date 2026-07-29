@@ -12,7 +12,7 @@ dayjs.locale('zh-cn');
 
 export type AssetDateQuick = 'all' | 'today' | 'week' | 'month' | 'custom';
 
-const QUICK_OPTIONS: { key: AssetDateQuick; label: string }[] = [
+const QUICK_OPTIONS: { key: Exclude<AssetDateQuick, 'custom'>; label: string }[] = [
   { key: 'all', label: '全部' },
   { key: 'today', label: '今天' },
   { key: 'week', label: '近一周' },
@@ -38,13 +38,10 @@ interface AssetDateRangeFilterProps {
 export function AssetDateRangeFilter({ value, onChange }: AssetDateRangeFilterProps) {
   const [quick, setQuick] = useState<AssetDateQuick>('all');
 
-  const pickQuick = (key: AssetDateQuick) => {
+  const pickQuick = (key: Exclude<AssetDateQuick, 'custom'>) => {
     setQuick(key);
     if (key === 'all') {
       onChange(null);
-      return;
-    }
-    if (key === 'custom') {
       return;
     }
     onChange(rangeForQuick(key));
@@ -77,11 +74,10 @@ export function AssetDateRangeFilter({ value, onChange }: AssetDateRangeFilterPr
           setQuick('custom');
           onChange([dates[0].startOf('day'), dates[1].endOf('day')]);
         }}
-        onFocus={() => setQuick('custom')}
+        onOpenChange={(open) => {
+          if (open) setQuick('custom');
+        }}
       />
-      {quick === 'custom' && value ? (
-        <span className="studio-assets__range-hint">自定义区间</span>
-      ) : null}
     </div>
   );
 }

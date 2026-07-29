@@ -8,6 +8,7 @@ export type NodeGenerateExtra = Partial<
     | 'duration'
     | 'ratio'
     | 'resolution'
+    | 'count'
     | 'model_id'
     | 'ref_asset_ids'
     | 'prompt'

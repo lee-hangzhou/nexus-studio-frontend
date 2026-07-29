@@ -1,244 +1,35 @@
-import { CloseOutlined, PlusOutlined } from '@ant-design/icons';
 import { message, Select } from 'antd';
-import type { CSSProperties } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { listAssets } from '../../../api/assets';
-import { listGenerateModels, uploadGenerateMaterial } from '../../../api/generate';
-import type { GenerateModelItem } from '../../../api/generate';
+import { uploadGenerateMaterial } from '../../../api/generate';
 import { ComposerSendButton } from '../../../shared/ui/ComposerSendButton';
 import { ComposerShell } from '../../../shared/ui/ComposerShell';
+import { isAuthenticated } from '../../../shared/utils/authGate';
 import type { GenerateKind, GenerateRatio, GenerateRefImage, GenerateResolution } from '../types';
-import { DEFAULT_GENERATE_MAX_REFERENCE_IMAGES } from '../constants';
-import { MentionEditor, type MentionEditorHandle } from './MentionEditor';
-
-// ── 常量 / 静态选项 ──────────────────────────────────────────────────────────
+import {
+  buildParamsCapsuleLabel,
+  createMentionProvider,
+  editorPlaceholderForMode,
+  filledRefs,
+  GenerationParamsCapsule,
+  GenerationPromptEditor,
+  GenerationRefRail,
+  isDualFrameMode,
+  isFirstFrameMode,
+  isFrameSlotMode,
+  normalizeUploadedAssetsForMode,
+  pickImageRatio,
+  ratiosForResolution,
+  refsToMentionItems,
+  resolveMaxReferenceImages,
+  useGenerateModelOptions,
+  type CanvasPromptEditorPayload,
+} from '../composer';
 
 const TASK_TYPE_OPTIONS = [
   { value: 'image', label: '图片生成' },
   { value: 'video', label: '视频生成' },
 ];
-
-const PREFERRED_IMAGE_RATIO: GenerateRatio = '4:3';
-
-function pickImageRatio(options: GenerateRatio[] | undefined): GenerateRatio | undefined {
-  if (!options?.length) return undefined;
-  return options.includes(PREFERRED_IMAGE_RATIO) ? PREFERRED_IMAGE_RATIO : options[0];
-}
-
-function resolutionLabel(r: GenerateResolution) {
-  const normalized = r.toLowerCase();
-  if (normalized === '4k') return '超清 4K';
-  if (normalized === '3k') return '高清 3K';
-  if (normalized === '2k') return '高清 2K';
-  if (normalized === '1k') return '标准 1K';
-  if (normalized === '0.5k') return '轻量 0.5K';
-  return r;
-}
-
-function ratioShape(value: string) {
-  const [wRaw, hRaw] = value.split(':');
-  const w = Number(wRaw);
-  const h = Number(hRaw);
-  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) {
-    return { w: 1, h: 1 };
-  }
-  return { w, h };
-}
-
-function normalizeRatioOptions(values?: string[]) {
-  if (!values?.length) return [];
-  return values.map((value) => ({ value, ...ratioShape(value) }));
-}
-
-function referenceModeLabel(value?: number, options?: { value: number; label: string }[]) {
-  if (value === undefined) return '';
-  return options?.find((opt) => opt.value === value)?.label ?? '';
-}
-
-// ── 参数弹出面板 ─────────────────────────────────────────────────────────────
-
-interface ParamsPanelProps {
-  ratio: GenerateRatio;
-  resolution: GenerateResolution;
-  count: number;
-  duration?: number;
-  referenceMode?: number;
-  kind: GenerateKind;
-  ratioOptions: { value: GenerateRatio; w: number; h: number }[];
-  resolutionOptions: GenerateResolution[];
-  countOptions: number[];
-  durationOptions: number[];
-  referenceModeOptions: { value: number; label: string }[];
-  onRatioChange: (v: GenerateRatio) => void;
-  onResolutionChange: (v: GenerateResolution) => void;
-  onCountChange: (v: number) => void;
-  onDurationChange: (v: number) => void;
-  onReferenceModeChange: (v: number) => void;
-  onClose: () => void;
-}
-
-function ParamsPanel({
-  ratio,
-  resolution,
-  count,
-  duration,
-  referenceMode,
-  kind,
-  ratioOptions,
-  resolutionOptions,
-  countOptions,
-  durationOptions,
-  referenceModeOptions,
-  onRatioChange,
-  onResolutionChange,
-  onCountChange,
-  onDurationChange,
-  onReferenceModeChange,
-}: ParamsPanelProps) {
-  return (
-    <>
-        <div className="studio-create__params-section">
-          <div className="studio-create__params-label">选择比例</div>
-        <div
-          className="studio-create__ratio-grid"
-          style={{ gridTemplateColumns: `repeat(${Math.min(ratioOptions.length, 8)}, minmax(0, 1fr))` }}
-        >
-          {ratioOptions.map((opt) => {
-            const scale = 20;
-            const w = Math.round((opt.w / Math.max(opt.w, opt.h)) * scale);
-            const h = Math.round((opt.h / Math.max(opt.w, opt.h)) * scale);
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                className={`studio-create__ratio-btn${ratio === opt.value ? ' studio-create__ratio-btn--active' : ''}`}
-                onClick={() => onRatioChange(opt.value)}
-              >
-                <span
-                  className="studio-create__ratio-icon"
-                  style={{ width: w, height: h }}
-                  aria-hidden
-                />
-                <span className="studio-create__ratio-label">{opt.value}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-        <div className="studio-create__params-section">
-          <div className="studio-create__params-label">选择分辨率</div>
-        <div
-          className="studio-create__pill-row"
-          style={{ gridTemplateColumns: `repeat(${Math.max(resolutionOptions.length, 1)}, minmax(0, 1fr))` }}
-        >
-          {resolutionOptions.map((value) => (
-            <button
-              key={value}
-              type="button"
-              className={`studio-create__option-pill${resolution === value ? ' studio-create__option-pill--active' : ''}`}
-              onClick={() => onResolutionChange(value)}
-            >
-              {resolutionLabel(value)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {kind === 'image' && (
-        <div className="studio-create__params-section">
-          <div className="studio-create__params-label">选择图片数量</div>
-          <div
-            className="studio-create__pill-row"
-            style={{ gridTemplateColumns: `repeat(${Math.min(countOptions.length, 8)}, minmax(0, 1fr))` }}
-          >
-            {countOptions.map((n) => (
-              <button
-                key={n}
-                type="button"
-                className={`studio-create__option-pill${count === n ? ' studio-create__option-pill--active' : ''}`}
-                onClick={() => onCountChange(n)}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {kind === 'video' && referenceModeOptions.length > 0 && (
-        <div className="studio-create__params-section">
-          <div className="studio-create__params-label">选择参考模式</div>
-          <div
-            className="studio-create__pill-row"
-            style={{ gridTemplateColumns: `repeat(${Math.min(referenceModeOptions.length, 4)}, minmax(0, 1fr))` }}
-          >
-            {referenceModeOptions.map((mode) => (
-              <button
-                key={mode.value}
-                type="button"
-                className={`studio-create__option-pill${referenceMode === mode.value ? ' studio-create__option-pill--active' : ''}`}
-                onClick={() => onReferenceModeChange(mode.value)}
-              >
-                {mode.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {kind === 'video' && durationOptions.length > 0 && (
-        <div className="studio-create__params-section">
-          <div className="studio-create__params-label">选择视频时长</div>
-          <div
-            className="studio-create__pill-row"
-            style={{ gridTemplateColumns: `repeat(${Math.min(durationOptions.length, 8)}, minmax(0, 1fr))` }}
-          >
-            {durationOptions.map((n) => (
-              <button
-                key={n}
-                type="button"
-                className={`studio-create__option-pill${duration === n ? ' studio-create__option-pill--active' : ''}`}
-                onClick={() => onDurationChange(n)}
-              >
-                {n}s
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-// ── 参考图缩略图 ─────────────────────────────────────────────────────────────
-
-function RefImageThumb({ img, onRemove }: { img: RefImage; onRemove: () => void }) {
-  const isImage = img.mimeType.startsWith('image/');
-  return (
-    <div className="studio-create__ref-thumb">
-      {isImage ? (
-        <img src={img.url} alt={img.name} />
-      ) : (
-        <div className="studio-create__ref-file" title={img.name}>
-          <span className="studio-create__ref-file-mark">@</span>
-          <span className="studio-create__ref-file-name">{img.name}</span>
-        </div>
-      )}
-      <button
-        type="button"
-        className="studio-create__ref-thumb-del"
-        aria-label="移除参考图"
-        onClick={onRemove}
-      >
-        <CloseOutlined />
-      </button>
-    </div>
-  );
-}
-
-// ── 主组件 ────────────────────────────────────────────────────────────────────
 
 export interface CreateComposerParams {
   ratio: GenerateRatio;
@@ -276,98 +67,85 @@ export function CreateComposer({
   onSubmit,
 }: CreateComposerProps) {
   const [prompt, setPrompt] = useState('');
-  const [refImages, setRefImages] = useState<RefImage[]>([]);
-  const [showParams, setShowParams] = useState(false);
-  const [paramsPopupStyle, setParamsPopupStyle] = useState<CSSProperties | null>(null);
-  const [modelOptions, setModelOptions] = useState<{ value: string; label: string }[]>([]);
-  const [modelSpecs, setModelSpecs] = useState<GenerateModelItem[]>([]);
-  const [modelsLoading, setModelsLoading] = useState(false);
+  const [promptKey, setPromptKey] = useState(0);
+  const [uploadedAssets, setUploadedAssets] = useState<(RefImage | null)[]>([]);
   const [materialsUploading, setMaterialsUploading] = useState(false);
   const [favoriteMaterials, setFavoriteMaterials] = useState<RefImage[]>([]);
   const composerRef = useRef<HTMLDivElement>(null);
-  const paramsCapsuleRef = useRef<HTMLButtonElement>(null);
-  const paramsPopupRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const editorRef = useRef<MentionEditorHandle>(null);
+  const uploadTargetIndexRef = useRef<number | null>(null);
+  const promptDraftRef = useRef('');
+
+  const ensureModel = useCallback(
+    (patch: {
+      model: string;
+      ratio?: GenerateRatio;
+      resolution?: string;
+      count?: number;
+      duration?: number;
+      referenceMode?: number;
+    }) => {
+      onParamsChange(patch);
+    },
+    [onParamsChange],
+  );
+
+  const {
+    modelOptions,
+    loading: modelsLoading,
+    currentSpec,
+    resolutionOptions,
+    countOptions,
+    durationOptions,
+    referenceModeOptions,
+    maxMaterialImages,
+  } = useGenerateModelOptions(kind, params.model, ensureModel);
 
   const currentModel = params.model || modelOptions[0]?.value || '';
-  const currentModelSpec = modelSpecs.find((m) => m.model_id === currentModel);
-  const paramOptions = currentModelSpec?.param_options;
-  const resolutionOptions = paramOptions?.resolutions ?? [];
-  const countOptions = paramOptions?.counts ?? [];
-  const durationOptions = paramOptions?.durations ?? [];
-  const referenceModeOptions = paramOptions?.reference_modes ?? [];
-  const ratiosByResolution = paramOptions?.ratios_by_resolution ?? {};
-  const ratioValues = ratiosByResolution[params.resolution] ?? paramOptions?.ratios;
-  const ratioOptions = normalizeRatioOptions(ratioValues);
-  const capsRefImages = paramOptions?.material_limits?.images;
-  const maxReferenceImages =
-    typeof capsRefImages === 'number' && capsRefImages > 0
-      ? capsRefImages
-      : DEFAULT_GENERATE_MAX_REFERENCE_IMAGES;
+  const ratioOptions = ratiosForResolution(currentSpec, params.resolution);
+  const isFirst = isFirstFrameMode(kind, params.referenceMode);
+  const isDual = isDualFrameMode(kind, params.referenceMode);
+  const frameSlotMode = isFrameSlotMode(kind, params.referenceMode);
+  const maxReferenceImages = resolveMaxReferenceImages({
+    kind,
+    referenceMode: params.referenceMode,
+    materialLimit: maxMaterialImages,
+  });
+  const refImages = filledRefs(uploadedAssets);
+  const dualSlots: [RefImage | null, RefImage | null] = isDual
+    ? [uploadedAssets[0] ?? null, uploadedAssets[1] ?? null]
+    : [null, null];
   const paramsReady = Boolean(
-    currentModelSpec
+    currentSpec
     && (
       kind === 'image'
         ? resolutionOptions.length > 0 && ratioOptions.length > 0 && countOptions.length > 0
         : ratioOptions.length > 0 && durationOptions.length > 0 && referenceModeOptions.length > 0
     ),
   );
-  const mentionMaterials = [...refImages, ...favoriteMaterials.filter(
-    (asset) => !refImages.some((item) => item.assetId != null && item.assetId === asset.assetId),
-  )];
 
-  const loadModels = useCallback(
-    async (k: GenerateKind) => {
-      setModelsLoading(true);
-      try {
-        const res = await listGenerateModels(k);
-        const items = res.items ?? [];
-        const opts = items.map((m) => ({ value: m.model_id, label: m.label }));
-        setModelSpecs(items);
-        setModelOptions(opts);
-        if (opts.length === 0) {
-          message.warning('暂无可用生成模型');
-          return;
-        }
-        if (!params.model || !opts.find((o) => o.value === params.model)) {
-          const nextSpec = items[0];
-          const nextOptions = nextSpec?.param_options;
-          const nextRatios = nextOptions?.ratios as GenerateRatio[] | undefined;
-          const nextRatio =
-            k === 'image' ? pickImageRatio(nextRatios) : nextRatios?.[0];
-          onParamsChange({
-            model: opts[0].value,
-            ...(nextRatio ? { ratio: nextRatio } : {}),
-            ...(nextOptions?.resolutions?.[0] ? { resolution: nextOptions.resolutions[0] } : {}),
-            ...(nextOptions?.counts?.[0] != null ? { count: nextOptions.counts[0] } : {}),
-            ...(nextOptions?.durations?.[0] != null ? { duration: nextOptions.durations[0] } : {}),
-            ...(nextOptions?.reference_modes?.[0]?.value != null
-              ? { referenceMode: nextOptions.reference_modes[0].value }
-              : {}),
-          });
-        }
-      } catch {
-        message.error('模型列表加载失败');
-        setModelSpecs([]);
-        setModelOptions([]);
-      } finally {
-        setModelsLoading(false);
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+  const mentionMaterials = useMemo(
+    () => [
+      ...refImages,
+      ...favoriteMaterials.filter(
+        (asset) => !refImages.some((item) => item.assetId != null && item.assetId === asset.assetId),
+      ),
+    ],
+    [favoriteMaterials, refImages],
   );
 
-  useEffect(() => {
-    void loadModels(kind);
-  }, [kind, loadModels]);
+  const mentionProvider = useMemo(
+    () => createMentionProvider(refsToMentionItems(frameSlotMode ? [] : mentionMaterials)),
+    [frameSlotMode, mentionMaterials],
+  );
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadFavoriteMaterials = useCallback(() => {
+    if (!isAuthenticated()) {
+      setFavoriteMaterials([]);
+      return;
+    }
     void listAssets({ page: 1, page_size: 80, favorites_only: true })
       .then((res) => {
-        if (cancelled) return;
         setFavoriteMaterials(
           res.items
             .filter((asset) => asset.kind === 'image' || asset.kind === 'video')
@@ -382,31 +160,39 @@ export function CreateComposer({
         );
       })
       .catch(() => {
-        if (!cancelled) setFavoriteMaterials([]);
+        setFavoriteMaterials([]);
       });
-    return () => {
-      cancelled = true;
-    };
   }, []);
+
+  useEffect(() => {
+    loadFavoriteMaterials();
+  }, [loadFavoriteMaterials]);
 
   useEffect(() => {
     if (!draft) return;
     const refs = draft.refImages ?? [];
-    setRefImages(refs);
-    // 用素材列表把 prompt 里的 @素材名 还原成富 chip（缩略图 + hover 预览）
-    editorRef.current?.setContent(draft.prompt, refs);
+    setUploadedAssets(refs);
+    setPrompt(draft.prompt);
+    promptDraftRef.current = draft.prompt;
+    setPromptKey((k) => k + 1);
   }, [draft]);
 
   useEffect(() => {
-    if (!currentModelSpec) return;
+    setUploadedAssets((prev) =>
+      normalizeUploadedAssetsForMode(kind, params.referenceMode, prev),
+    );
+  }, [kind, params.referenceMode]);
+
+  useEffect(() => {
+    if (!currentSpec) return;
     const next: Partial<CreateComposerParams> = {};
-    const nextResolutions = currentModelSpec.param_options?.resolutions ?? [];
-    const nextCounts = currentModelSpec.param_options?.counts ?? [];
-    const nextDurations = currentModelSpec.param_options?.durations ?? [];
-    const nextReferenceModes = currentModelSpec.param_options?.reference_modes ?? [];
+    const nextResolutions = currentSpec.param_options?.resolutions ?? [];
+    const nextCounts = currentSpec.param_options?.counts ?? [];
+    const nextDurations = currentSpec.param_options?.durations ?? [];
+    const nextReferenceModes = currentSpec.param_options?.reference_modes ?? [];
     const nextRatioValues =
-      currentModelSpec.param_options?.ratios_by_resolution?.[params.resolution]
-      ?? currentModelSpec.param_options?.ratios
+      currentSpec.param_options?.ratios_by_resolution?.[params.resolution]
+      ?? currentSpec.param_options?.ratios
       ?? [];
 
     if (nextResolutions.length > 0 && !nextResolutions.includes(params.resolution)) {
@@ -435,60 +221,19 @@ export function CreateComposer({
     if (Object.keys(next).length > 0) {
       onParamsChange(next);
     }
-  }, [currentModelSpec, kind, onParamsChange, params.count, params.duration, params.ratio, params.referenceMode, params.resolution]);
+  }, [
+    currentSpec,
+    kind,
+    onParamsChange,
+    params.count,
+    params.duration,
+    params.ratio,
+    params.referenceMode,
+    params.resolution,
+  ]);
 
-  const updateParamsPopupPosition = useCallback(() => {
-    const composerEl = composerRef.current;
-    const capsuleEl = paramsCapsuleRef.current;
-    if (!composerEl || !capsuleEl) return;
-
-    const composerRect = composerEl.getBoundingClientRect();
-    const capsuleRect = capsuleEl.getBoundingClientRect();
-    const margin = 8;
-    const viewportPadding = 12;
-    const width = Math.min(520, composerRect.width, window.innerWidth - viewportPadding * 2);
-    const left = capsuleRect.left + capsuleRect.width / 2 - width / 2;
-
-    setParamsPopupStyle({
-      position: 'fixed',
-      top: Math.max(viewportPadding, capsuleRect.top - margin),
-      left: Math.max(viewportPadding, Math.min(left, window.innerWidth - width - viewportPadding)),
-      width,
-      transform: 'translateY(-100%)',
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!showParams) return;
-
-    updateParamsPopupPosition();
-    window.addEventListener('resize', updateParamsPopupPosition);
-    window.addEventListener('scroll', updateParamsPopupPosition, true);
-    return () => {
-      window.removeEventListener('resize', updateParamsPopupPosition);
-      window.removeEventListener('scroll', updateParamsPopupPosition, true);
-    };
-  }, [showParams, updateParamsPopupPosition]);
-
-  // 点击外部关闭参数面板
-  useEffect(() => {
-    if (!showParams) return;
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (
-        paramsPopupRef.current &&
-        !paramsPopupRef.current.contains(target) &&
-        paramsCapsuleRef.current &&
-        !paramsCapsuleRef.current.contains(target)
-      ) {
-        setShowParams(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [showParams]);
-
-  const handleAddRef = () => {
+  const handleAddRef = (slotIndex?: number) => {
+    uploadTargetIndexRef.current = slotIndex ?? null;
     fileInputRef.current?.click();
   };
 
@@ -497,29 +242,56 @@ export function CreateComposer({
     e.target.value = '';
     if (files.length === 0) return;
 
-    const remaining = maxReferenceImages - refImages.length;
-    if (remaining <= 0) {
-      message.warning(`最多添加 ${maxReferenceImages} 张参考图`);
-      return;
+    const targetIndex = uploadTargetIndexRef.current;
+    uploadTargetIndexRef.current = null;
+
+    const imageOnly = frameSlotMode;
+    const accepted = imageOnly
+      ? files.filter((file) => file.type.startsWith('image/'))
+      : files;
+    if (imageOnly && accepted.length < files.length) {
+      message.warning('当前参考模式仅支持图片');
     }
-    const selected = files.slice(0, remaining);
-    if (selected.length < files.length) {
-      message.warning(`最多添加 ${maxReferenceImages} 张参考图`);
-    }
+    if (accepted.length === 0) return;
+
+    const uploadOne = async (file: File): Promise<RefImage> => {
+      const material = await uploadGenerateMaterial(file);
+      return {
+        id: `ref-${material.asset_id}`,
+        assetId: material.asset_id,
+        url: material.url,
+        name: material.filename || file.name,
+        mimeType: material.mime_type || file.type,
+      };
+    };
 
     setMaterialsUploading(true);
     try {
-      const uploaded = await Promise.all(selected.map(async (file) => {
-        const material = await uploadGenerateMaterial(file);
-        return {
-          id: `ref-${material.asset_id}`,
-          assetId: material.asset_id,
-          url: material.url,
-          name: material.filename || file.name,
-          mimeType: material.mime_type || file.type,
-        };
-      }));
-      setRefImages((prev) => [...prev, ...uploaded].slice(0, maxReferenceImages));
+      if (isDual) {
+        const slot = targetIndex === 1 ? 1 : targetIndex === 0 ? 0 : dualSlots[0] ? 1 : 0;
+        const next = await uploadOne(accepted[0]);
+        setUploadedAssets((prev) => {
+          const slots: [RefImage | null, RefImage | null] = [prev[0] ?? null, prev[1] ?? null];
+          slots[slot] = next;
+          return slots;
+        });
+        return;
+      }
+      if (isFirst) {
+        setUploadedAssets([await uploadOne(accepted[0])]);
+        return;
+      }
+      const remaining = maxReferenceImages - refImages.length;
+      if (remaining <= 0) {
+        message.warning(`最多添加 ${maxReferenceImages} 张参考图`);
+        return;
+      }
+      const selected = accepted.slice(0, remaining);
+      if (selected.length < accepted.length) {
+        message.warning(`最多添加 ${maxReferenceImages} 张参考图`);
+      }
+      const uploaded = await Promise.all(selected.map(uploadOne));
+      setUploadedAssets((prev) => [...filledRefs(prev), ...uploaded].slice(0, maxReferenceImages));
     } catch (err) {
       const msg = err instanceof Error ? err.message : '素材上传失败';
       message.error(msg);
@@ -531,71 +303,95 @@ export function CreateComposer({
   const submit = () => {
     const text = prompt.trim();
     if (!text || materialsUploading) return;
+    if (!isAuthenticated()) {
+      onSubmit({
+        kind,
+        prompt: text,
+        params,
+        refImages: filledRefs(uploadedAssets),
+      });
+      return;
+    }
     if (!paramsReady) {
       message.warning('模型参数不可用，请刷新后重试');
       return;
     }
-    onSubmit({ kind, prompt: text, params, refImages });
-    editorRef.current?.clear();
+    if (isFirst && refImages.length !== 1) {
+      message.warning('请上传首帧参考图');
+      return;
+    }
+    if (isDual && (!dualSlots[0] || !dualSlots[1])) {
+      message.warning(dualSlots[0] ? '请上传尾帧参考图' : '请上传首帧参考图');
+      return;
+    }
+    const submitRefs = isDual ? [dualSlots[0]!, dualSlots[1]!] : refImages;
+    onSubmit({ kind, prompt: text, params, refImages: submitRefs });
+    setPrompt('');
+    promptDraftRef.current = '';
+    setPromptKey((k) => k + 1);
+    setUploadedAssets(isDual ? [null, null] : []);
   };
 
-  const handleMentionMaterialSelect = useCallback((material: RefImage) => {
-    setRefImages((prev) => {
-      if (material.assetId != null && prev.some((item) => item.assetId === material.assetId)) return prev;
-      return [...prev, material];
-    });
+  const handlePromptChange = useCallback((payload: CanvasPromptEditorPayload) => {
+    promptDraftRef.current = payload.prompt;
+    setPrompt(payload.prompt);
   }, []);
 
-  const capLabel = kind === 'image'
-    ? `${params.ratio}  ${resolutionLabel(params.resolution)}  ${params.count}张图片`
-    : [
-      referenceModeLabel(params.referenceMode, referenceModeOptions),
-      params.ratio,
-      resolutionLabel(params.resolution),
-      `${params.duration ?? durationOptions[0] ?? ''}秒`,
-    ].filter(Boolean).join('  ');
+  const capLabel = buildParamsCapsuleLabel({
+    kind,
+    ratio: params.ratio,
+    resolution: params.resolution,
+    count: params.count,
+    duration: params.duration,
+    referenceMode: params.referenceMode,
+    referenceModeOptions,
+    durationFallback: durationOptions[0],
+  });
 
   return (
     <footer className="studio-create__composer-v2 studio-create__composer">
       <ComposerShell
         boxRef={composerRef}
         className="studio-create__composer-box"
-        top={
-          <div className="studio-create__refs">
-            {refImages.map((img) => (
-              <RefImageThumb
-                key={img.id}
-                img={img}
-                onRemove={() => setRefImages((prev) => prev.filter((x) => x.id !== img.id))}
-              />
-            ))}
-            <button
-              type="button"
-              className="studio-create__ref-add"
-              onClick={handleAddRef}
-              title="添加参考素材（可选）"
-            >
-              <PlusOutlined />
-            </button>
-            {refImages.length === 0 ? (
-              <span className="studio-create__ref-hint">
-                {materialsUploading ? '素材上传中...' : '参考素材（可选）'}
-              </span>
-            ) : null}
-          </div>
-        }
-        input={
-          <MentionEditor
-            ref={editorRef}
-            className="studio-composer-box__textarea"
-            materials={mentionMaterials}
-            placeholder="结合参考、输入文字或 @ 引用参考素材，描述你想如何调整图片。"
-            onChange={setPrompt}
-            onEnterSubmit={submit}
-            onMaterialSelect={handleMentionMaterialSelect}
+        top={(
+          <GenerationRefRail
+            kind={kind}
+            referenceMode={params.referenceMode}
+            assets={uploadedAssets}
+            maxOmniAssets={maxReferenceImages}
+            uploading={materialsUploading}
+            onAdd={handleAddRef}
+            onRemove={(id) => {
+              setUploadedAssets((prev) => filledRefs(prev).filter((x) => x.id !== id));
+            }}
+            onRemoveSlot={(index) => {
+              setUploadedAssets((prev) => {
+                const slots: [RefImage | null, RefImage | null] = [
+                  prev[0] ?? null,
+                  prev[1] ?? null,
+                ];
+                slots[index] = null;
+                return slots;
+              });
+            }}
+            onSwapFrames={() => {
+              setUploadedAssets((prev) => [prev[1] ?? null, prev[0] ?? null]);
+            }}
           />
-        }
-        footerLeft={
+        )}
+        input={(
+          <GenerationPromptEditor
+            key={promptKey}
+            prompt={prompt}
+            placeholder={editorPlaceholderForMode(kind, params.referenceMode)}
+            enableMention={!frameSlotMode}
+            mentionProvider={mentionProvider}
+            onChange={handlePromptChange}
+            onEnterSubmit={submit}
+            className="studio-composer-box__textarea"
+          />
+        )}
+        footerLeft={(
           <>
             <Select
               className="studio-create__task-select"
@@ -618,76 +414,58 @@ export function CreateComposer({
               variant="outlined"
               style={{ minWidth: 130 }}
             />
-            <button
-              ref={paramsCapsuleRef}
-              type="button"
-              className={`studio-create__params-capsule${showParams ? ' studio-create__params-capsule--active' : ''}`}
-              onClick={() => {
-                updateParamsPopupPosition();
-                setShowParams((v) => !v);
-              }}
-              title="展开参数配置"
-            >
-              <span className="studio-create__params-ratio-ico" aria-hidden />
-              {capLabel}
-            </button>
+            <GenerationParamsCapsule
+              kind={kind}
+              label={capLabel}
+              ratio={params.ratio}
+              resolution={params.resolution}
+              count={params.count}
+              duration={params.duration}
+              referenceMode={params.referenceMode}
+              ratioOptions={ratioOptions}
+              resolutionOptions={resolutionOptions}
+              countOptions={countOptions}
+              durationOptions={durationOptions}
+              referenceModeOptions={referenceModeOptions}
+              onRatioChange={(v) => onParamsChange({ ratio: v })}
+              onResolutionChange={(v) => onParamsChange({ resolution: v })}
+              onCountChange={(v) => onParamsChange({ count: v })}
+              onDurationChange={(v) => onParamsChange({ duration: v })}
+              onReferenceModeChange={(v) => onParamsChange({ referenceMode: v })}
+            />
             <button
               type="button"
               className="studio-create__at-btn"
-              title="引用参考素材"
-              onClick={() => editorRef.current?.openMention()}
+              title={frameSlotMode ? '当前参考模式请使用上方帧槽上传' : '引用参考素材'}
+              disabled={frameSlotMode}
+              onClick={() => {
+                loadFavoriteMaterials();
+              }}
             >
               @
             </button>
           </>
-        }
-        footerRight={
+        )}
+        footerRight={(
           <ComposerSendButton
-            disabled={!prompt.trim() || materialsUploading || !paramsReady || modelsLoading}
+            disabled={
+              !prompt.trim()
+              || materialsUploading
+              || (isAuthenticated() && (modelsLoading || !paramsReady))
+            }
             onSend={submit}
             title="生成 (Enter)"
           />
-        }
+        )}
       />
-
-      {showParams && paramsPopupStyle
-        ? createPortal(
-            <div
-              ref={paramsPopupRef}
-              className="studio-create__params-popup"
-              style={paramsPopupStyle}
-            >
-              <ParamsPanel
-                ratio={params.ratio}
-                resolution={params.resolution}
-                count={params.count}
-                duration={params.duration}
-                referenceMode={params.referenceMode}
-                kind={kind}
-                ratioOptions={ratioOptions}
-                resolutionOptions={resolutionOptions}
-                countOptions={countOptions}
-                durationOptions={durationOptions}
-                referenceModeOptions={referenceModeOptions}
-                onRatioChange={(v) => onParamsChange({ ratio: v })}
-                onResolutionChange={(v) => onParamsChange({ resolution: v })}
-                onCountChange={(v) => onParamsChange({ count: v })}
-                onDurationChange={(v) => onParamsChange({ duration: v })}
-                onReferenceModeChange={(v) => onParamsChange({ referenceMode: v })}
-                onClose={() => setShowParams(false)}
-              />
-            </div>,
-            document.body,
-          )
-        : null}
 
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*,video/*,audio/*"
-        multiple
+        accept={frameSlotMode ? 'image/*' : 'image/*,video/*,audio/*'}
+        multiple={!frameSlotMode}
         className="studio-create__file-input"
-        onChange={handleRefFileChange}
+        onChange={(e) => void handleRefFileChange(e)}
       />
     </footer>
   );

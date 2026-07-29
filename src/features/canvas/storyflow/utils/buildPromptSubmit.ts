@@ -1,8 +1,8 @@
-import type { WorkflowMentionItem } from '../components/CanvasPromptEditor/types';
+import type { WorkflowMentionItem } from '../../../generate/composer/promptEditor/types';
 import {
   parsePromptToDoc,
   serializeDocToContent,
-} from '../components/CanvasPromptEditor/utils/promptSerialize';
+} from '../../../generate/composer/promptEditor/utils/promptSerialize';
 import type { WorkflowPromptContent } from '../types';
 import { mergeConnectedTextIntoSubmitContent } from './mergePredecessorTextForSubmit';
 

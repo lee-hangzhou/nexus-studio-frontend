@@ -36,7 +36,6 @@ export function FoyerInProgressTasks({ tasks, loading, error, onRetry }: Props) 
           查看全部
         </Link>
       </div>
-      <p className={styles.sectionNote}>创作页在途生成；无任务时隐藏整块。</p>
 
       {loading ? (
         <div className={styles.sectionLoading} aria-busy>

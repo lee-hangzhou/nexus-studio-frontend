@@ -129,11 +129,13 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 10px;
-  border: 1px solid transparent;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--studio-text) 12%, transparent);
+  background: var(--studio-surface);
+  color: var(--studio-text-secondary);
   cursor: pointer;
   font: inherit;
-  font-weight: 650;
+  font-weight: 500;
   line-height: 1;
   white-space: nowrap;
 }
@@ -150,14 +152,14 @@ body {
 }
 
 .studio-btn--md {
-  min-height: 40px;
-  padding: 0 18px;
+  min-height: 36px;
+  padding: 0 14px;
   font-size: 13px;
 }
 
 .studio-btn--lg {
-  min-height: 44px;
-  padding: 0 22px;
+  min-height: 40px;
+  padding: 0 18px;
   font-size: 14px;
 }
 
@@ -165,28 +167,83 @@ body {
   width: 100%;
 }
 
+/* 主按钮 = 选中 chip：金边 + 金字 + 淡金底，禁止实心黄底 */
 .studio-btn--primary {
-  background: var(--studio-primary);
-  color: var(--studio-on-primary);
+  color: var(--studio-control-selected-fg);
+  font-weight: 650;
+  border-color: var(--studio-control-selected-border);
+  background: var(--studio-control-selected-bg);
 }
 
 .studio-btn--primary:hover:not(:disabled),
 .studio-btn--primary:focus-visible:not(:disabled) {
-  background: var(--studio-primary-hover);
+  color: var(--studio-control-selected-fg);
+  border-color: color-mix(in srgb, var(--studio-primary) 55%, transparent);
+  background: color-mix(in srgb, var(--studio-primary) 16%, transparent);
   outline: none;
 }
 
+.studio-btn:hover:not(:disabled):not(.studio-btn--primary):not(.studio-btn--text),
+.studio-btn:focus-visible:not(:disabled):not(.studio-btn--primary):not(.studio-btn--text) {
+  color: var(--studio-control-hover-fg);
+  border-color: var(--studio-control-hover-border);
+  background: var(--studio-control-hover-bg);
+  outline: none;
+}
+
+/* Ant Design primary / default：对齐 chip 体系 */
+.ant-btn {
+  border-radius: 999px !important;
+}
+
+.ant-btn-variant-solid.ant-btn-color-primary,
+.ant-btn-primary:not(.ant-btn-dangerous):not(:disabled) {
+  color: var(--studio-control-selected-fg) !important;
+  font-weight: 650 !important;
+  background: var(--studio-control-selected-bg) !important;
+  border-color: var(--studio-control-selected-border) !important;
+  box-shadow: none !important;
+}
+
+.ant-btn-variant-solid.ant-btn-color-primary:not(:disabled):hover,
+.ant-btn-primary:not(.ant-btn-dangerous):not(:disabled):hover {
+  color: var(--studio-control-selected-fg) !important;
+  background: color-mix(in srgb, var(--studio-primary) 16%, transparent) !important;
+  border-color: color-mix(in srgb, var(--studio-primary) 55%, transparent) !important;
+}
+
+.ant-btn-variant-solid.ant-btn-color-primary:not(:disabled):active,
+.ant-btn-primary:not(.ant-btn-dangerous):not(:disabled):active {
+  color: var(--studio-control-selected-fg) !important;
+  background: color-mix(in srgb, var(--studio-primary) 16%, transparent) !important;
+  border-color: color-mix(in srgb, var(--studio-primary) 55%, transparent) !important;
+}
+
+.ant-btn-default:not(:disabled) {
+  color: var(--studio-text-secondary) !important;
+  background: var(--studio-surface) !important;
+  border-color: color-mix(in srgb, var(--studio-text) 12%, transparent) !important;
+  box-shadow: none !important;
+}
+
+.ant-btn-default:not(:disabled):hover {
+  color: var(--studio-control-hover-fg) !important;
+  background: var(--studio-control-hover-bg) !important;
+  border-color: var(--studio-control-hover-border) !important;
+}
+
 .studio-btn--ghost {
-  border-color: color-mix(in srgb, var(--studio-text) 14%, transparent);
-  background: color-mix(in srgb, var(--studio-text) 2%, transparent);
-  color: var(--studio-text);
-  font-weight: 550;
+  border-color: color-mix(in srgb, var(--studio-text) 12%, transparent);
+  background: var(--studio-surface);
+  color: var(--studio-text-secondary);
+  font-weight: 500;
 }
 
 .studio-btn--ghost:hover:not(:disabled),
 .studio-btn--ghost:focus-visible:not(:disabled) {
-  border-color: color-mix(in srgb, var(--studio-text) 22%, transparent);
-  background: color-mix(in srgb, var(--studio-text) 6%, transparent);
+  color: var(--studio-control-hover-fg);
+  border-color: var(--studio-control-hover-border);
+  background: var(--studio-control-hover-bg);
   outline: none;
 }
 
@@ -455,6 +512,24 @@ body {
   outline-offset: 2px;
 }
 
+a.studio-user--login {
+  min-width: 48px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--studio-text) 18%, transparent);
+  color: var(--studio-text-secondary);
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+a.studio-user--login:hover {
+  color: var(--studio-text);
+  border-color: color-mix(in srgb, var(--studio-primary) 45%, transparent);
+  background: color-mix(in srgb, var(--studio-primary) 10%, transparent);
+}
+
 .studio-user__avatar.ant-avatar {
   background: color-mix(in srgb, var(--studio-primary) 18%, transparent);
   color: var(--studio-primary);
@@ -486,35 +561,10 @@ body {
   margin: 0 auto 24px;
   padding-bottom: 20px;
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: flex-end;
   gap: 24px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.studio-assets__eyebrow {
-  display: block;
-  margin-bottom: 12px;
-  color: var(--studio-primary);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0;
-}
-
-.studio-projects-gallery__heading h1 {
-  margin: 0;
-  color: var(--studio-text);
-  font-size: 24px;
-  font-weight: 620;
-  line-height: 1.2;
-  letter-spacing: 0;
-}
-
-.studio-projects-gallery__heading p {
-  margin: 6px 0 0;
-  color: var(--studio-text-secondary);
-  font-size: 13px;
-  line-height: 1.5;
 }
 
 .studio-projects-gallery__actions {
@@ -563,24 +613,22 @@ body {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid var(--studio-primary);
-  border-radius: 4px;
-  background: var(--studio-primary);
-  color: var(--studio-on-primary);
+  border: 1px solid var(--studio-control-selected-border);
+  border-radius: 999px;
+  background: var(--studio-control-selected-bg);
+  color: var(--studio-control-selected-fg);
   font-size: 13px;
   font-weight: 650;
-  white-space: nowrap;
   cursor: pointer;
-  transition: background 160ms ease, border-color 160ms ease;
 }
 
 .studio-projects-gallery__new-button:hover {
-  border-color: var(--studio-primary-hover);
-  background: var(--studio-primary-hover);
+  border-color: color-mix(in srgb, var(--studio-primary) 55%, transparent);
+  background: color-mix(in srgb, var(--studio-primary) 16%, transparent);
 }
 
 .studio-projects-gallery__new-button:focus-visible {
-  outline: 2px solid var(--studio-secondary);
+  outline: 2px solid color-mix(in srgb, var(--studio-primary) 55%, transparent);
   outline-offset: 2px;
 }
 
@@ -660,16 +708,17 @@ body {
 .studio-projects-gallery__page-btn {
   min-width: 76px;
   height: 32px;
-  border: 1px solid var(--studio-border);
-  border-radius: 4px;
-  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--studio-text) 12%, transparent);
+  border-radius: 999px;
+  background: var(--studio-surface);
   color: var(--studio-text-secondary);
+  font-weight: 500;
 }
 
 .studio-projects-gallery__page-btn:hover:not(:disabled) {
-  border-color: var(--studio-primary);
-  background: rgba(240, 179, 91, 0.08);
-  color: var(--studio-text);
+  color: var(--studio-control-hover-fg);
+  border-color: var(--studio-control-hover-border);
+  background: var(--studio-control-hover-bg);
 }
 
 /* Chat: generous reading column, optional tools, no empty reserved rail. */
@@ -810,10 +859,16 @@ body {
 }
 
 .studio-composer-box__send {
-  border-radius: 4px;
-  background: var(--studio-primary);
-  color: var(--studio-on-primary);
+  border-radius: 999px;
+  border: 1px solid var(--studio-control-selected-border);
+  background: var(--studio-control-selected-bg);
+  color: var(--studio-control-selected-fg);
   box-shadow: none;
+}
+
+.studio-composer-box__send:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--studio-primary) 55%, transparent);
+  background: color-mix(in srgb, var(--studio-primary) 16%, transparent);
 }
 
 .studio-composer-box__send.studio-composer-box__send--stop {
@@ -1111,6 +1166,26 @@ body {
   color: var(--studio-primary-hover);
 }
 
+.studio-create__frame-box {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #1a1e24;
+}
+
+.studio-create__frame-box--empty {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: transparent;
+}
+
+.studio-create__frame-box--empty:hover {
+  border-color: var(--studio-primary);
+  color: var(--studio-primary-hover);
+}
+
+.studio-create__frame-swap {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #1a1e24;
+}
+
 .studio-create__prompt-assistant {
   color: var(--studio-primary-hover);
 }
@@ -1142,6 +1217,36 @@ body {
 
 .studio-create__params-popup {
   border-color: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: #1c2026;
+  box-shadow: var(--studio-shadow-lg);
+  padding: 16px 18px 18px;
+  min-width: 400px;
+}
+
+.studio-create__params-popup--popover {
+  min-width: 400px;
+  max-width: min(560px, 92vw);
+  padding: 14px 16px 16px;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.studio-create__params-popover-overlay.ant-popover .ant-popover-inner {
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: #1c2026;
+  box-shadow: var(--studio-shadow-lg);
+}
+
+.studio-create__params-popover-overlay.ant-popover .ant-popover-inner-content {
+  padding: 0;
+}
+
+.studio-create__mention-popup {
+  border-color: rgba(255, 255, 255, 0.12);
   border-radius: 6px;
   background: #1c2026;
   box-shadow: var(--studio-shadow-lg);
@@ -1150,10 +1255,13 @@ body {
 /* 参数选项：布局在 global，交互态只走 --studio-control-*（与 StudioChip / Select 同源） */
 .studio-create__params-label {
   color: var(--studio-text-muted);
+  margin-bottom: 8px;
 }
 
 .studio-create__ratio-grid,
 .studio-create__pill-row {
+  gap: 6px;
+  padding: 6px;
   background: rgba(255, 255, 255, 0.06);
 }
 
@@ -1243,25 +1351,12 @@ body {
 }
 
 .studio-assets__toolbar-row {
-  align-items: flex-end;
+  align-items: center;
   margin-bottom: 18px;
 }
 
-.studio-assets__toolbar-title {
-  align-items: flex-end;
-  gap: 14px;
-}
-
-.studio-assets__title {
-  margin: 0;
-  font-size: 34px;
-  font-weight: 620;
-  line-height: 1.1;
-  letter-spacing: 0;
-}
-
 .studio-assets__count {
-  padding-bottom: 2px;
+  padding-bottom: 0;
   color: var(--studio-text-muted);
   font-size: 12px;
 }
@@ -1290,20 +1385,14 @@ body {
   color: var(--studio-primary-hover);
 }
 
-.studio-assets__filter-scroll {
-  gap: 8px;
-  padding-bottom: 11px;
-  border-bottom: 1px solid color-mix(in srgb, var(--studio-text) 8%, transparent);
-}
-
-.studio-assets__filter-sep {
-  height: 14px;
-  background: rgba(255, 255, 255, 0.12);
+.studio-assets__filters {
+  gap: 10px;
+  border-bottom-color: color-mix(in srgb, var(--studio-text) 8%, transparent);
 }
 
 .studio-assets__date-filter {
-  margin-top: 14px;
-  padding-bottom: 14px;
+  margin-top: 0;
+  padding-bottom: 0;
   border-bottom: 0;
 }
 
@@ -1321,6 +1410,20 @@ body {
 
 .studio-assets__body {
   padding-top: 24px;
+}
+
+.studio-assets__feed {
+  gap: 40px;
+}
+
+.studio-assets__section {
+  gap: 18px;
+}
+
+.studio-assets__section-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
 }
 
 .studio-assets__grid {
@@ -1447,12 +1550,9 @@ body {
     margin-bottom: 22px;
   }
 
-  .studio-projects-gallery__heading h1 {
-    font-size: 22px;
-  }
-
   .studio-projects-gallery__actions {
     justify-content: flex-start;
+    width: 100%;
   }
 
   .studio-projects-gallery__search {
@@ -1514,10 +1614,6 @@ body {
     flex-direction: column;
   }
 
-  .studio-assets__toolbar-title {
-    align-items: flex-end;
-  }
-
   .studio-assets__toolbar-actions {
     width: 100%;
   }
@@ -1545,10 +1641,6 @@ body {
 
   .studio-projects-gallery__card {
     min-height: 0;
-  }
-
-  .studio-assets__title {
-    font-size: 28px;
   }
 
   .studio-assets__toolbar-actions {

@@ -35,3 +35,29 @@
 .actions {
   margin-top: var(--studio-space-1, 4px);
 }
+
+.generateCore {
+  display: flex;
+  flex-direction: column;
+  gap: var(--studio-space-2, 8px);
+}
+
+.modelSelect {
+  width: 100%;
+}
+
+.refBlock,
+.paramsBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--studio-space-1, 4px);
+}
+
+.paramsBlock :global(.studio-create__params-section) {
+  margin-top: var(--studio-space-2, 8px);
+}
+
+.paramsBlock :global(.studio-create__params-label) {
+  font-size: var(--studio-font-size-sm, 12px);
+  color: var(--studio-color-text-secondary, #666);
+}

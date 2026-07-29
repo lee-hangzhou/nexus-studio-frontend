@@ -5,6 +5,7 @@ import type {
   GenerationKind,
   GenerationTaskStatus,
 } from './generated/generation';
+import { filterSelectableModels } from '../shared/utils/hiddenSelectableModels';
 
 export type {
   GenerateTaskCursor,
@@ -161,10 +162,14 @@ export function favoriteTask(taskId: number, favorited: boolean) {
   });
 }
 
-export function listGenerateModels(kind: 'image' | 'video' | 'audio') {
-  return request<{ items: GenerateModelItem[] }>(`/generate/models?kind=${kind}`, {
+export async function listGenerateModels(kind: 'image' | 'video' | 'audio') {
+  const res = await request<{ items: GenerateModelItem[] }>(`/generate/models?kind=${kind}`, {
     method: 'GET',
   });
+  return {
+    ...res,
+    items: filterSelectableModels(res.items ?? [], (item) => [item.model_id, item.label]),
+  };
 }
 
 export interface GenerateVoiceItem {

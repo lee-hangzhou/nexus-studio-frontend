@@ -34,6 +34,7 @@ export const ImageNodeContent = memo(function ImageNodeContent({
           status={status}
           taskId={d.task_id}
           assetUrls={d.output_asset_urls}
+          assetIds={d.output_asset_ids}
         />
         {!hasImage ? <PictureOutlined /> : null}
         <CanvasNodeTaskOverlay status={status} runningLabel="正在生成图片…" failedTitle="生图失败" />

@@ -66,6 +66,11 @@ export function useCanvasGenerateModels(nodeId: string, kind: 'image' | 'video')
     [currentSpec],
   );
 
+  const countOptions = useMemo(
+    () => currentSpec?.param_options?.counts ?? [],
+    [currentSpec],
+  );
+
   const durationOptions = useMemo(
     () => currentSpec?.param_options?.durations ?? [],
     [currentSpec],
@@ -104,6 +109,7 @@ export function useCanvasGenerateModels(nodeId: string, kind: 'image' | 'video')
     modelReady,
     ratioOptions,
     resolutionOptions,
+    countOptions,
     durationOptions,
     referenceModeOptions,
     maxReferenceImages,

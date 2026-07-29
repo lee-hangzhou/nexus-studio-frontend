@@ -9,9 +9,10 @@ import {
 } from '@ant-design/icons';
 import { Avatar, Dropdown } from 'antd';
 import type { ReactNode } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { logout } from '../../api/auth';
 import { useUser } from '../../contexts/UserContext';
+import { loginUrl } from '../../shared/utils/authGate';
 
 const workspaceNav: { key: string; to: string; label: string; end?: boolean; icon: ReactNode }[] = [
   { key: 'home', to: '/', label: '首页', end: true, icon: <HomeOutlined /> },
@@ -41,14 +42,14 @@ export function AppShell() {
 
   const shellMode = isCanvasEditorRoute ? 'canvas' : 'workspace';
 
-  const userMenu = (
+  const userMenu = user ? (
     <Dropdown
       menu={{
         items: [
           {
             key: 'account',
             icon: <UserOutlined />,
-            label: user?.username || '当前用户',
+            label: user.username || '当前用户',
             disabled: true,
           },
           { type: 'divider' },
@@ -64,10 +65,18 @@ export function AppShell() {
     >
       <button type="button" className="studio-user" aria-label="用户菜单">
         <Avatar size={28} className="studio-user__avatar">
-          {user?.username?.[0]?.toUpperCase()}
+          {user.username?.[0]?.toUpperCase()}
         </Avatar>
       </button>
     </Dropdown>
+  ) : (
+    <Link
+      to={loginUrl(`${location.pathname}${location.search}`)}
+      className="studio-user studio-user--login"
+      aria-label="登录"
+    >
+      登录
+    </Link>
   );
 
   return (

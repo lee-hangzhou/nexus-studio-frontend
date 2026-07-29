@@ -1,4 +1,3 @@
-import { PlusOutlined } from '@ant-design/icons';
 import { Modal, message } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +7,7 @@ import { listGenerateTasks, type GenerateTaskListItem } from '../../../api/gener
 import { createProject, listProjects, type ProjectView } from '../../../api/projects';
 import { useUser } from '../../../contexts/UserContext';
 import { StudioSegment } from '../../../shared/ui/StudioSegment';
+import { isAuthenticated, loginUrl } from '../../../shared/utils/authGate';
 import { ChatComposerBox } from '../../chat/components/ChatComposerBox';
 import {
   CreateComposer,
@@ -41,7 +41,7 @@ const MODE_OPTIONS: { value: FoyerMode; label: string }[] = [
   { value: 'agent', label: 'Agent' },
 ];
 
-const RECENT_CANVAS_LIMIT = 6;
+const RECENT_CANVAS_LIMIT = 3;
 const IN_PROGRESS_LIMIT = 8;
 
 export function FoyerPage() {
@@ -72,6 +72,12 @@ export function FoyerPage() {
   const [creating, setCreating] = useState(false);
 
   const loadProjects = useCallback(async () => {
+    if (!isAuthenticated()) {
+      setProjects([]);
+      setProjectsLoading(false);
+      setProjectsError(null);
+      return;
+    }
     setProjectsLoading(true);
     setProjectsError(null);
     try {
@@ -86,6 +92,12 @@ export function FoyerPage() {
   }, []);
 
   const loadInProgress = useCallback(async () => {
+    if (!isAuthenticated()) {
+      setInProgressTasks([]);
+      setInProgressLoading(false);
+      setInProgressError(null);
+      return;
+    }
     setInProgressLoading(true);
     setInProgressError(null);
     try {
@@ -111,6 +123,13 @@ export function FoyerPage() {
   }, [loadInProgress, loadProjects]);
 
   const loadAgentModels = useCallback(async () => {
+    if (!isAuthenticated()) {
+      setAgentModels([]);
+      setAgentModel('');
+      setAgentModelsLoading(false);
+      setAgentModelsError(null);
+      return;
+    }
     setAgentModelsLoading(true);
     setAgentModelsError(null);
     try {
@@ -140,8 +159,19 @@ export function FoyerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const goLogin = useCallback(
+    (from = '/') => {
+      navigate(loginUrl(from));
+    },
+    [navigate],
+  );
+
   const handleCreateSubmit = useCallback(
     (payload: CreateComposerSubmitPayload) => {
+      if (!isAuthenticated()) {
+        goLogin('/generate');
+        return;
+      }
       const handoff: FoyerCreateHandoff = {
         version: 1,
         target: 'create',
@@ -150,10 +180,14 @@ export function FoyerPage() {
       };
       navigate('/generate', { state: { [FOYER_HANDOFF_STATE_KEY]: handoff } });
     },
-    [navigate],
+    [goLogin, navigate],
   );
 
   const handleAgentSend = useCallback(() => {
+    if (!isAuthenticated()) {
+      goLogin('/chat');
+      return;
+    }
     const messageText = agentInput.trim();
     if (!messageText) {
       message.warning('请先输入内容');
@@ -172,9 +206,13 @@ export function FoyerPage() {
       files: agentFiles.map((item) => item.file),
     };
     navigate('/chat', { state: { [FOYER_HANDOFF_STATE_KEY]: handoff } });
-  }, [agentFiles, agentInput, agentModel, agentModelsError, navigate]);
+  }, [agentFiles, agentInput, agentModel, agentModelsError, goLogin, navigate]);
 
   const handleCreateCanvas = useCallback(async () => {
+    if (!isAuthenticated()) {
+      goLogin('/projects');
+      return;
+    }
     const name = createName.trim();
     if (!name) {
       message.warning('请输入画布名称');
@@ -191,7 +229,15 @@ export function FoyerPage() {
     } finally {
       setCreating(false);
     }
-  }, [createName, navigate]);
+  }, [createName, goLogin, navigate]);
+
+  const openCreateCanvas = useCallback(() => {
+    if (!isAuthenticated()) {
+      goLogin('/projects');
+      return;
+    }
+    setCreateOpen(true);
+  }, [goLogin]);
 
   const greeting = buildFoyerGreeting(user?.username);
 
@@ -199,7 +245,7 @@ export function FoyerPage() {
     <div className={styles.page}>
       <header className={styles.head}>
         <h1 className={styles.title}>{greeting}</h1>
-        <p className={styles.lead}>从一句话开始，或继续你的画布。</p>
+        <p className={styles.lead}>开始点亮你的想法吧</p>
       </header>
 
       <div className={styles.body}>
@@ -272,7 +318,7 @@ export function FoyerPage() {
                 }}
                 busy={false}
                 modelsLoading={agentModelsLoading}
-                canSend={Boolean(agentModel) && Boolean(agentInput.trim())}
+                canSend={Boolean(agentInput.trim()) && (isAuthenticated() ? Boolean(agentModel) : true)}
                 onSend={handleAgentSend}
                 showDisclaimer={false}
                 fixedTextareaHeight
@@ -281,21 +327,12 @@ export function FoyerPage() {
           </div>
         </section>
 
-        <button
-          type="button"
-          className={styles.createCanvasBtn}
-          onClick={() => setCreateOpen(true)}
-        >
-          <PlusOutlined aria-hidden />
-          新建画布
-        </button>
-
         <FoyerRecentCanvases
           projects={projects}
           loading={projectsLoading}
           error={projectsError}
           onRetry={() => void loadProjects()}
-          onCreateCanvas={() => setCreateOpen(true)}
+          onCreateCanvas={openCreateCanvas}
         />
 
         <FoyerInProgressTasks

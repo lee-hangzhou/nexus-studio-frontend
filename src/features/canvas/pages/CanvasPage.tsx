@@ -217,9 +217,16 @@ function CanvasPageInner() {
     if (replaceGraphQueuedRef.current) {
       return replaceGraphQueuedRef.current(nextNodes, nextEdges);
     }
-    setNodes(nextNodes);
+    const selectedIds = new Set(
+      graphRef.current.nodes.filter((node) => node.selected).map((node) => node.id),
+    );
+    const mergedNodes = nextNodes.map((node) => ({
+      ...node,
+      selected: selectedIds.has(node.id),
+    }));
+    setNodes(mergedNodes);
     setEdges(nextEdges);
-    return { nodes: nextNodes, edges: nextEdges };
+    return { nodes: mergedNodes, edges: nextEdges };
   }, [refetchSnapshot, setNodes, setEdges]);
 
   const { commitOps, applyResult, applyNodeProgress, patchNodeData, replaceGraphQueued } = useCanvasPatch(
@@ -910,6 +917,9 @@ function CanvasPageInner() {
         body.resolution = extra?.resolution ?? node.data.resolution;
         body.duration = extra?.duration ?? node.data.duration_sec;
         body.reference_mode = extra?.reference_mode;
+        if (kind === 'image' && extra?.count != null) {
+          body.count = extra.count;
+        }
         body.ref_asset_ids = extra?.ref_asset_ids;
         if (extra?.submit_content?.length) {
           body.submit_content = extra.submit_content;

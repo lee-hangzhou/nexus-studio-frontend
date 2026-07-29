@@ -1,5 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons';
-import { Empty, Spin } from 'antd';
+import { Spin } from 'antd';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
@@ -10,6 +10,8 @@ import styles from '../pages/FoyerPage.module.css';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
+
+const RECENT_VISIBLE = 3;
 
 type Props = {
   projects: ProjectView[];
@@ -27,6 +29,7 @@ export function FoyerRecentCanvases({
   onCreateCanvas,
 }: Props) {
   const navigate = useNavigate();
+  const visible = projects.slice(0, RECENT_VISIBLE);
 
   return (
     <section className={styles.section} aria-labelledby="foyer-recent-canvases">
@@ -50,16 +53,9 @@ export function FoyerRecentCanvases({
             重试
           </button>
         </div>
-      ) : projects.length === 0 ? (
-        <Empty description="还没有画布">
-          <button type="button" className={styles.primaryAction} onClick={onCreateCanvas}>
-            <PlusOutlined />
-            新建画布
-          </button>
-        </Empty>
       ) : (
         <div className={styles.canvasGrid}>
-          {projects.map((project) => (
+          {visible.map((project) => (
             <button
               key={project.id}
               type="button"
@@ -75,6 +71,20 @@ export function FoyerRecentCanvases({
               </span>
             </button>
           ))}
+          <button
+            type="button"
+            className={`${styles.canvasCard} ${styles.canvasCreateCard}`}
+            onClick={onCreateCanvas}
+            aria-label="新建画布"
+          >
+            <span className={styles.canvasCreateIcon} aria-hidden>
+              <PlusOutlined />
+            </span>
+            <span className={styles.canvasMeta}>
+              <strong className={styles.canvasName}>新建画布</strong>
+              <span className={styles.canvasTime}>从空白开始</span>
+            </span>
+          </button>
         </div>
       )}
     </section>

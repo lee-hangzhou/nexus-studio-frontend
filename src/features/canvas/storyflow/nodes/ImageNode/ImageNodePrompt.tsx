@@ -1,8 +1,17 @@
-import { ArrowUpOutlined, CloseOutlined, PlusOutlined } from '@ant-design/icons';
+import { ArrowUpOutlined } from '@ant-design/icons';
 import { Button, Dropdown, message } from 'antd';
 import { useStore } from '@xyflow/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { uploadGenerateMaterial } from '../../../../../api/generate';
+import type { GenerateRefImage } from '../../../../generate/types';
+import {
+  buildParamsCapsuleLabel,
+  filledRefs,
+  GenerationParamsCapsule,
+  GenerationRefRail,
+  normalizeRatioOptions,
+  resolveMaxReferenceImages,
+} from '../../../../generate/composer';
 import { useCanvasActions } from '../../context/CanvasActionsContext';
 import { useCanvasGenerate } from '../../../context/CanvasGenerateContext';
 import { NodeFloatPromptPanel } from '../../components/NodeFloatPromptPanel';
@@ -45,8 +54,12 @@ export function ImageNodePrompt({
   const nodeWidth = useStore((s) => s.nodeLookup.get(nodeId)?.width);
   const panelWidth = resolveFloatPromptWidth(nodeWidth, 'image');
 
-  const { modelLabel, modelMenuItems, modelReady, ratioOptions, resolutionOptions, maxReferenceImages } =
+  const { modelLabel, modelMenuItems, modelReady, ratioOptions, resolutionOptions, countOptions, maxReferenceImages } =
     useCanvasGenerateModels(nodeId, 'image');
+  const maxRefs = resolveMaxReferenceImages({
+    kind: 'image',
+    materialLimit: maxReferenceImages ?? IMAGE_PROMPT_MAX_REFERENCE_IMAGES,
+  });
   const {
     mentionProvider,
     previewMediaRefs,
@@ -55,18 +68,32 @@ export function ImageNodePrompt({
     connectedPromptTexts,
   } = useConnectedPredecessorRefs(nodeId, visible, {
     allowedTypes: ['image'],
-    maxReferenceCount: maxReferenceImages ?? IMAGE_PROMPT_MAX_REFERENCE_IMAGES,
+    maxReferenceCount: maxRefs,
   });
   const handleRemoveConnectedRef = useDisconnectConnectedRef(nodeId);
   const promptContentRef = useRef<WorkflowPromptContent>([]);
   const promptDraftRef = useRef(data.input_prompt ?? '');
-  const [refUrl, setRefUrl] = useState<string | null>(null);
-  const [refAssetId, setRefAssetId] = useState<number | null>(null);
+  const [uploadedAssets, setUploadedAssets] = useState<(GenerateRefImage | null)[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [count, setCount] = useState(1);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const ratio = data.ratio ?? ratioOptions[0] ?? '16:9';
   const resolution = data.resolution ?? resolutionOptions[0] ?? '2k';
   const isGenerating = data.status === 'running';
+  const ratioShapes = normalizeRatioOptions(ratioOptions);
+  const resolvedCount = countOptions.includes(count) ? count : (countOptions[0] ?? 1);
+  const capLabel = buildParamsCapsuleLabel({
+    kind: 'image',
+    ratio,
+    resolution,
+    count: resolvedCount,
+  });
+
+  useEffect(() => {
+    if (!countOptions.length) return;
+    if (!countOptions.includes(count)) setCount(countOptions[0]);
+  }, [countOptions, count]);
 
   useEffect(() => {
     if (!ratioOptions.length) return;
@@ -85,21 +112,37 @@ export function ImageNodePrompt({
   }, [resolutionOptions, data.resolution, nodeId, onNodeChange]);
 
   const handleAddRef = useCallback(() => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    input.onchange = () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      void uploadGenerateMaterial(file)
-        .then((asset) => {
-          setRefUrl(asset.url);
-          setRefAssetId(asset.asset_id);
-        })
-        .catch(() => message.error('参考图上传失败'));
-    };
-    input.click();
+    fileInputRef.current?.click();
   }, []);
+
+  const handleRefFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = '';
+    if (!files.length) return;
+    const images = files.filter((f) => f.type.startsWith('image/'));
+    if (!images.length) {
+      message.warning('图片节点仅支持图片参考');
+      return;
+    }
+    const room = maxRefs - filledRefs(uploadedAssets).length;
+    try {
+      const uploaded = await Promise.all(
+        images.slice(0, Math.max(room, 0)).map(async (file) => {
+          const asset = await uploadGenerateMaterial(file);
+          return {
+            id: `ref-${asset.asset_id}`,
+            assetId: asset.asset_id,
+            url: asset.url,
+            name: asset.filename || file.name,
+            mimeType: asset.mime_type || file.type,
+          } satisfies GenerateRefImage;
+        }),
+      );
+      setUploadedAssets((prev) => [...filledRefs(prev), ...uploaded].slice(0, maxRefs));
+    } catch {
+      message.error('参考图上传失败');
+    }
+  };
 
   const handlePromptChange = useCallback((payload: { prompt: string; content: WorkflowPromptContent }) => {
     promptContentRef.current = payload.content;
@@ -108,8 +151,9 @@ export function ImageNodePrompt({
 
   const handleSubmit = useCallback(async () => {
     if (submitting || isGenerating) return;
-    const manualRefs =
-      refAssetId != null ? [{ assetId: refAssetId }] : [];
+    const manualRefs = filledRefs(uploadedAssets)
+      .filter((item) => item.assetId != null)
+      .map((item) => ({ assetId: item.assetId! }));
     const content = promptContentRef.current;
     const { prompt: submitPrompt, ref_asset_ids } = buildSubmitPromptAndRefs({
       content,
@@ -140,6 +184,7 @@ export function ImageNodePrompt({
         input_prompt: promptDraftRef.current,
         ratio,
         resolution,
+        count: resolvedCount,
         ref_asset_ids: ref_asset_ids.length > 0 ? ref_asset_ids : undefined,
         ...refValidation,
       });
@@ -148,53 +193,31 @@ export function ImageNodePrompt({
     }
   }, [
     connectedAssetIds,
-    data.input_prompt,
+    connectedPromptTexts,
     isGenerating,
     mentionProvider,
     modelReady,
     nodeId,
     onNodeGenerate,
-    connectedPromptTexts,
     previewMediaRefs,
     ratio,
     resolution,
-    refAssetId,
+    resolvedCount,
     submitting,
+    uploadedAssets,
   ]);
 
-  if (!visible) return null;
-
-  const addRefBtn = (
-    <button type="button" className="node-float-prompt__icon-btn" aria-label="添加参考" onClick={handleAddRef}>
-      <PlusOutlined />
-    </button>
-  );
-
-  const topSlot = (
-    <div className="workflow-image-prompt-ref-rail">
-      {addRefBtn}
+  const leadingSlot = useMemo(
+    () => (
       <ConnectedRefRail
         items={[...previewTextRefs, ...previewMediaRefs]}
         onRemove={handleRemoveConnectedRef}
       />
-      {refUrl ? (
-        <div className="workflow-image-prompt-ref-rail__thumb">
-          <img src={refUrl} alt="" />
-          <button
-            type="button"
-            className="workflow-image-prompt-ref-rail__thumb-remove"
-            aria-label="移除参考图"
-            onClick={() => {
-              setRefUrl(null);
-              setRefAssetId(null);
-            }}
-          >
-            <CloseOutlined aria-hidden />
-          </button>
-        </div>
-      ) : null}
-    </div>
+    ),
+    [handleRemoveConnectedRef, previewMediaRefs, previewTextRefs],
   );
+
+  if (!visible) return null;
 
   const bottomStartSlot = (
     <div className="workflow-image-gen-bar">
@@ -205,66 +228,74 @@ export function ImageNodePrompt({
         </Button>
       </Dropdown>
       <span className="workflow-image-gen-bar__divider" aria-hidden />
-      <Dropdown
-        {...canvasDropdownProps({
-          items: ratioOptions.map((r) => ({
-            key: r,
-            label: r,
-            onClick: () => onNodeChange({ nodeId, patch: { ratio: r } }),
-          })),
-        })}
-        trigger={['click']}
-        placement="topLeft"
-      >
-        <Button className="workflow-image-gen-bar__model-chip" type="text">
-          <span>{ratio}</span>
-        </Button>
-      </Dropdown>
-      <span className="workflow-image-gen-bar__divider" aria-hidden />
-      <Dropdown
-        {...canvasDropdownProps({
-          items: resolutionOptions.map((r) => ({
-            key: r,
-            label: r.toUpperCase(),
-            onClick: () => onNodeChange({ nodeId, patch: { resolution: r } }),
-          })),
-        })}
-        trigger={['click']}
-        placement="topLeft"
-      >
-        <Button className="workflow-image-gen-bar__model-chip" type="text">
-          <span>{resolution.toUpperCase()}</span>
-        </Button>
-      </Dropdown>
+      <GenerationParamsCapsule
+        kind="image"
+        label={capLabel}
+        ratio={ratio}
+        resolution={resolution}
+        count={resolvedCount}
+        ratioOptions={ratioShapes}
+        resolutionOptions={resolutionOptions}
+        countOptions={countOptions}
+        durationOptions={[]}
+        referenceModeOptions={[]}
+        disabled={isGenerating}
+        onRatioChange={(v) => onNodeChange({ nodeId, patch: { ratio: v } })}
+        onResolutionChange={(v) => onNodeChange({ nodeId, patch: { resolution: v } })}
+        onCountChange={setCount}
+        onDurationChange={() => undefined}
+        onReferenceModeChange={() => undefined}
+      />
     </div>
   );
 
   return (
-    <NodeFloatPromptPanel
-      visible
-      width={panelWidth}
-      topSlot={topSlot}
-      bottomStartSlot={bottomStartSlot}
-      bottomEndSlot={
-        <button
-          type="button"
-          className={`workflow-image-gen-bar__submit-btn${submitting ? ' workflow-image-gen-bar__submit-btn--busy' : ''}`}
-          aria-label="生成"
-          aria-busy={submitting}
-          disabled={isGenerating}
-          onClick={() => void handleSubmit()}
-        >
-          <ArrowUpOutlined />
-        </button>
-      }
-    >
-      <CanvasPromptEditor
-        prompt={data.input_prompt ?? ''}
-        placeholder={IMAGE_PROMPT_PLACEHOLDER}
-        mentionProvider={mentionProvider}
-        readOnly={isGenerating}
-        onChange={handlePromptChange}
+    <>
+      <NodeFloatPromptPanel
+        visible
+        width={panelWidth}
+        topSlot={(
+          <GenerationRefRail
+            kind="image"
+            assets={uploadedAssets}
+            maxOmniAssets={maxRefs}
+            leadingSlot={leadingSlot}
+            onAdd={handleAddRef}
+            onRemove={(id) => {
+              setUploadedAssets((prev) => filledRefs(prev).filter((x) => x.id !== id));
+            }}
+          />
+        )}
+        bottomStartSlot={bottomStartSlot}
+        bottomEndSlot={
+          <button
+            type="button"
+            className={`workflow-image-gen-bar__submit-btn${submitting ? ' workflow-image-gen-bar__submit-btn--busy' : ''}`}
+            aria-label="生成"
+            aria-busy={submitting}
+            disabled={isGenerating}
+            onClick={() => void handleSubmit()}
+          >
+            <ArrowUpOutlined />
+          </button>
+        }
+      >
+        <CanvasPromptEditor
+          prompt={data.input_prompt ?? ''}
+          placeholder={IMAGE_PROMPT_PLACEHOLDER}
+          mentionProvider={mentionProvider}
+          readOnly={isGenerating}
+          onChange={handlePromptChange}
+        />
+      </NodeFloatPromptPanel>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={(e) => void handleRefFileChange(e)}
       />
-    </NodeFloatPromptPanel>
+    </>
   );
 }

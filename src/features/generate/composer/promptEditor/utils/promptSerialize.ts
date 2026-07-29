@@ -2,12 +2,12 @@ import {
   collectReferencedAssetIds,
   parseAssetIdFromMentionId,
   resolveMentionDisplayLabel,
-} from '../../../providers/canvasMentionProvider';
+} from '../../mentionProvider';
 import type { WorkflowMentionItem } from '../types';
 import type {
   WorkflowPromptContent,
   WorkflowPromptContentSegment,
-} from '../../../types';
+} from '../../promptContent';
 
 function resolveMentionAssetId(item: Pick<WorkflowMentionItem, 'id' | 'assetId'>): number {
   if (typeof item.assetId === 'number' && item.assetId > 0) {

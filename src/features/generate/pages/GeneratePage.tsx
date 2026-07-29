@@ -40,8 +40,6 @@ const HISTORY_PAGE_SIZE = 15;
 const SEARCH_DEBOUNCE_MS = 350;
 
 function pickDefaultActiveId(items: GenerateFeedItem[]) {
-  const latestSuccess = items.find((i) => i.status === TASK_STATUS.SUCCEEDED);
-  if (latestSuccess) return latestSuccess.id;
   return items[0]?.id ?? null;
 }
 
@@ -451,14 +449,15 @@ export function GeneratePage() {
 
   return (
     <div className={`studio-create${historyOpen ? ' studio-create--history-open' : ''}`}>
-      <StudioChip
-        className="studio-create__history-toggle"
-        active={historyOpen}
-        icon={<HistoryOutlined aria-hidden />}
-        onClick={() => setHistoryOpen((value) => !value)}
-      >
-        最近生成
-      </StudioChip>
+      {!historyOpen ? (
+        <StudioChip
+          className="studio-create__history-toggle"
+          icon={<HistoryOutlined aria-hidden />}
+          onClick={() => setHistoryOpen(true)}
+        >
+          最近生成
+        </StudioChip>
+      ) : null}
       <div className="studio-create__center">
         <CreateStage
           item={activeItem}
@@ -480,6 +479,7 @@ export function GeneratePage() {
               ? () => handleCancelTask(activeItem.id)
               : undefined
           }
+          onDelete={activeItem ? () => handleDeleteTask(activeItem.id) : undefined}
         />
         <CreateComposer
           kind={kind}
@@ -509,6 +509,7 @@ export function GeneratePage() {
             onLoadMore={loadMoreHistory}
             loadingMore={historyLoading}
             initialLoading={historyInitialLoading}
+            onClose={() => setHistoryOpen(false)}
           />
         </aside>
       ) : null}

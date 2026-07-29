@@ -56,3 +56,8 @@ export type WorkflowPromptContentSegment =
   | WorkflowPromptTextRefContentSegment;
 
 export type WorkflowPromptContent = WorkflowPromptContentSegment[];
+
+// 与 generate/composer 对齐；画布内部可继续从本文件 import
+export type {
+  WorkflowPromptContent as SharedWorkflowPromptContent,
+} from '../../generate/composer/promptContent';

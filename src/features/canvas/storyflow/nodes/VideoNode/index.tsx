@@ -30,6 +30,7 @@ export const VideoNodeContent = memo(function VideoNodeContent({
           status={status}
           taskId={d.task_id}
           assetUrls={d.output_asset_urls}
+          assetIds={d.output_asset_ids}
         />
         {!hasPreview ? <PlaySquareOutlined /> : null}
         <CanvasNodeTaskOverlay status={status} runningLabel="正在生成视频…" failedTitle="生视频失败" />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Input, Modal, Pagination, Spin, message } from 'antd';
 import {
@@ -15,6 +15,7 @@ import type { AssetKindFilter, AssetSourceFilter } from '../constants';
 import { AssetBatchBar } from '../components/AssetBatchBar';
 import { AssetGrid } from '../components/AssetGrid';
 import { AssetToolbar } from '../components/AssetToolbar';
+import { groupAssetsByDate } from '../utils/groupAssetsByDate';
 
 const ASSET_SOURCE_TO_BACKEND: Record<AssetSourceFilter, string> = {
   all: 'library',
@@ -199,6 +200,8 @@ export function AssetsPage() {
     setSource('all');
   };
 
+  const dateSections = useMemo(() => groupAssetsByDate(assets), [assets]);
+
   return (
     <div className="studio-assets">
       <div className="studio-assets__inner">
@@ -261,14 +264,21 @@ export function AssetsPage() {
             <Spin />
           </div>
         ) : assets.length > 0 ? (
-          <AssetGrid
-            items={assets}
-            selectable={selectMode}
-            selectedIds={selectedIds}
-            onOpen={setPreviewAsset}
-            onToggleSelect={toggleSelect}
-            onMediaError={(asset) => void refreshAssetPreview(asset)}
-          />
+          <div className="studio-assets__feed">
+            {dateSections.map((section) => (
+              <section key={section.key} className="studio-assets__section">
+                <h2 className="studio-assets__section-title">{section.dateLabel}</h2>
+                <AssetGrid
+                  items={section.items}
+                  selectable={selectMode}
+                  selectedIds={selectedIds}
+                  onOpen={setPreviewAsset}
+                  onToggleSelect={toggleSelect}
+                  onMediaError={(asset) => void refreshAssetPreview(asset)}
+                />
+              </section>
+            ))}
+          </div>
         ) : (
           <p className="studio-assets__empty">没有匹配的资源，试试调整筛选或搜索关键词。</p>
         )}

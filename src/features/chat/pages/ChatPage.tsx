@@ -1,6 +1,5 @@
 import {
   CopyOutlined,
-  DeleteOutlined,
   FolderOpenOutlined,
   PlusOutlined,
   SearchOutlined,
@@ -1696,13 +1695,6 @@ export function ChatPage() {
                 ))}
               </div>
             ))}
-          </div>
-
-          <div className="studio-chat__sidebar-bottom">
-            <button type="button" className="studio-chat__trash-btn">
-              <DeleteOutlined />
-              回收站
-            </button>
           </div>
         </aside>
 

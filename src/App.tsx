@@ -31,8 +31,11 @@ export default function App() {
             paddingLG: 16,
           },
           Button: {
-            borderRadius: 8,
+            borderRadius: 999,
             controlHeight: 36,
+            primaryShadow: 'none',
+            defaultShadow: 'none',
+            dangerShadow: 'none',
           },
           Input: {
             borderRadius: 8,

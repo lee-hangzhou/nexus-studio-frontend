@@ -1,16 +1,16 @@
 import type { CSSProperties } from 'react';
 import {
   CloseOutlined,
+  DeleteOutlined,
   DownloadOutlined,
   EditOutlined,
-  EllipsisOutlined,
-  ExpandOutlined,
   LeftOutlined,
   ReloadOutlined,
   RightOutlined,
   StarFilled,
   StarOutlined,
 } from '@ant-design/icons';
+import { Modal } from 'antd';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GenerateFeedItem, GenerateResultMedia } from '../types';
 import { isTaskInProgress, TASK_STATUS } from '../../../domains/task/types';
@@ -34,6 +34,7 @@ interface CreateStageProps {
   onRegenerate?: () => void;
   onEdit?: () => void;
   onCancel?: () => void;
+  onDelete?: () => void;
 }
 
 const VIDEO_REFERENCE_MODE_LABELS: Record<number, string> = {
@@ -56,6 +57,7 @@ export function CreateStage({
   onRegenerate,
   onEdit,
   onCancel,
+  onDelete,
 }: CreateStageProps) {
   if (!item) {
     return (
@@ -109,6 +111,7 @@ export function CreateStage({
           onToggleFavorite={onToggleFavorite}
           onRegenerate={onRegenerate}
           onEdit={onEdit}
+          onDelete={onDelete}
         />
       )}
     </div>
@@ -317,6 +320,7 @@ function StageResults({
   onToggleFavorite,
   onRegenerate,
   onEdit,
+  onDelete,
 }: {
   item: GenerateFeedItem;
   allItems: GenerateFeedItem[];
@@ -329,6 +333,7 @@ function StageResults({
   onToggleFavorite?: () => void;
   onRegenerate?: () => void;
   onEdit?: () => void;
+  onDelete?: () => void;
 }) {
   const media: GenerateResultMedia[] = item.resultImages ?? [];
   const total = Math.max(media.length, 1);
@@ -429,24 +434,22 @@ function StageResults({
             style={{ aspectRatio: currentAspectRatio } as CSSProperties}
           >
             {isVideo ? (
-              <>
-                <video
-                  key={`${item.id}-${selected}`}
-                  src={currentMedia.url}
-                  className="studio-create__viewer-img studio-create__viewer-video"
-                  controls
-                  playsInline
-                  preload="metadata"
-                />
-                <button
-                  type="button"
-                  className="studio-create__viewer-expand"
-                  title="全屏预览"
-                  onClick={openPreview}
-                >
-                  <ExpandOutlined />
-                </button>
-              </>
+              <video
+                key={`${item.id}-${selected}`}
+                src={currentMedia.url}
+                className="studio-create__viewer-img studio-create__viewer-video"
+                controls
+                playsInline
+                preload="metadata"
+                title="点击画面放大预览"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const inControls = e.clientY - rect.top > rect.height - 48;
+                  if (inControls) return;
+                  e.preventDefault();
+                  openPreview();
+                }}
+              />
             ) : (
               <button
                 type="button"
@@ -502,9 +505,25 @@ function StageResults({
               <DownloadOutlined />
             </a>
           )}
-          <button type="button" className="studio-create__viewer-action" title="更多操作">
-            <EllipsisOutlined />
-          </button>
+          {onDelete && (
+            <button
+              type="button"
+              className="studio-create__viewer-action"
+              title="删除"
+              onClick={() => {
+                Modal.confirm({
+                  title: '删除这条生成记录？',
+                  content: '删除后无法恢复，进行中的任务会先尝试取消。',
+                  okText: '删除',
+                  okType: 'danger',
+                  cancelText: '取消',
+                  onOk: onDelete,
+                });
+              }}
+            >
+              <DeleteOutlined />
+            </button>
+          )}
         </div>
 
         {showBatchNav && (

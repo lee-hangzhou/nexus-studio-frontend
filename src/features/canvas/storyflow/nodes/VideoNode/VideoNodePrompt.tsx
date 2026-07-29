@@ -1,8 +1,20 @@
-import { ArrowUpOutlined, CloseOutlined, PlusOutlined } from '@ant-design/icons';
+import { ArrowUpOutlined } from '@ant-design/icons';
 import { Button, Dropdown, message } from 'antd';
 import { useStore } from '@xyflow/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { uploadGenerateMaterial } from '../../../../../api/generate';
+import type { GenerateRefImage } from '../../../../generate/types';
+import {
+  buildParamsCapsuleLabel,
+  editorPlaceholderForMode,
+  filledRefs,
+  GenerationParamsCapsule,
+  GenerationRefRail,
+  isFrameSlotMode,
+  normalizeRatioOptions,
+  normalizeUploadedAssetsForMode,
+  resolveMaxReferenceImages,
+} from '../../../../generate/composer';
 import { useCanvasActions } from '../../context/CanvasActionsContext';
 import { useCanvasGenerate } from '../../../context/CanvasGenerateContext';
 import { NodeFloatPromptPanel } from '../../components/NodeFloatPromptPanel';
@@ -20,19 +32,11 @@ import {
   buildSubmitPromptAndRefs,
   buildSubmitRefValidationPayload,
 } from '../../utils/buildPromptSubmit';
-import { VIDEO_PROMPT_PLACEHOLDER } from '../shared/canvasPromptCopy';
 import { GenerationRunningLabel } from '../shared/GenerationRunningLabel';
 import { resolveFloatPromptWidth } from '../shared/promptPanelWidth';
 import '../shared/GenerationPromptEditor.less';
 import '../shared/ImagePrompt.less';
 import './VideoPrompt.less';
-
-type RefThumb = {
-  id: string;
-  assetId: number;
-  url: string;
-  type: 'image' | 'video' | 'audio';
-};
 
 export function VideoNodePrompt({
   nodeId,
@@ -59,10 +63,20 @@ export function VideoNodePrompt({
     modelReady,
     ratioOptions,
     resolutionOptions,
+    countOptions,
     durationOptions,
     referenceModeOptions,
     maxReferenceImages,
   } = useCanvasGenerateModels(nodeId, 'video');
+
+  const [referenceMode, setReferenceMode] = useState(3);
+  const frameSlotMode = isFrameSlotMode('video', referenceMode);
+  const maxRefs = resolveMaxReferenceImages({
+    kind: 'video',
+    referenceMode,
+    materialLimit: maxReferenceImages ?? IMAGE_PROMPT_MAX_REFERENCE_IMAGES,
+  });
+
   const {
     mentionProvider,
     previewMediaRefs,
@@ -70,28 +84,42 @@ export function VideoNodePrompt({
     connectedAssetIds,
     connectedPromptTexts,
   } = useConnectedPredecessorRefs(nodeId, visible, {
-    allowedTypes: ['image', 'video', 'audio'],
-    maxReferenceCount: maxReferenceImages ?? IMAGE_PROMPT_MAX_REFERENCE_IMAGES,
+    allowedTypes: frameSlotMode ? ['image'] : ['image', 'video', 'audio'],
+    maxReferenceCount: maxRefs,
   });
   const handleRemoveConnectedRef = useDisconnectConnectedRef(nodeId);
   const promptContentRef = useRef<WorkflowPromptContent>([]);
   const promptDraftRef = useRef(data.input_prompt ?? '');
-  const [referenceMode, setReferenceMode] = useState(3);
-  const [refs, setRefs] = useState<RefThumb[]>([]);
+  const [uploadedAssets, setUploadedAssets] = useState<(GenerateRefImage | null)[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadTargetIndexRef = useRef<number | null>(null);
   const isGenerating = data.status === 'running';
 
-  const referenceModeLabel =
-    referenceModeOptions.find((o) => o.value === referenceMode)?.label ?? referenceModeOptions[0]?.label ?? '参考模式';
   const ratio = data.ratio ?? ratioOptions[0] ?? '16:9';
   const resolution = data.resolution ?? resolutionOptions[0] ?? '2k';
   const duration = data.duration_sec ?? durationOptions[0] ?? 15;
+  const ratioShapes = normalizeRatioOptions(ratioOptions);
+  const capLabel = buildParamsCapsuleLabel({
+    kind: 'video',
+    ratio,
+    resolution,
+    count: 1,
+    duration,
+    referenceMode,
+    referenceModeOptions,
+    durationFallback: durationOptions[0],
+  });
 
   useEffect(() => {
     if (!referenceModeOptions.some((o) => o.value === referenceMode)) {
       setReferenceMode(referenceModeOptions[0]?.value ?? 3);
     }
   }, [referenceModeOptions, referenceMode]);
+
+  useEffect(() => {
+    setUploadedAssets((prev) => normalizeUploadedAssetsForMode('video', referenceMode, prev));
+  }, [referenceMode]);
 
   useEffect(() => {
     if (!ratioOptions.length) return;
@@ -117,40 +145,63 @@ export function VideoNodePrompt({
     }
   }, [durationOptions, data.duration_sec, nodeId, onNodeChange]);
 
-  const handleAddRef = useCallback(() => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*,video/*,audio/*';
-    input.multiple = true;
-    input.onchange = () => {
-      const files = input.files;
-      if (!files?.length) return;
-      void (async () => {
-        for (const file of Array.from(files).slice(0, 12 - refs.length)) {
-          try {
-            const asset = await uploadGenerateMaterial(file);
-            const type = file.type.startsWith('video')
-              ? 'video'
-              : file.type.startsWith('audio')
-                ? 'audio'
-                : 'image';
-            setRefs((prev) => [
-              ...prev,
-              {
-                id: String(asset.asset_id),
-                assetId: asset.asset_id,
-                url: asset.url,
-                type,
-              },
-            ]);
-          } catch {
-            message.error('参考素材上传失败');
-          }
-        }
-      })();
+  const handleAddRef = useCallback((slotIndex?: number) => {
+    uploadTargetIndexRef.current = slotIndex ?? null;
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleRefFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = '';
+    if (!files.length) return;
+    const targetIndex = uploadTargetIndexRef.current;
+    uploadTargetIndexRef.current = null;
+    const imageOnly = frameSlotMode;
+    const accepted = imageOnly ? files.filter((f) => f.type.startsWith('image/')) : files;
+    if (!accepted.length) {
+      message.warning('当前参考模式仅支持图片');
+      return;
+    }
+
+    const uploadOne = async (file: File): Promise<GenerateRefImage> => {
+      const asset = await uploadGenerateMaterial(file);
+      return {
+        id: `ref-${asset.asset_id}`,
+        assetId: asset.asset_id,
+        url: asset.url,
+        name: asset.filename || file.name,
+        mimeType: asset.mime_type || file.type,
+      };
     };
-    input.click();
-  }, [refs.length]);
+
+    try {
+      if (frameSlotMode && (referenceMode === 1 || referenceMode === 2)) {
+        if (referenceMode === 1) {
+          setUploadedAssets([await uploadOne(accepted[0])]);
+          return;
+        }
+        const slotsNow = [uploadedAssets[0] ?? null, uploadedAssets[1] ?? null] as const;
+        const slot = targetIndex === 1 ? 1 : targetIndex === 0 ? 0 : slotsNow[0] ? 1 : 0;
+        const next = await uploadOne(accepted[0]);
+        setUploadedAssets((prev) => {
+          const slots: [GenerateRefImage | null, GenerateRefImage | null] = [
+            prev[0] ?? null,
+            prev[1] ?? null,
+          ];
+          slots[slot] = next;
+          return slots;
+        });
+        return;
+      }
+      const current = filledRefs(uploadedAssets);
+      const room = maxRefs - current.length;
+      const selected = accepted.slice(0, Math.max(room, 0));
+      const uploaded = await Promise.all(selected.map(uploadOne));
+      setUploadedAssets((prev) => [...filledRefs(prev), ...uploaded].slice(0, maxRefs));
+    } catch {
+      message.error('参考素材上传失败');
+    }
+  };
 
   const handlePromptChange = useCallback((payload: { prompt: string; content: WorkflowPromptContent }) => {
     promptContentRef.current = payload.content;
@@ -159,9 +210,22 @@ export function VideoNodePrompt({
 
   const handleSubmit = useCallback(async () => {
     if (submitting || isGenerating) return;
-    const manualRefs = refs.map((item) => ({
-      assetId: item.assetId,
-    }));
+    const refs = filledRefs(uploadedAssets);
+    if (referenceMode === 1 && refs.length !== 1) {
+      message.warning('请上传首帧参考图');
+      return;
+    }
+    if (referenceMode === 2 && (refs.length !== 2 || !uploadedAssets[0] || !uploadedAssets[1])) {
+      message.warning(uploadedAssets[0] ? '请上传尾帧参考图' : '请上传首帧参考图');
+      return;
+    }
+    const ordered =
+      referenceMode === 2 && uploadedAssets[0] && uploadedAssets[1]
+        ? [uploadedAssets[0], uploadedAssets[1]]
+        : refs;
+    const manualRefs = ordered
+      .filter((item) => item.assetId != null)
+      .map((item) => ({ assetId: item.assetId! }));
     const content = promptContentRef.current;
     const { prompt: submitPrompt, ref_asset_ids } = buildSubmitPromptAndRefs({
       content,
@@ -202,60 +266,32 @@ export function VideoNodePrompt({
     }
   }, [
     connectedAssetIds,
-    data.input_prompt,
+    connectedPromptTexts,
+    duration,
     isGenerating,
     mentionProvider,
-    connectedPromptTexts,
-    refs,
     modelReady,
     nodeId,
     onNodeGenerate,
     previewMediaRefs,
-    referenceMode,
     ratio,
+    referenceMode,
     resolution,
-    duration,
     submitting,
+    uploadedAssets,
   ]);
 
-  if (!visible) return null;
-
-  const addRefBtn = (
-    <button
-      type="button"
-      className="node-float-prompt__icon-btn"
-      aria-label="添加参考"
-      disabled={refs.length >= 12}
-      onClick={handleAddRef}
-    >
-      <PlusOutlined />
-    </button>
-  );
-
-  const topSlot = (
-    <div className="workflow-image-prompt-ref-rail">
-      {addRefBtn}
+  const leadingSlot = useMemo(
+    () => (
       <ConnectedRefRail
         items={[...previewTextRefs, ...previewMediaRefs]}
         onRemove={handleRemoveConnectedRef}
       />
-      {refs.map((item) => (
-        <div key={item.id} className="workflow-image-prompt-ref-rail__thumb" title={item.type}>
-          {item.type === 'image' ? <img src={item.url} alt="" /> : null}
-          {item.type === 'video' ? <video src={item.url} muted playsInline /> : null}
-          {item.type === 'audio' ? <span>{item.type}</span> : null}
-          <button
-            type="button"
-            className="workflow-image-prompt-ref-rail__thumb-remove"
-            aria-label="移除参考"
-            onClick={() => setRefs((prev) => prev.filter((x) => x.id !== item.id))}
-          >
-            <CloseOutlined aria-hidden />
-          </button>
-        </div>
-      ))}
-    </div>
+    ),
+    [handleRemoveConnectedRef, previewMediaRefs, previewTextRefs],
   );
+
+  if (!visible) return null;
 
   const bottomStartSlot = (
     <div className="workflow-image-gen-bar">
@@ -266,98 +302,91 @@ export function VideoNodePrompt({
         </Button>
       </Dropdown>
       <span className="workflow-image-gen-bar__divider" aria-hidden />
-      <Dropdown
-        {...canvasDropdownProps({
-          items: referenceModeOptions.map((opt) => ({
-            key: opt.value,
-            label: opt.label,
-            onClick: () => setReferenceMode(opt.value),
-          })),
-        })}
-        trigger={['click']}
-        placement="topLeft"
-      >
-        <Button className="workflow-image-gen-bar__model-chip" type="text">
-          <span>{referenceModeLabel}</span>
-        </Button>
-      </Dropdown>
-      <span className="workflow-image-gen-bar__divider" aria-hidden />
-      <Dropdown
-        {...canvasDropdownProps({
-          items: ratioOptions.map((r) => ({
-            key: r,
-            label: r,
-            onClick: () => onNodeChange({ nodeId, patch: { ratio: r } }),
-          })),
-        })}
-        trigger={['click']}
-        placement="topLeft"
-      >
-        <Button className="workflow-image-gen-bar__model-chip" type="text">
-          <span>{ratio}</span>
-        </Button>
-      </Dropdown>
-      <span className="workflow-image-gen-bar__divider" aria-hidden />
-      <Dropdown
-        {...canvasDropdownProps({
-          items: resolutionOptions.map((r) => ({
-            key: r,
-            label: r.toUpperCase(),
-            onClick: () => onNodeChange({ nodeId, patch: { resolution: r } }),
-          })),
-        })}
-        trigger={['click']}
-        placement="topLeft"
-      >
-        <Button className="workflow-image-gen-bar__model-chip" type="text">
-          <span>{resolution.toUpperCase()}</span>
-        </Button>
-      </Dropdown>
-      <span className="workflow-image-gen-bar__divider" aria-hidden />
-      <Dropdown
-        {...canvasDropdownProps({
-          items: durationOptions.map((d) => ({
-            key: d,
-            label: `${d}s`,
-            onClick: () => onNodeChange({ nodeId, patch: { duration_sec: d } }),
-          })),
-        })}
-        trigger={['click']}
-        placement="topLeft"
-      >
-        <Button className="workflow-image-gen-bar__model-chip" type="text">
-          <span>{duration}s</span>
-        </Button>
-      </Dropdown>
+      <GenerationParamsCapsule
+        kind="video"
+        label={capLabel}
+        ratio={ratio}
+        resolution={resolution}
+        count={1}
+        duration={duration}
+        referenceMode={referenceMode}
+        ratioOptions={ratioShapes}
+        resolutionOptions={resolutionOptions}
+        countOptions={countOptions}
+        durationOptions={durationOptions}
+        referenceModeOptions={referenceModeOptions}
+        disabled={isGenerating}
+        onRatioChange={(v) => onNodeChange({ nodeId, patch: { ratio: v } })}
+        onResolutionChange={(v) => onNodeChange({ nodeId, patch: { resolution: v } })}
+        onCountChange={() => undefined}
+        onDurationChange={(v) => onNodeChange({ nodeId, patch: { duration_sec: v } })}
+        onReferenceModeChange={setReferenceMode}
+      />
     </div>
   );
 
   return (
-    <NodeFloatPromptPanel
-      visible
-      width={panelWidth}
-      topSlot={topSlot}
-      bottomStartSlot={bottomStartSlot}
-      bottomEndSlot={
-        <button
-          type="button"
-          className={`workflow-image-gen-bar__submit-btn${submitting ? ' workflow-image-gen-bar__submit-btn--busy' : ''}`}
-          aria-label="生成"
-          aria-busy={submitting}
-          disabled={isGenerating}
-          onClick={() => void handleSubmit()}
-        >
-          <ArrowUpOutlined />
-        </button>
-      }
-    >
-      <CanvasPromptEditor
-        prompt={data.input_prompt ?? ''}
-        placeholder={VIDEO_PROMPT_PLACEHOLDER}
-        mentionProvider={mentionProvider}
-        readOnly={isGenerating}
-        onChange={handlePromptChange}
+    <>
+      <NodeFloatPromptPanel
+        visible
+        width={panelWidth}
+        topSlot={(
+          <GenerationRefRail
+            kind="video"
+            referenceMode={referenceMode}
+            assets={uploadedAssets}
+            maxOmniAssets={maxRefs}
+            leadingSlot={leadingSlot}
+            onAdd={handleAddRef}
+            onRemove={(id) => {
+              setUploadedAssets((prev) => filledRefs(prev).filter((x) => x.id !== id));
+            }}
+            onRemoveSlot={(index) => {
+              setUploadedAssets((prev) => {
+                const slots: [GenerateRefImage | null, GenerateRefImage | null] = [
+                  prev[0] ?? null,
+                  prev[1] ?? null,
+                ];
+                slots[index] = null;
+                return slots;
+              });
+            }}
+            onSwapFrames={() => {
+              setUploadedAssets((prev) => [prev[1] ?? null, prev[0] ?? null]);
+            }}
+          />
+        )}
+        bottomStartSlot={bottomStartSlot}
+        bottomEndSlot={
+          <button
+            type="button"
+            className={`workflow-image-gen-bar__submit-btn${submitting ? ' workflow-image-gen-bar__submit-btn--busy' : ''}`}
+            aria-label="生成"
+            aria-busy={submitting}
+            disabled={isGenerating}
+            onClick={() => void handleSubmit()}
+          >
+            <ArrowUpOutlined />
+          </button>
+        }
+      >
+        <CanvasPromptEditor
+          prompt={data.input_prompt ?? ''}
+          placeholder={editorPlaceholderForMode('video', referenceMode)}
+          enableMention={!frameSlotMode}
+          mentionProvider={mentionProvider}
+          readOnly={isGenerating}
+          onChange={handlePromptChange}
+        />
+      </NodeFloatPromptPanel>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={frameSlotMode ? 'image/*' : 'image/*,video/*,audio/*'}
+        multiple={!frameSlotMode}
+        hidden
+        onChange={(e) => void handleRefFileChange(e)}
       />
-    </NodeFloatPromptPanel>
+    </>
   );
 }

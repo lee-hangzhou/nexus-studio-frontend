@@ -66,12 +66,8 @@ export function ProjectsPage() {
   }, [createName, navigate]);
 
   return (
-    <div className="studio-projects-gallery">
+    <div className="studio-projects-gallery" aria-label="画布列表">
       <div className="studio-projects-gallery__header">
-        <div className="studio-projects-gallery__heading">
-          <h1>画布</h1>
-          <p>打开已有画布，或新建一个继续创作。</p>
-        </div>
         <div className="studio-projects-gallery__actions">
           <Input
             className="studio-projects-gallery__search"

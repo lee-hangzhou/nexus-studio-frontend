@@ -12,6 +12,11 @@ import { CanvasPage } from '../features/canvas/pages/CanvasPage';
 import { FoyerPage } from '../features/home/pages/FoyerPage';
 import { ProjectDetailPage } from '../features/projects/pages/ProjectDetailPage';
 import { ProjectsPage } from '../features/projects/pages/ProjectsPage';
+import type { ReactNode } from 'react';
+
+function Protected({ children }: { children: ReactNode }) {
+  return <RequireAuth>{children}</RequireAuth>;
+}
 
 export function AppRouter() {
   return (
@@ -20,21 +25,17 @@ export function AppRouter() {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route
-        path="/"
-        element={
-          <RequireAuth>
-            <AppShell />
-          </RequireAuth>
-        }
-      >
+      <Route path="/" element={<AppShell />}>
         <Route index element={<FoyerPage />} />
-        <Route path="chat" element={<ChatPage />} />
-        <Route path="generate" element={<GeneratePage />} />
-        <Route path="assets" element={<AssetsPage />} />
-        <Route path="projects" element={<ProjectsPage />} />
-        <Route path="projects/:projectId" element={<ProjectDetailPage />} />
-        <Route path="projects/:projectId/episodes/:episodeId" element={<CanvasPage />} />
+        <Route path="chat" element={<Protected><ChatPage /></Protected>} />
+        <Route path="generate" element={<Protected><GeneratePage /></Protected>} />
+        <Route path="assets" element={<Protected><AssetsPage /></Protected>} />
+        <Route path="projects" element={<Protected><ProjectsPage /></Protected>} />
+        <Route path="projects/:projectId" element={<Protected><ProjectDetailPage /></Protected>} />
+        <Route
+          path="projects/:projectId/episodes/:episodeId"
+          element={<Protected><CanvasPage /></Protected>}
+        />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -5,14 +5,22 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { createEpisode, deleteEpisode, updateEpisode } from '../../../api/episodes';
-import { getProject, updateProject, type EpisodeView, type ProjectView } from '../../../api/projects';
+import {
+  createEpisode,
+  deleteEpisode,
+  listEpisodes,
+  updateEpisode,
+  type EpisodeView,
+} from '../../../api/episodes';
+import { getProject, updateProject, type ProjectView } from '../../../api/projects';
 import { CoverPicker } from '../components/CoverPicker';
 import { CoverThumb } from '../components/CoverThumb';
 import styles from './ProjectDetailPage.module.css';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
+
+const EPISODE_PAGE_SIZE = 12;
 
 type CoverTarget =
   | { type: 'project' }
@@ -24,7 +32,10 @@ export function ProjectDetailPage() {
   const projectId = Number(rawProjectId);
   const [project, setProject] = useState<ProjectView | null>(null);
   const [episodes, setEpisodes] = useState<EpisodeView[]>([]);
+  const [episodePage, setEpisodePage] = useState(1);
+  const [episodeTotal, setEpisodeTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [episodesLoading, setEpisodesLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('');
@@ -32,7 +43,7 @@ export function ProjectDetailPage() {
   const creatingRef = useRef(false);
   const [coverTarget, setCoverTarget] = useState<CoverTarget | null>(null);
 
-  const loadDetail = useCallback(async (signal?: AbortSignal) => {
+  const loadProject = useCallback(async (signal?: AbortSignal) => {
     if (!Number.isFinite(projectId) || projectId <= 0) return;
     setLoading(true);
     setLoadError(null);
@@ -40,22 +51,62 @@ export function ProjectDetailPage() {
       const detail = await getProject(projectId, { signal });
       if (signal?.aborted) return;
       setProject(detail.project);
-      setEpisodes(detail.episodes);
     } catch (err) {
       if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) return;
       setProject(null);
-      setEpisodes([]);
       setLoadError(err instanceof Error ? err.message : '项目加载失败');
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
   }, [projectId]);
 
+  const loadEpisodes = useCallback(async (page: number, signal?: AbortSignal) => {
+    if (!Number.isFinite(projectId) || projectId <= 0) return;
+    setEpisodesLoading(true);
+    try {
+      const res = await listEpisodes(
+        { project_id: projectId, page, page_size: EPISODE_PAGE_SIZE },
+        { signal },
+      );
+      if (signal?.aborted) return;
+      const total = res.total ?? 0;
+      const totalPages = Math.max(1, Math.ceil(total / EPISODE_PAGE_SIZE));
+      const safePage = Math.min(page, totalPages);
+      if (safePage !== page && total > 0) {
+        setEpisodePage(safePage);
+        return;
+      }
+      setEpisodes(res.items ?? []);
+      setEpisodeTotal(total);
+    } catch (err) {
+      if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) return;
+      message.error(err instanceof Error ? err.message : '集列表加载失败');
+      setEpisodes([]);
+      setEpisodeTotal(0);
+    } finally {
+      if (!signal?.aborted) setEpisodesLoading(false);
+    }
+  }, [projectId]);
+
   useEffect(() => {
     const controller = new AbortController();
-    void loadDetail(controller.signal);
+    setEpisodePage(1);
+    void loadProject(controller.signal);
     return () => controller.abort();
-  }, [loadDetail]);
+  }, [loadProject]);
+
+  useEffect(() => {
+    if (!project) return;
+    const controller = new AbortController();
+    void loadEpisodes(episodePage, controller.signal);
+    return () => controller.abort();
+  }, [project, episodePage, loadEpisodes]);
+
+  const refreshAfterMutation = useCallback(async () => {
+    const detail = await getProject(projectId);
+    setProject(detail.project);
+    await loadEpisodes(episodePage);
+  }, [episodePage, loadEpisodes, projectId]);
 
   const handleCreateEpisode = useCallback(async () => {
     if (creatingRef.current) return;
@@ -66,7 +117,6 @@ export function ProjectDetailPage() {
       const episode = await createEpisode(projectId, name || undefined);
       setCreateOpen(false);
       setCreateName('');
-      await loadDetail();
       navigate(`/projects/${projectId}/episodes/${episode.id}`);
     } catch (err) {
       message.error(err instanceof Error ? err.message : '创建集失败');
@@ -74,7 +124,7 @@ export function ProjectDetailPage() {
       creatingRef.current = false;
       setCreating(false);
     }
-  }, [createName, loadDetail, navigate, projectId]);
+  }, [createName, navigate, projectId]);
 
   const updateCover = useCallback(
     async (assetId: number | null) => {
@@ -101,7 +151,7 @@ export function ProjectDetailPage() {
         onOk: async () => {
           try {
             await deleteEpisode(episode.id);
-            await loadDetail();
+            await refreshAfterMutation();
           } catch (err) {
             message.error(err instanceof Error ? err.message : '删除集失败');
             throw err;
@@ -109,7 +159,7 @@ export function ProjectDetailPage() {
         },
       });
     },
-    [loadDetail],
+    [refreshAfterMutation],
   );
 
   if (!Number.isFinite(projectId) || projectId <= 0) {
@@ -133,7 +183,7 @@ export function ProjectDetailPage() {
       <div className={`${styles.page} ${styles.error}`} role="alert">
         <p>{loadError || '项目不存在或无权访问'}</p>
         <div>
-          <button type="button" onClick={() => void loadDetail()}>
+          <button type="button" onClick={() => void loadProject()}>
             重试
           </button>{' '}
           <button type="button" onClick={() => navigate('/projects')}>
@@ -143,6 +193,9 @@ export function ProjectDetailPage() {
       </div>
     );
   }
+
+  const totalPages = Math.max(1, Math.ceil(episodeTotal / EPISODE_PAGE_SIZE));
+  const currentPage = Math.min(episodePage, totalPages);
 
   return (
     <div className={styles.page}>
@@ -169,49 +222,74 @@ export function ProjectDetailPage() {
         </button>
       </header>
 
-      <section className={styles.episodes} aria-labelledby="project-episodes">
-        <div className={styles.sectionHead}>
-          <h2 id="project-episodes">集</h2>
-        </div>
-
-        {episodes.length === 0 ? (
+      <section className={styles.episodes} aria-label="集列表">
+        {episodesLoading && episodes.length === 0 ? (
+          <div className={styles.episodesLoading}>
+            <Spin />
+          </div>
+        ) : episodeTotal === 0 ? (
           <Empty description="暂无集">
             <button type="button" className={styles.primaryBtn} onClick={() => setCreateOpen(true)}>
               新建集
             </button>
           </Empty>
         ) : (
-          <div className={styles.episodeGrid}>
-            {episodes.map((episode) => (
-              <article key={episode.id} className={styles.episodeCard}>
+          <>
+            <div className={`${styles.episodeGrid}${episodesLoading ? ` ${styles.episodeGridLoading}` : ''}`}>
+              {episodes.map((episode) => (
+                <article key={episode.id} className={styles.episodeCard}>
+                  <button
+                    type="button"
+                    className={styles.episodeOpen}
+                    onClick={() => navigate(`/projects/${project.id}/episodes/${episode.id}`)}
+                  >
+                    <CoverThumb
+                      id={episode.id}
+                      cover={episode.cover}
+                      className={styles.episodeCover}
+                    />
+                    <span className={styles.episodeMeta}>
+                      <strong>{episode.name}</strong>
+                      <span>第 {episode.episode_no} 集 · {dayjs(episode.updated_at).fromNow()}编辑</span>
+                    </span>
+                  </button>
+                  <div className={styles.episodeActions}>
+                    <button type="button" onClick={() => setCoverTarget({ type: 'episode', episodeId: episode.id })}>
+                      <EditOutlined />
+                      封面
+                    </button>
+                    <button type="button" onClick={() => confirmDeleteEpisode(episode)}>
+                      <DeleteOutlined />
+                      删除
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+            {totalPages > 1 ? (
+              <div className={styles.pagination}>
                 <button
                   type="button"
-                  className={styles.episodeOpen}
-                  onClick={() => navigate(`/projects/${project.id}/episodes/${episode.id}`)}
+                  className={styles.pageBtn}
+                  disabled={currentPage <= 1 || episodesLoading}
+                  onClick={() => setEpisodePage((value) => Math.max(1, value - 1))}
                 >
-                  <CoverThumb
-                    id={episode.id}
-                    cover={episode.cover}
-                    className={styles.episodeCover}
-                  />
-                  <span className={styles.episodeMeta}>
-                    <strong>{episode.name}</strong>
-                    <span>第 {episode.episode_no} 集 · {dayjs(episode.updated_at).fromNow()}编辑</span>
-                  </span>
+                  上一页
                 </button>
-                <div className={styles.episodeActions}>
-                  <button type="button" onClick={() => setCoverTarget({ type: 'episode', episodeId: episode.id })}>
-                    <EditOutlined />
-                    封面
-                  </button>
-                  <button type="button" onClick={() => confirmDeleteEpisode(episode)}>
-                    <DeleteOutlined />
-                    删除
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
+                <span className={styles.pageStatus}>
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className={styles.pageBtn}
+                  disabled={currentPage >= totalPages || episodesLoading}
+                  onClick={() => setEpisodePage((value) => Math.min(totalPages, value + 1))}
+                >
+                  下一页
+                </button>
+              </div>
+            ) : null}
+          </>
         )}
       </section>
 

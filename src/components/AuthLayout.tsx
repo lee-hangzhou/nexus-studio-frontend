@@ -11,15 +11,15 @@ export function AuthLayout({ title, subtitle, children, links }: AuthLayoutProps
   return (
     <div className="auth-page">
       <aside className="auth-hero" aria-hidden="true">
-        <img className="auth-hero__image" src="/auth-hero.jpg" alt="" />
+        <img className="auth-hero__image" src="/auth-hero.png" alt="" />
         <div className="auth-hero__veil" />
         <div className="auth-hero__copy">
           <div className="auth-hero__brand">
             <img src="/logo.png" alt="" className="auth-hero__mark" />
             <span>Nexus Studio</span>
           </div>
-          <h1 className="auth-hero__title">把想象变成画面</h1>
-          <p className="auth-hero__lead">登录后开始创作。</p>
+          <h1 className="auth-hero__title">点亮你的想法</h1>
+          <p className="auth-hero__lead">从灵感到现实，AI 与你一起创造无限可能</p>
         </div>
       </aside>
 
