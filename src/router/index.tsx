@@ -12,6 +12,10 @@ import { CanvasPage } from '../features/canvas/pages/CanvasPage';
 import { FoyerPage } from '../features/home/pages/FoyerPage';
 import { ProjectDetailPage } from '../features/projects/pages/ProjectDetailPage';
 import { ProjectsPage } from '../features/projects/pages/ProjectsPage';
+import {
+  WorkshopPage,
+  WorkshopProjectRedirect,
+} from '../features/workshop/pages/WorkshopRedirects';
 import type { ReactNode } from 'react';
 
 function Protected({ children }: { children: ReactNode }) {
@@ -28,6 +32,9 @@ export function AppRouter() {
       <Route path="/" element={<AppShell />}>
         <Route index element={<FoyerPage />} />
         <Route path="chat" element={<Protected><ChatPage /></Protected>} />
+        {/* 兼容旧链接：工坊是超级工坊内形态，不再作为并列入口 */}
+        <Route path="workshop" element={<Protected><WorkshopPage /></Protected>} />
+        <Route path="workshop/:projectId" element={<Protected><WorkshopProjectRedirect /></Protected>} />
         <Route path="generate" element={<Protected><GeneratePage /></Protected>} />
         <Route path="assets" element={<Protected><AssetsPage /></Protected>} />
         <Route path="projects" element={<Protected><ProjectsPage /></Protected>} />

@@ -2,12 +2,17 @@ import {
   PaperClipOutlined,
   PlusOutlined,
   SettingOutlined,
+  TeamOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
-import { Dropdown } from 'antd';
-import type { MenuProps } from 'antd';
+import { Avatar, Dropdown } from 'antd';
 import { useMemo, useRef, useState } from 'react';
 
+import type { ExpertDirectoryEntry } from '../workshop/utils/expertDirectory';
+import {
+  buildComposerPlusMenuSpecs,
+  toAntdMenuItems,
+} from './buildComposerPlusMenuItems';
 import type { SkillListItem, SkillSurface } from './types';
 import { useUserSkills } from './useUserSkills';
 
@@ -19,93 +24,156 @@ export type ComposerPlusMenuSkillsProps = {
   selectedPaths: string[];
   onSelectedPathsChange: (paths: string[]) => void;
   onManage: () => void;
+  /** 由外层统一拉取时传入，避免与输入框 / 触发各拉一份 */
+  enabledSkills?: SkillListItem[];
+  skillsLoading?: boolean;
+};
+
+export type ComposerPlusMenuExpertsProps = {
+  loading?: boolean;
+  items: ExpertDirectoryEntry[];
+  selectedKey?: string | null;
+  onSelect: (expertKey: string) => void;
+  onBrowseMore: () => void;
+  menuLabel?: string;
 };
 
 export type ComposerPlusMenuProps = {
   disabled?: boolean;
   onUploadFile?: (file: File) => Promise<unknown> | unknown;
   skills?: ComposerPlusMenuSkillsProps | null;
+  experts?: ComposerPlusMenuExpertsProps | null;
 };
 
 /**
- * Composer「+」入口：一级菜单挂上传/技能，技能走二级列表。
+ * Composer「+」入口：添加文件 / 发给 / 技能。
+ * 邀请专家与连接器在右侧详情面板管理，不出现在此处。
  */
 export function ComposerPlusMenu({
   disabled = false,
   onUploadFile,
   skills = null,
+  experts = null,
 }: ComposerPlusMenuProps) {
   const [open, setOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const ownsSkillQuery = skills != null && skills.enabledSkills == null;
   const skillQuery = useUserSkills({
     surface: skills?.surface ?? 'chat',
     projectId: skills?.projectId,
-    enabled: skills != null,
+    enabled: ownsSkillQuery,
   });
+  const enabledSkills = skills?.enabledSkills ?? skillQuery.enabledSkills;
+  const skillsLoading = skills?.skillsLoading ?? skillQuery.loading;
 
   const available = useMemo(() => {
     if (!skills) return [] as SkillListItem[];
-    return skillQuery.enabledSkills.filter((item) => !skills.selectedPaths.includes(item.path));
-  }, [skillQuery.enabledSkills, skills]);
+    return enabledSkills.filter((item) => !skills.selectedPaths.includes(item.path));
+  }, [enabledSkills, skills]);
 
-  const items = useMemo(() => {
-    const next: MenuProps['items'] = [];
-    if (onUploadFile) {
-      next.push({
-        key: 'upload',
-        icon: <PaperClipOutlined aria-hidden />,
-        label: '图片 / 文件',
-        onClick: () => {
+  const menuSpecs = useMemo(
+    () =>
+      buildComposerPlusMenuSpecs({
+        onUploadFile,
+        skillsEnabled: skills != null,
+        skillsLoading,
+        availableSkillLabels: available.map((item) => ({
+          key: `skill:${item.scope}:${item.path}`,
+          name: item.name,
+          path: item.path,
+        })),
+        onSkillSelect: (path) => skills?.onSelectedPathsChange([...skills.selectedPaths, path]),
+        onSkillsManage: () => skills?.onManage(),
+        experts: experts
+          ? {
+              loading: experts.loading ?? false,
+              items: experts.items,
+              selectedKey: experts.selectedKey,
+              onSelect: experts.onSelect,
+              onBrowseMore: experts.onBrowseMore,
+              menuLabel: experts.menuLabel,
+            }
+          : null,
+        inviteExperts: null,
+        connectors: null,
+      }),
+    [available, experts, onUploadFile, skills, skillsLoading],
+  );
+
+  const items = useMemo(
+    () =>
+      toAntdMenuItems(menuSpecs, {
+        onUpload: () => {
           setOpen(false);
-          // 等 dropdown 关闭后再唤起文件选择，避免焦点被菜单抢走
           window.setTimeout(() => fileInputRef.current?.click(), 0);
         },
-      });
-    }
-    if (skills) {
-      const skillChildren: MenuProps['items'] = [];
-      if (skillQuery.loading) {
-        skillChildren.push({ key: 'skills-loading', label: '加载中…', disabled: true });
-      } else if (available.length === 0) {
-        skillChildren.push({ key: 'skills-empty', label: '暂无已启用的技能', disabled: true });
-      } else {
-        for (const item of available) {
-          skillChildren.push({
-            key: `skill:${item.scope}:${item.path}`,
-            label: (
-              <span className={styles.skillItem}>
-                <span className={styles.skillName}>{item.name}</span>
-                <span className={styles.skillPath}>{item.path}</span>
-              </span>
-            ),
-            onClick: () => {
-              skills.onSelectedPathsChange([...skills.selectedPaths, item.path]);
-              setOpen(false);
-            },
-          });
-        }
-      }
-      skillChildren.push({ type: 'divider' });
-      skillChildren.push({
-        key: 'skills-manage',
-        icon: <SettingOutlined aria-hidden />,
-        label: '管理技能',
-        onClick: () => {
+        onExpert: (key) => {
+          experts?.onSelect(key);
           setOpen(false);
-          skills.onManage();
         },
-      });
-      next.push({
-        key: 'skills',
-        icon: <ThunderboltOutlined aria-hidden />,
-        label: '技能',
-        children: skillChildren,
-      });
-    }
-    return next;
-  }, [available, onUploadFile, skillQuery.loading, skills]);
+        onExpertsMore: () => {
+          experts?.onBrowseMore();
+          setOpen(false);
+        },
+        onSkill: (path) => {
+          if (!skills) return;
+          skills.onSelectedPathsChange([...skills.selectedPaths, path]);
+          setOpen(false);
+        },
+        onSkillsManage: () => {
+          skills?.onManage();
+          setOpen(false);
+        },
+      })?.map((item) => {
+        if (item && 'key' in item && item.key === 'upload') {
+          return {
+            ...item,
+            icon: <PaperClipOutlined aria-hidden />,
+            label: '添加文件',
+          };
+        }
+        if (item && 'key' in item && item.key === 'experts' && 'children' in item) {
+          const expertChildren = item.children ?? [];
+          return {
+            ...item,
+            icon: <TeamOutlined aria-hidden />,
+            children: expertChildren.map((child) => {
+              if (!child || !('key' in child)) return child;
+              if (typeof child.key !== 'string' || !child.key.startsWith('expert:')) return child;
+              const expertKey = child.key.slice('expert:'.length);
+              const expert = experts?.items.find((row) => row.key === expertKey);
+              if (!expert) return child;
+              return {
+                ...child,
+                label: (
+                  <span className={styles.expertItem}>
+                    <Avatar size={20} src={expert.avatar_url} alt="">
+                      {expert.name.slice(0, 1)}
+                    </Avatar>
+                    <span className={styles.expertName}>{expert.name}</span>
+                  </span>
+                ),
+              };
+            }),
+          };
+        }
+        if (item && 'key' in item && item.key === 'skills') {
+          return {
+            ...item,
+            icon: <ThunderboltOutlined aria-hidden />,
+            children: ('children' in item ? item.children ?? [] : []).map((child) => {
+              if (!child || !('key' in child)) return child;
+              if (child.key !== 'skills-manage') return child;
+              return { ...child, icon: <SettingOutlined aria-hidden /> };
+            }),
+          };
+        }
+        return item;
+      }),
+    [experts, menuSpecs, skills],
+  );
 
-  if (!onUploadFile && !skills) {
+  if (!onUploadFile && !skills && !experts) {
     return null;
   }
 

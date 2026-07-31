@@ -106,7 +106,7 @@ export function CanvasHeader({
           {busy ? (
             <span className="workflow-canvas-header__live" aria-live="polite">
               <i aria-hidden />
-              Agent 工作中
+              画布助手工作中
             </span>
           ) : null}
         </div>

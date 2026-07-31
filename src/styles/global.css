@@ -1039,11 +1039,19 @@ a:hover {
 }
 
 .studio-chat__new-btn.ant-btn-primary {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding-inline: 0 !important;
   background: var(--studio-gradient) !important;
   border: none !important;
   border-radius: 10px !important;
   font-weight: 600 !important;
   box-shadow: 0 4px 12px rgba(6, 147, 249, 0.28) !important;
+}
+
+.studio-chat__new-btn.ant-btn-primary > .ant-btn-icon {
+  margin-inline-end: 0 !important;
 }
 
 .studio-chat__new-btn.ant-btn-primary:hover {
@@ -5464,7 +5472,7 @@ a:hover {
   }
 }
 
-@media (max-width: 960px) {
+@media (max-width: 991px) {
   .studio-topbar {
     padding: 0 16px;
   }

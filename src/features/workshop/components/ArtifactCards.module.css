@@ -1,0 +1,24 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: var(--studio-space-3, 12px);
+}
+
+.card {
+  border: 1px solid var(--studio-border-subtle, rgba(0, 0, 0, 0.06));
+  border-radius: var(--studio-radius-md, 8px);
+  padding: var(--studio-space-3, 12px);
+  min-width: 0;
+}
+
+.metaRow {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: var(--studio-space-2, 8px);
+  margin-bottom: var(--studio-space-1, 4px);
+  font-size: var(--studio-text-sm, 13px);
+}
+
+.metaLabel {
+  color: var(--studio-text-secondary, rgba(0, 0, 0, 0.45));
+}

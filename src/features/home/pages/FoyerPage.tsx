@@ -37,8 +37,8 @@ import styles from './FoyerPage.module.css';
 type FoyerMode = 'create' | 'agent';
 
 const MODE_OPTIONS: { value: FoyerMode; label: string }[] = [
+  { value: 'agent', label: '超级工坊' },
   { value: 'create', label: '创作' },
-  { value: 'agent', label: 'Agent' },
 ];
 
 const RECENT_CANVAS_LIMIT = 3;
@@ -48,7 +48,7 @@ export function FoyerPage() {
   const navigate = useNavigate();
   const { user } = useUser();
 
-  const [mode, setMode] = useState<FoyerMode>('create');
+  const [mode, setMode] = useState<FoyerMode>('agent');
   const [kind, setKind] = useState<GenerateKind>('image');
   const [params, setParams] = useState<CreateComposerParams>(DEFAULT_CREATE_COMPOSER_PARAMS);
 
@@ -249,7 +249,7 @@ export function FoyerPage() {
       </header>
 
       <div className={styles.body}>
-        <section className={styles.composerBlock} aria-label="首页创作入口">
+        <section className={styles.composerBlock} aria-label="首页入口">
           <StudioSegment
             className={styles.modeSwitch}
             aria-label="首页模式"

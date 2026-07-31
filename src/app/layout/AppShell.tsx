@@ -13,14 +13,20 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { logout } from '../../api/auth';
 import { useUser } from '../../contexts/UserContext';
 import { loginUrl } from '../../shared/utils/authGate';
+import { WORKSPACE_NAV_ITEMS } from './workspaceNav';
 
-const workspaceNav: { key: string; to: string; label: string; end?: boolean; icon: ReactNode }[] = [
-  { key: 'home', to: '/', label: '首页', end: true, icon: <HomeOutlined /> },
-  { key: 'generate', to: '/generate', label: '创作', icon: <PictureOutlined /> },
-  { key: 'projects', to: '/projects', label: '画布', icon: <AppstoreOutlined /> },
-  { key: 'chat', to: '/chat', label: '超级工坊', icon: <CommentOutlined /> },
-  { key: 'assets', to: '/assets', label: '资源', icon: <FolderOpenOutlined /> },
-];
+const NAV_ICONS: Record<string, ReactNode> = {
+  home: <HomeOutlined />,
+  generate: <PictureOutlined />,
+  projects: <AppstoreOutlined />,
+  chat: <CommentOutlined />,
+  assets: <FolderOpenOutlined />,
+};
+
+const workspaceNav = WORKSPACE_NAV_ITEMS.map((item) => ({
+  ...item,
+  icon: NAV_ICONS[item.key],
+}));
 
 export function AppShell() {
   const location = useLocation();

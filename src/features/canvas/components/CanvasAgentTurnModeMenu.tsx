@@ -26,7 +26,7 @@ const TURN_MODE_OPTIONS: TurnModeOption[] = [
   {
     value: 'auto',
     label: '自动生成',
-    description: 'Agent 自主规划并自动执行',
+    description: '自动规划并执行',
     icon: <ThunderboltOutlined />,
   },
   {

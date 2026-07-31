@@ -21,29 +21,50 @@ export type Stream =
   | UserGateRequiredFrame
   | BrowserBlockedFrame
   | BrowserFrameEvent;
+export type Avatar = string | null;
 export type TokenChannel = "answer" | "think";
+export type ExpertId = string | null;
+export type ExpertName = string | null;
 export type ProtocolVersion = number;
+export type SpeakerRole = string | null;
+export type TaskId = string | null;
 export type Text = string;
 export type Type = "token";
+export type Avatar1 = string | null;
 export type CallId = string;
+export type ExpertId1 = string | null;
+export type ExpertName1 = string | null;
 export type Name = string;
 export type ProtocolVersion1 = number;
+export type SpeakerRole1 = string | null;
+export type TaskId1 = string | null;
 export type Type1 = "tool_start";
+export type Avatar2 = string | null;
 export type CallId1 = string;
 export type ErrorCode = string | null;
 export type ProtocolVersion2 = number;
 export type Recoverable = boolean;
 export type RecoveryAttempt = number | null;
 export type Synthetic = boolean;
+export type ExpertId2 = string | null;
+export type ExpertName2 = string | null;
 export type Name1 = string;
 export type Ok = boolean;
 export type Preview = string;
 export type ProtocolVersion3 = number;
+export type SpeakerRole2 = string | null;
+export type TaskId2 = string | null;
 export type Type2 = "tool_end";
+export type Avatar3 = string | null;
+export type ExpertId3 = string | null;
+export type ExpertName3 = string | null;
 export type ProtocolVersion4 = number;
+export type SpeakerRole3 = string | null;
+export type TaskId3 = string | null;
 export type Ts = number;
 export type TurnId = string | null;
 export type Type3 = "heartbeat";
+export type Avatar4 = string | null;
 export type StreamErrorCode =
   | "agent_recovery_exhausted"
   | "canvas_duplicate_turn"
@@ -62,12 +83,21 @@ export type StreamErrorCode =
 export type Data = {
   [k: string]: unknown;
 } | null;
+export type ExpertId4 = string | null;
+export type ExpertName4 = string | null;
 export type Message = string;
 export type ProtocolVersion5 = number;
+export type SpeakerRole4 = string | null;
+export type TaskId4 = string | null;
 export type TurnId1 = string | null;
 export type Type4 = "error";
+export type Avatar5 = string | null;
+export type ExpertId5 = string | null;
+export type ExpertName5 = string | null;
 export type MessageIds = number[];
 export type ProtocolVersion6 = number;
+export type SpeakerRole5 = string | null;
+export type TaskId5 = string | null;
 export type TurnId2 = string;
 export type Type5 = "done";
 export type ProtocolVersion7 = number;
@@ -168,7 +198,7 @@ export type TurnId4 = string | null;
 export type Type13 = "canvas_patch";
 export type NodeId = string;
 export type Revision2 = number;
-export type TaskId = number | null;
+export type TaskId6 = number | null;
 export type ProtocolVersion11 = number;
 export type TurnId5 = string | null;
 export type Type14 = "generation_progress";
@@ -232,28 +262,43 @@ export type Type21 = "browser_frame";
 export type Width1 = number;
 
 export interface TokenFrame {
+  avatar?: Avatar;
   channel: TokenChannel;
+  expert_id?: ExpertId;
+  expert_name?: ExpertName;
   protocol_version?: ProtocolVersion;
+  speaker_role?: SpeakerRole;
+  task_id?: TaskId;
   text: Text;
   type: Type;
 }
 export interface ToolStartFrame {
   args?: Args;
+  avatar?: Avatar1;
   call_id: CallId;
+  expert_id?: ExpertId1;
+  expert_name?: ExpertName1;
   name: Name;
   protocol_version?: ProtocolVersion1;
+  speaker_role?: SpeakerRole1;
+  task_id?: TaskId1;
   type: Type1;
 }
 export interface Args {
   [k: string]: unknown;
 }
 export interface ToolEndFrame {
+  avatar?: Avatar2;
   call_id: CallId1;
   data?: ToolRecoveryFrameData | null;
+  expert_id?: ExpertId2;
+  expert_name?: ExpertName2;
   name: Name1;
   ok: Ok;
   preview?: Preview;
   protocol_version?: ProtocolVersion3;
+  speaker_role?: SpeakerRole2;
+  task_id?: TaskId2;
   type: Type2;
 }
 export interface ToolRecoveryFrameData {
@@ -264,22 +309,37 @@ export interface ToolRecoveryFrameData {
   synthetic?: Synthetic;
 }
 export interface HeartbeatFrame {
+  avatar?: Avatar3;
+  expert_id?: ExpertId3;
+  expert_name?: ExpertName3;
   protocol_version?: ProtocolVersion4;
+  speaker_role?: SpeakerRole3;
+  task_id?: TaskId3;
   ts: Ts;
   turn_id?: TurnId;
   type: Type3;
 }
 export interface ErrorFrame {
+  avatar?: Avatar4;
   code: StreamErrorCode;
   data?: Data;
+  expert_id?: ExpertId4;
+  expert_name?: ExpertName4;
   message: Message;
   protocol_version?: ProtocolVersion5;
+  speaker_role?: SpeakerRole4;
+  task_id?: TaskId4;
   turn_id?: TurnId1;
   type: Type4;
 }
 export interface DoneFrame {
+  avatar?: Avatar5;
+  expert_id?: ExpertId5;
+  expert_name?: ExpertName5;
   message_ids?: MessageIds;
   protocol_version?: ProtocolVersion6;
+  speaker_role?: SpeakerRole5;
+  task_id?: TaskId5;
   turn_id: TurnId2;
   type: Type5;
 }
@@ -441,7 +501,7 @@ export interface GenerationProgress {
   node_id: NodeId;
   revision: Revision2;
   status: CanvasNodeStatus;
-  task_id?: TaskId;
+  task_id?: TaskId6;
 }
 export interface ToolPendingFrame {
   call_id: CallId2;

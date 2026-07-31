@@ -1,15 +1,16 @@
 import {
   CopyOutlined,
   FolderOpenOutlined,
+  MenuOutlined,
   PlusOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
-import { Button, Spin, Upload, message as antMessage } from 'antd';
+import { Button, Drawer, Grid, Spin, Upload, message as antMessage } from 'antd';
 import dayjs from 'dayjs';
-import { useCallback, useEffect, useRef, useState, Fragment } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { DEFAULT_CHAT_MODEL_KEY } from '../../canvas/lib/chatModelKey';
 import {
   createConversation,
@@ -32,13 +33,50 @@ import {
 } from '../../../api/chat';
 import { PageScaffold } from '../../../shared/ui/PageScaffold';
 import { StudioChip } from '../../../shared/ui/StudioChip';
+import { useStudioApp } from '../../../shared/ui/useStudioApp';
 import { ChatComposerBox } from '../components/ChatComposerBox';
-import { ChatRightPanel } from '../components/ChatRightPanel';
+import {
+  UnifiedChatSidePanel,
+  type UnifiedSidePanelTab,
+} from '../components/UnifiedChatSidePanel';
+import { useChatSidePanelWidth } from '../hooks/useChatSidePanelWidth';
 import { UserGatePanel, type UserGateState } from '../components/UserGatePanel';
 import { TurnWorkingStatus } from '../components/TurnWorkingStatus';
 import { MessageAttachmentList, getMessageAttachments } from '../components/MessageAttachmentList';
 import { SessionListItem } from '../components/SessionListItem';
 import { ToolRunTimeline } from '../components/ToolRunTimeline';
+import {
+  clearChatSelectedExpert,
+  getChatSelectedExpert,
+  getWorkshopProjectByChat,
+  inviteWorkshopExpert,
+  listExpertDirectory,
+  listWorkshopConnectors,
+  listWorkshopProjects,
+  listWorkshopRoomMembers,
+  listWorkshopRoster,
+  setChatSelectedExpert,
+  upgradeWorkshopFromExpert,
+  upgradeWorkshopProject,
+  addWorkshopPreset,
+  beginWorkshopShopAuth,
+  type ExpertDirectoryEntry,
+  type WorkshopConnectorEntry,
+  type WorkshopProjectView,
+  type WorkshopRoomMemberView,
+  type WorkshopRosterExpertView,
+} from '../../../api/workshop';
+import {
+  confirmInviteUpgradeCopy,
+} from '../../workshop/utils/inviteExpertFlow';
+import {
+  findExpertByKey,
+  resolveSpeakerAttribution,
+} from '../../workshop/utils/expertDirectory';
+import {
+  buildRoomRecipientExperts,
+  resolveRoomTurnTargetExpertId,
+} from '../../workshop/utils/turnRouting';
 import {
   FOYER_HANDOFF_STATE_KEY,
   isFoyerAgentHandoff,
@@ -297,8 +335,14 @@ const TIME_FILTER_TABS: { key: TimeFilter; label: string }[] = [
 export function ChatPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { modal } = useStudioApp();
   const [input, setInput] = useState('');
   const [selectedSkillPaths, setSelectedSkillPaths] = useState<string[]>([]);
+  const [selectedExpertKey, setSelectedExpertKey] = useState<string | null>(null);
+  const [expertDirectory, setExpertDirectory] = useState<ExpertDirectoryEntry[]>([]);
+  const [workshopConnectors, setWorkshopConnectors] = useState<WorkshopConnectorEntry[]>([]);
+  const [expertsLoading, setExpertsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sessionFilter, setSessionFilter] = useState<TimeFilter>('all');
   const [models, setModels] = useState<ChatModelItem[]>([]);
@@ -314,7 +358,19 @@ export function ChatPage() {
   const [gatePending, setGatePending] = useState<UserGateState | null>(null);
   const [gateCancelling, setGateCancelling] = useState(false);
   const [modelVisionHint, setModelVisionHint] = useState<string | null>(null);
-  const [resourcesOpen, setResourcesOpen] = useState(false);
+  const [workshopProject, setWorkshopProject] = useState<WorkshopProjectView | null>(null);
+  const [workshopProjects, setWorkshopProjects] = useState<WorkshopProjectView[]>([]);
+  const [workshopRoster, setWorkshopRoster] = useState<WorkshopRosterExpertView[]>([]);
+  const [workshopRoomMembers, setWorkshopRoomMembers] = useState<WorkshopRoomMemberView[]>([]);
+  const [sidePanelTab, setSidePanelTab] = useState<UnifiedSidePanelTab>('overview');
+  const [pendingShopAuth, setPendingShopAuth] = useState(false);
+  const [shopAuthBusy, setShopAuthBusy] = useState(false);
+  const [sidePanelOpen, setSidePanelOpen] = useState(false);
+  const [conversationListOpen, setConversationListOpen] = useState(false);
+  const screens = Grid.useBreakpoint();
+  const layoutCompact = !screens.lg;
+  const showSidePanelColumn = sidePanelOpen && !layoutCompact;
+  const sidePanelWidth = useChatSidePanelWidth('nexus-chat-side-panel-width');
   const [loadingConversationIds, setLoadingConversationIds] = useState<Set<number>>(() => new Set());
   const [booting, setBooting] = useState(true);
   const uiByConversationRef = useRef<Map<number, ConversationUiState>>(new Map());
@@ -502,6 +558,79 @@ export function ChatPage() {
   useEffect(() => {
     activeConversationIdRef.current = activeConversationId;
   }, [activeConversationId]);
+
+  const refreshWorkshopProjects = useCallback(async () => {
+    try {
+      const res = await listWorkshopProjects();
+      setWorkshopProjects(res.items ?? []);
+    } catch {
+      // ignore list errors on soft refresh
+    }
+  }, []);
+
+  const resolveWorkshopForConversation = useCallback(async (conversationId: number | null) => {
+    if (conversationId == null) {
+      setWorkshopProject(null);
+      return;
+    }
+    try {
+      const res = await getWorkshopProjectByChat(conversationId);
+      setWorkshopProject(res.project ?? null);
+      if (res.project) {
+        setSidePanelOpen(true);
+      }
+    } catch {
+      setWorkshopProject(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshWorkshopProjects();
+  }, [refreshWorkshopProjects]);
+
+  useEffect(() => {
+    void resolveWorkshopForConversation(activeConversationId);
+  }, [activeConversationId, resolveWorkshopForConversation]);
+
+  const refreshWorkshopRoster = useCallback(async (projectId: string) => {
+    try {
+      const [rosterRes, roomRes] = await Promise.all([
+        listWorkshopRoster(projectId),
+        listWorkshopRoomMembers(projectId),
+      ]);
+      setWorkshopRoster(rosterRes.items ?? []);
+      setWorkshopRoomMembers(roomRes.items ?? []);
+    } catch {
+      setWorkshopRoster([]);
+      setWorkshopRoomMembers([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!workshopProject) {
+      setWorkshopRoster([]);
+      setWorkshopRoomMembers([]);
+      return;
+    }
+    void refreshWorkshopRoster(workshopProject.id);
+  }, [refreshWorkshopRoster, workshopProject?.id]);
+
+  const speakerRoster = useMemo(
+    () =>
+      workshopRoster.map((expert) => ({
+        id: expert.id,
+        name:
+          (expert as { display_name?: string | null }).display_name?.trim() ||
+          expert.name ||
+          expert.id,
+        avatar_url:
+          (expert as { avatar_id?: string | null }).avatar_id != null
+            ? `/avatars/experts/${(expert as { avatar_id?: string | null }).avatar_id}.png`
+            : findExpertByKey(expert.preset_key ?? '')?.avatar_url,
+        preset_key: expert.preset_key ?? null,
+      })),
+    [workshopRoster],
+  );
 
   const selectedModelSpec = models.find((item) => item.key === selectedModel);
   const supportsVision = selectedModelSpec?.supports_vision === true;
@@ -858,10 +987,290 @@ export function ChatPage() {
       setActiveConversationId(conv.id);
       setSelectedSkillPaths([]);
       applyUiFromCache(conv.id);
+      setWorkshopProject(null);
     } catch (err) {
       antMessage.error(err instanceof Error ? err.message : '创建会话失败');
     }
   };
+
+  useEffect(() => {
+    setExpertsLoading(true);
+    void Promise.all([
+      listExpertDirectory(),
+      listWorkshopConnectors({ project_id: workshopProject?.id }),
+    ])
+      .then(([expertsRes, connectorsRes]) => {
+        setExpertDirectory(expertsRes.items ?? []);
+        setWorkshopConnectors(connectorsRes.items ?? []);
+      })
+      .catch((err) => {
+        antMessage.error(err instanceof Error ? err.message : '专家目录加载失败');
+      })
+      .finally(() => setExpertsLoading(false));
+  }, [workshopProject?.id]);
+
+  useEffect(() => {
+    if (activeConversationId == null) {
+      setSelectedExpertKey(null);
+      return;
+    }
+    void getChatSelectedExpert(activeConversationId)
+      .then((res) => setSelectedExpertKey(res.expert_key))
+      .catch(() => setSelectedExpertKey(null));
+  }, [activeConversationId]);
+
+  const selectedExpert = useMemo(() => {
+    if (!selectedExpertKey || selectedExpertKey === 'host') return null;
+    if (workshopProject) {
+      const rosterExpert =
+        workshopRoster.find((item) => item.preset_key === selectedExpertKey) ??
+        workshopRoster.find((item) => item.id === selectedExpertKey);
+      if (!rosterExpert) return null;
+      const roomMember = workshopRoomMembers.find((item) => item.expert_id === rosterExpert.id);
+      if (!roomMember) return null;
+      return {
+        key: selectedExpertKey,
+        name: roomMember.name ?? rosterExpert.name,
+        avatarUrl:
+          roomMember.avatar_url ||
+          findExpertByKey(rosterExpert.preset_key ?? selectedExpertKey)?.avatar_url ||
+          '/avatars/experts/host.png',
+      };
+    }
+    const expert =
+      expertDirectory.find((item) => item.key === selectedExpertKey) ??
+      findExpertByKey(selectedExpertKey);
+    if (!expert) return null;
+    return {
+      key: expert.key,
+      name: expert.name,
+      avatarUrl: expert.avatar_url,
+    };
+  }, [expertDirectory, selectedExpertKey, workshopProject, workshopRoomMembers, workshopRoster]);
+
+  const applySingleExpertSelection = useCallback(
+    async (expertKey: string) => {
+      if (activeConversationId == null) {
+        antMessage.warning('请先选择或创建会话');
+        return;
+      }
+      await setChatSelectedExpert(activeConversationId, expertKey);
+      setSelectedExpertKey(expertKey);
+    },
+    [activeConversationId],
+  );
+
+  const handleInviteExpert = useCallback(
+    (expertKey: string) => {
+      const expertMeta =
+        expertDirectory.find((item) => item.key === expertKey) ?? findExpertByKey(expertKey);
+      const expertName = expertMeta?.name ?? expertKey;
+
+      if (!workshopProject) {
+        const copy = confirmInviteUpgradeCopy(expertName);
+        modal.confirm({
+          title: copy.title,
+          content: copy.content,
+          okText: copy.okText,
+          cancelText: '取消',
+          onOk: async () => {
+            if (activeConversationId == null) {
+              antMessage.warning('请先选择或创建会话');
+              return;
+            }
+            try {
+              const result = await upgradeWorkshopFromExpert({
+                conversation_id: activeConversationId,
+                expert_key: expertKey,
+                project_name: activeSession?.title || expertName,
+                carried_message_count: messages.length,
+              });
+              await clearChatSelectedExpert(activeConversationId);
+              setSelectedExpertKey(null);
+              setWorkshopProject(result.project);
+              setSidePanelOpen(true);
+              setSidePanelTab('members');
+              await refreshWorkshopProjects();
+              await refreshWorkshopRoster(result.project.id);
+            } catch (err) {
+              antMessage.error(err instanceof Error ? err.message : '邀请失败');
+              throw err;
+            }
+          },
+        });
+        return;
+      }
+
+      void (async () => {
+        try {
+          const [roster, room] = await Promise.all([
+            listWorkshopRoster(workshopProject.id),
+            listWorkshopRoomMembers(workshopProject.id),
+          ]);
+          let rosterExpert =
+            roster.items.find((item) => item.preset_key === expertKey) ??
+            roster.items.find((item) => item.id === expertKey);
+          if (!rosterExpert) {
+            rosterExpert = await addWorkshopPreset(workshopProject.id, expertKey);
+          }
+          const inRoom = room.items.some((member) => member.expert_id === rosterExpert!.id);
+          if (!inRoom) {
+            await inviteWorkshopExpert(workshopProject.id, rosterExpert.id);
+          }
+          await refreshWorkshopRoster(workshopProject.id);
+          setSidePanelOpen(true);
+          setSidePanelTab('members');
+          antMessage.success(`已邀请「${expertName}」进房间`);
+        } catch (err) {
+          antMessage.error(err instanceof Error ? err.message : '邀请失败');
+        }
+      })();
+    },
+    [
+      activeConversationId,
+      activeSession?.title,
+      expertDirectory,
+      messages.length,
+      modal,
+      refreshWorkshopProjects,
+      refreshWorkshopRoster,
+      workshopProject,
+    ],
+  );
+
+  const handleExpertSelect = useCallback(
+    (expertKey: string) => {
+      if (!workshopProject) {
+        handleInviteExpert(expertKey);
+        return;
+      }
+      const recipients = buildRoomRecipientExperts({
+        roomMembers: workshopRoomMembers,
+        roster: workshopRoster,
+      });
+      if (!recipients.some((item) => item.key === expertKey)) {
+        antMessage.warning('请先邀请该专家进入房间，再选择发给');
+        return;
+      }
+      void applySingleExpertSelection(expertKey).catch((err) => {
+        antMessage.error(err instanceof Error ? err.message : '选择专家失败');
+      });
+    },
+    [
+      applySingleExpertSelection,
+      handleInviteExpert,
+      workshopProject,
+      workshopRoomMembers,
+      workshopRoster,
+    ],
+  );
+
+  const handleClearSelectedExpert = useCallback(async () => {
+    if (activeConversationId == null) {
+      setSelectedExpertKey(null);
+      return;
+    }
+    await clearChatSelectedExpert(activeConversationId);
+    setSelectedExpertKey(null);
+  }, [activeConversationId]);
+
+  const composerExperts = useMemo(() => {
+    if (!workshopProject) {
+      return {
+        loading: expertsLoading,
+        items: expertDirectory.filter((item) => item.key !== 'host'),
+        selectedKey: selectedExpertKey,
+        onSelect: handleExpertSelect,
+        onBrowseMore: () => {
+          setSidePanelOpen(true);
+          setSidePanelTab('members');
+        },
+        menuLabel: '发给',
+      };
+    }
+    return {
+      loading: expertsLoading,
+      items: buildRoomRecipientExperts({
+        roomMembers: workshopRoomMembers,
+        roster: workshopRoster,
+      }),
+      selectedKey: selectedExpertKey,
+      onSelect: handleExpertSelect,
+      onBrowseMore: () => {
+        setSidePanelOpen(true);
+        setSidePanelTab('members');
+      },
+      menuLabel: '发给',
+    };
+  }, [
+    expertDirectory,
+    expertsLoading,
+    handleExpertSelect,
+    selectedExpertKey,
+    workshopProject,
+    workshopRoomMembers,
+    workshopRoster,
+  ]);
+
+  const beginTaobaoShopAuth = useCallback(async () => {
+    if (activeConversationId == null) {
+      antMessage.warning('请先选择或创建会话');
+      return;
+    }
+    setShopAuthBusy(true);
+    try {
+      let project = workshopProject;
+      if (!project) {
+        const upgraded = await upgradeWorkshopProject({
+          group_chat_id: activeConversationId,
+          project_name: activeSession?.title || '新项目',
+          carried_message_count: messages.length,
+        });
+        project = upgraded.project;
+        setWorkshopProject(project);
+        await refreshWorkshopProjects();
+        setSidePanelOpen(true);
+        setSidePanelTab('connect');
+      }
+      const result = await beginWorkshopShopAuth(project.id);
+      if (!result.authorize_url) {
+        antMessage.error('当前环境未配置淘宝应用');
+        return;
+      }
+      window.open(result.authorize_url, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      antMessage.error(err instanceof Error ? err.message : '连接淘宝店铺失败');
+    } finally {
+      setShopAuthBusy(false);
+    }
+  }, [
+    activeConversationId,
+    activeSession?.title,
+    messages.length,
+    refreshWorkshopProjects,
+    workshopProject,
+  ]);
+
+  useEffect(() => {
+    const workshopId = searchParams.get('workshop');
+    if (!workshopId || workshopProjects.length === 0) return;
+    const project = workshopProjects.find((item) => item.id === workshopId);
+    if (!project) return;
+    const chatId = project.group_chat_id;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('workshop');
+        return next;
+      },
+      { replace: true },
+    );
+    if (activeConversationId !== chatId) {
+      void selectSession(chatId);
+    }
+    // Intentionally omit selectSession from deps: deep-link runs once per workshop query.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workshopProjects, searchParams]);
 
   const send = async (options?: {
     text?: string;
@@ -1006,6 +1415,32 @@ export function ChatPage() {
           ),
         }));
       },
+      onSpeakerAttribution: (payload: {
+        speaker_role?: string | null;
+        expert_id?: string | null;
+        expert_name?: string | null;
+        avatar?: string | null;
+        task_id?: string | null;
+      }) => {
+        if (!isCurrentTurn()) return;
+        patchConversationUi(conversationId, (prev) => ({
+          ...prev,
+          messages: prev.messages.map((m) => {
+            if (m.id !== assistantTempId) return m;
+            return {
+              ...m,
+              metadata: {
+                ...m.metadata,
+                ...(payload.speaker_role ? { speaker_role: payload.speaker_role } : {}),
+                ...(payload.expert_id ? { expert_id: payload.expert_id } : {}),
+                ...(payload.expert_name ? { expert_name: payload.expert_name } : {}),
+                ...(payload.avatar ? { avatar: payload.avatar } : {}),
+                ...(payload.task_id ? { task_id: payload.task_id } : {}),
+              },
+            };
+          }),
+        }));
+      },
       onToolStart: (callId: string, name: string, args: Record<string, unknown>) => {
         if (!isCurrentTurn()) return;
         patchConversationUi(conversationId, (prev) => {
@@ -1142,7 +1577,7 @@ export function ChatPage() {
         title: string;
         updated_at?: string;
       }) => {
-        if (!isCurrentTurn()) return;
+        // 标题可能在首轮 DONE 前到达；按 conversation_id 更新，不依赖 isCurrentTurn
         setSessions((prev) =>
           prev.map((s) =>
             s.id === conversation_id ? { ...s, title, ...(updated_at ? { updated_at } : {}) } : s,
@@ -1199,6 +1634,27 @@ export function ChatPage() {
     };
 
     try {
+      let turnTarget:
+        | {
+            expert_id?: string | null;
+            task_id?: string | null;
+            speaker_role?: string | null;
+          }
+        | undefined;
+
+      if (workshopProject && selectedExpertKey && selectedExpertKey !== 'host') {
+        const expertId = resolveRoomTurnTargetExpertId({
+          selectedKey: selectedExpertKey,
+          roomMembers: workshopRoomMembers,
+          roster: workshopRoster,
+        });
+        if (expertId) {
+          turnTarget = { expert_id: expertId };
+        } else {
+          antMessage.warning('选中的专家尚未进入房间，本轮将由项目助手回复');
+        }
+      }
+
       await streamMessage(
         {
           request_id: crypto.randomUUID(),
@@ -1208,6 +1664,7 @@ export function ChatPage() {
           model: model,
           enable_tools: true,
           client_turn_id: turnId,
+          ...(turnTarget ? { turn_target: turnTarget } : {}),
         },
         streamHandlers,
         controller.signal,
@@ -1574,6 +2031,31 @@ export function ChatPage() {
 
     return (
       <>
+        {isAssistant ? (
+          (() => {
+            const speaker = resolveSpeakerAttribution({
+              speaker_role: getMetaString(message.metadata, 'speaker_role'),
+              expert_id: getMetaString(message.metadata, 'expert_id'),
+              expert_name: getMetaString(message.metadata, 'expert_name'),
+              avatar: getMetaString(message.metadata, 'avatar'),
+              directory: expertDirectory,
+              roster: speakerRoster,
+            });
+            if (!speaker) return null;
+            return (
+              <div className="studio-bubble__speaker">
+                <img
+                  className="studio-bubble__speaker-avatar"
+                  src={speaker.avatar_url}
+                  alt=""
+                  aria-hidden
+                />
+                <span>{speaker.name}</span>
+                {getMetaString(message.metadata, 'task_id') ? ' · 当前工作' : null}
+              </div>
+            );
+          })()
+        ) : null}
         {message.role === 'user' ? (
           <UserMessageContent
             content={message.content}
@@ -1625,92 +2107,125 @@ export function ChatPage() {
       ? [{ label: `搜索结果 (${filteredSessions.length})`, items: filteredSessions }]
       : []
     : groupSessions(filteredSessions);
+  const projectByConversation = new Map(
+    workshopProjects.map((project) => [project.group_chat_id, project] as const),
+  );
+  const conversationNavigation = (
+    <>
+      <div className="studio-chat__sidebar-top">
+        <Button
+          type="primary"
+          className="studio-chat__new-btn"
+          block
+          icon={<PlusOutlined />}
+          aria-label="新对话"
+          onClick={() => {
+            setConversationListOpen(false);
+            void newSession();
+          }}
+        />
 
+        <label className="studio-chat__search">
+          <SearchOutlined className="studio-chat__search-icon" />
+          <input
+            type="text"
+            placeholder="搜索对话和项目"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </label>
+      </div>
+
+      {!searchQuery.trim() && (
+        <div className="studio-chat__filter-tabs">
+          {TIME_FILTER_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={`studio-chat__filter-tab${sessionFilter === tab.key ? ' studio-chat__filter-tab--active' : ''}`}
+              onClick={() => setSessionFilter(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="studio-chat__sessions">
+        {sessionGroups.length === 0 && (
+          <div className="studio-chat__empty">
+            {searchQuery ? '没有找到相关内容' : '还没有对话'}
+          </div>
+        )}
+        {sessionGroups.map((group) => (
+          <div key={group.label}>
+            <div className="studio-chat__section-label">{group.label}</div>
+            {group.items.map((session) => {
+              const project = projectByConversation.get(session.id);
+              return (
+                <SessionListItem
+                  key={session.id}
+                  session={session}
+                  active={session.id === activeConversationId}
+                  busy={loadingConversationIds.has(session.id)}
+                  projectLabel={project ? '项目' : undefined}
+                  onSelect={(id) => {
+                    setConversationListOpen(false);
+                    void selectSession(id);
+                  }}
+                  onRenamed={(id, title) =>
+                    setSessions((prev) =>
+                      prev.map((item) => (item.id === id ? { ...item, title } : item)),
+                    )
+                  }
+                  onDeleted={handleSessionDeleted}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </>
+  );
   return (
     <PageScaffold immersive>
-      <div className={`studio-chat${resourcesOpen ? ' studio-chat--resources-open' : ''}`}>
-
-        {/* ── 左侧栏 ── */}
-        <aside className="studio-chat__sidebar">
-          <div className="studio-chat__sidebar-top">
-            <Button
-              type="primary"
-              className="studio-chat__new-btn"
-              block
-              icon={<PlusOutlined />}
-              onClick={() => void newSession()}
-            >
-              新会话
-            </Button>
-
-            <label className="studio-chat__search">
-              <SearchOutlined className="studio-chat__search-icon" />
-              <input
-                type="text"
-                placeholder="搜索会话..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </label>
-          </div>
-
-          {/* 时间筛选标签（搜索模式下隐藏） */}
-          {!searchQuery.trim() && (
-            <div className="studio-chat__filter-tabs">
-              {TIME_FILTER_TABS.map((tab) => (
-                <button
-                  key={tab.key}
-                  type="button"
-                  className={`studio-chat__filter-tab${sessionFilter === tab.key ? ' studio-chat__filter-tab--active' : ''}`}
-                  onClick={() => setSessionFilter(tab.key)}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="studio-chat__sessions">
-            {sessionGroups.length === 0 && (
-              <div className="studio-chat__empty">
-                {searchQuery ? '无匹配结果' : '暂无会话'}
-              </div>
-            )}
-            {sessionGroups.map((group) => (
-              <div key={group.label}>
-                {/* 搜索结果 label 不用 uppercase 样式 */}
-                <div className="studio-chat__section-label">{group.label}</div>
-                {group.items.map((s) => (
-                  <SessionListItem
-                    key={s.id}
-                    session={s}
-                    active={s.id === activeConversationId}
-                    busy={loadingConversationIds.has(s.id)}
-                    onSelect={selectSession}
-                    onRenamed={(id, title) =>
-                      setSessions((prev) => prev.map((x) => (x.id === id ? { ...x, title } : x)))
-                    }
-                    onDeleted={handleSessionDeleted}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
-        </aside>
+      <div
+        className={`studio-chat${
+          showSidePanelColumn ? ' studio-chat--resources-open' : ''
+        }${workshopProject ? ' studio-chat--workshop' : ''}`}
+      >
+        {!layoutCompact ? (
+          <aside className="studio-chat__sidebar">{conversationNavigation}</aside>
+        ) : null}
 
         {/* ── 中间内容区 ── */}
         <section className="studio-chat__main">
           <div className="studio-chat__title-bar">
-            <span className="studio-chat__title">{activeSession?.title || '新会话'}</span>
-            {!resourcesOpen ? (
-              <StudioChip
-                icon={<FolderOpenOutlined aria-hidden />}
-                aria-controls="studio-chat-resources-panel"
-                onClick={() => setResourcesOpen(true)}
-              >
-                会话资源
-              </StudioChip>
-            ) : null}
+            <span className="studio-chat__title">
+              {activeSession?.title || '新会话'}
+              {workshopProject ? (
+                <span className="studio-chat__mode-chip">项目</span>
+              ) : null}
+            </span>
+            <div className="studio-chat__title-actions">
+              {layoutCompact ? (
+                <StudioChip
+                  icon={<MenuOutlined aria-hidden />}
+                  onClick={() => setConversationListOpen(true)}
+                >
+                  对话与项目
+                </StudioChip>
+              ) : null}
+              {!sidePanelOpen ? (
+                <StudioChip
+                  icon={<FolderOpenOutlined aria-hidden />}
+                  aria-controls="studio-chat-side-panel"
+                  onClick={() => setSidePanelOpen(true)}
+                >
+                  详情
+                </StudioChip>
+              ) : null}
+            </div>
           </div>
 
           <div className="studio-chat__content">
@@ -1720,11 +2235,14 @@ export function ChatPage() {
               ref={messagesContainerRef}
               onScroll={handleMessagesScroll}
             >
-              {activeConversationId == null && (
-                <div className="studio-chat__empty">
-                  <p>一起开始探索吧</p>
+              {messages.length === 0 && !activeConversationLoading ? (
+                <div className="studio-chat__start">
+                  <h1>一起开始探索吧</h1>
+                  <p className="studio-chat__start-hint">
+                    输入 @ 指定专家，/ 引用技能；需要协作或连店铺时，打开右侧详情即可
+                  </p>
                 </div>
-              )}
+              ) : null}
               {visibleMessages(messages).map((m) => {
                 const isActiveUserTurn = m.role === 'user' && isActiveTurnMessage(m);
                 const userTurnTimeline =
@@ -1790,6 +2308,12 @@ export function ChatPage() {
               onInputChange={setInput}
               selectedSkillPaths={selectedSkillPaths}
               onSelectedSkillPathsChange={setSelectedSkillPaths}
+              selectedExpert={selectedExpert}
+              expertTargetPrefix={workshopProject ? '发给 ' : null}
+              onSelectedExpertChange={(expert) => {
+                if (!expert) void handleClearSelectedExpert();
+              }}
+              composerExperts={composerExperts}
               models={models}
               selectedModel={selectedModel}
               onModelChange={handleModelChange}
@@ -1817,23 +2341,80 @@ export function ChatPage() {
           </div>
         </section>
 
-        {/* ── 右侧资源面板 ── */}
-        {resourcesOpen ? (
-          <ChatRightPanel
-            messages={messages}
-            onCollapse={() => setResourcesOpen(false)}
-            onAddRef={() => {
-              const input = document.createElement('input');
-              input.type = 'file';
-              input.onchange = async (e) => {
-                const file = (e.target as HTMLInputElement).files?.[0];
-                if (file) await onUpload(file, false);
-              };
-              input.click();
-            }}
-          />
+        {showSidePanelColumn ? (
+          <aside
+            className="studio-chat__panel studio-chat__panel--workshop"
+            style={{ width: sidePanelWidth.width }}
+          >
+            <div
+              className="studio-chat__panel-resize"
+              onPointerDown={sidePanelWidth.onResizePointerDown}
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="调整详情面板宽度"
+            />
+            <UnifiedChatSidePanel
+              title={activeSession?.title || workshopProject?.name || '新会话'}
+              project={workshopProject}
+              messages={messages}
+              expertDirectory={expertDirectory}
+              connectors={workshopConnectors}
+              onClose={() => setSidePanelOpen(false)}
+              onInviteExpert={handleInviteExpert}
+              onBeginShopAuth={() => void beginTaobaoShopAuth()}
+              onProjectUpdated={() => void resolveWorkshopForConversation(activeConversationId)}
+              activeTab={sidePanelTab}
+              onTabChange={setSidePanelTab}
+              pendingShopAuth={pendingShopAuth}
+              onPendingShopAuthHandled={() => setPendingShopAuth(false)}
+              shopAuthBusy={shopAuthBusy}
+            />
+          </aside>
         ) : null}
       </div>
+      {layoutCompact ? (
+        <Drawer
+          title="对话与项目"
+          placement="left"
+          width={320}
+          open={conversationListOpen}
+          onClose={() => setConversationListOpen(false)}
+          styles={{ body: { padding: 0 } }}
+        >
+          <div className="studio-chat__sidebar studio-chat__sidebar--drawer">
+            {conversationNavigation}
+          </div>
+        </Drawer>
+      ) : null}
+      {layoutCompact && sidePanelOpen ? (
+        <Drawer
+          title={null}
+          closable={false}
+          placement="right"
+          width="min(92vw, 380px)"
+          open
+          onClose={() => setSidePanelOpen(false)}
+          styles={{ body: { padding: 0 }, header: { display: 'none' } }}
+          destroyOnClose={false}
+        >
+          <UnifiedChatSidePanel
+            title={activeSession?.title || workshopProject?.name || '新会话'}
+            project={workshopProject}
+            messages={messages}
+            expertDirectory={expertDirectory}
+            connectors={workshopConnectors}
+            onClose={() => setSidePanelOpen(false)}
+            onInviteExpert={handleInviteExpert}
+            onBeginShopAuth={() => void beginTaobaoShopAuth()}
+            onProjectUpdated={() => void resolveWorkshopForConversation(activeConversationId)}
+            activeTab={sidePanelTab}
+            onTabChange={setSidePanelTab}
+            pendingShopAuth={pendingShopAuth}
+            onPendingShopAuthHandled={() => setPendingShopAuth(false)}
+            shopAuthBusy={shopAuthBusy}
+          />
+        </Drawer>
+      ) : null}
       {gatePending && (
         <UserGatePanel
           gate={gatePending}

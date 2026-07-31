@@ -1,0 +1,30 @@
+.root {
+  display: grid;
+  gap: var(--studio-space-3, 12px);
+  min-width: 0;
+}
+
+.confirmRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--studio-space-2, 8px);
+}
+
+.hashInput {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--studio-border);
+  border-radius: var(--studio-radius-sm);
+  background: var(--studio-bg);
+  color: var(--studio-text);
+}
+
+.confirmBtn {
+  align-self: center;
+}
+
+@media (max-width: 599px) {
+  .confirmRow {
+    grid-template-columns: 1fr;
+  }
+}

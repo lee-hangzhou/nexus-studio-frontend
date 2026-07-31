@@ -229,6 +229,13 @@ export function cancelGate(conversationId: number, turnId: string, gateId: strin
 
 type StreamHandlers = {
   onToken: (channel: 'answer' | 'think', text: string) => void;
+  onSpeakerAttribution?: (payload: {
+    speaker_role?: string | null;
+    expert_id?: string | null;
+    expert_name?: string | null;
+    avatar?: string | null;
+    task_id?: string | null;
+  }) => void;
   onToolStart: (callId: string, name: string, args: Record<string, unknown>) => void;
   onToolEnd: (
     callId: string,
@@ -311,6 +318,21 @@ async function consumeChatSSE(
           handlers.onActivity?.();
           switch (frame.type) {
             case 'token':
+              if (
+                'speaker_role' in frame ||
+                'expert_id' in frame ||
+                'expert_name' in frame ||
+                'avatar' in frame ||
+                'task_id' in frame
+              ) {
+                handlers.onSpeakerAttribution?.({
+                  speaker_role: (frame as { speaker_role?: string | null }).speaker_role,
+                  expert_id: (frame as { expert_id?: string | null }).expert_id,
+                  expert_name: (frame as { expert_name?: string | null }).expert_name,
+                  avatar: (frame as { avatar?: string | null }).avatar,
+                  task_id: (frame as { task_id?: string | null }).task_id,
+                });
+              }
               if (frame.text) {
                 handlers.onToken(frame.channel === 'think' ? 'think' : 'answer', frame.text);
               }
@@ -396,6 +418,11 @@ export async function streamMessage(
     enable_tools?: boolean;
     client_turn_id?: string;
     project_id?: number;
+    turn_target?: {
+      expert_id?: string | null;
+      task_id?: string | null;
+      speaker_role?: string | null;
+    };
   },
   handlers: StreamHandlers,
   signal?: AbortSignal,

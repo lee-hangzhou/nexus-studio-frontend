@@ -1,0 +1,25 @@
+.root {
+  min-width: 0;
+}
+
+.hint {
+  display: block;
+  margin-bottom: var(--studio-space-2, 8px);
+}
+
+.item {
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--studio-space-2, 8px);
+  flex-wrap: wrap;
+  margin-bottom: var(--studio-space-1, 4px);
+}
+
+.attribution {
+  margin-bottom: 0 !important;
+  font-size: var(--studio-text-xs, 12px);
+}

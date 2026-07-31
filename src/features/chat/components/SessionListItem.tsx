@@ -10,12 +10,21 @@ export interface SessionListItemProps {
   session: ConversationView;
   active: boolean;
   busy?: boolean;
+  projectLabel?: string;
   onSelect: (id: number) => void;
   onRenamed: (id: number, title: string) => void;
   onDeleted: (id: number) => void;
 }
 
-export function SessionListItem({ session, active, busy = false, onSelect, onRenamed, onDeleted }: SessionListItemProps) {
+export function SessionListItem({
+  session,
+  active,
+  busy = false,
+  projectLabel,
+  onSelect,
+  onRenamed,
+  onDeleted,
+}: SessionListItemProps) {
   const { modal } = useStudioApp();
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState(session.title);
@@ -74,22 +83,29 @@ export function SessionListItem({ session, active, busy = false, onSelect, onRen
         openRename();
       },
     },
-    {
-      key: 'delete',
-      label: '删除',
-      danger: true,
-      onClick: (info) => {
-        stopMenuEvent(info);
-        confirmDelete();
-      },
-    },
+    ...(projectLabel
+      ? []
+      : [
+          {
+            key: 'delete',
+            label: '删除',
+            danger: true,
+            onClick: (info: Parameters<NonNullable<MenuProps['onClick']>>[0]) => {
+              stopMenuEvent(info);
+              confirmDelete();
+            },
+          },
+        ]),
   ];
 
   return (
     <>
       <div className={`studio-chat__session${active ? ' studio-chat__session--active' : ''}`}>
         <button type="button" className="studio-chat__session-body" onClick={() => onSelect(session.id)}>
-          <div className="studio-chat__session-title">{session.title}</div>
+          <div className="studio-chat__session-title">
+            <span className="studio-chat__session-name">{session.title}</span>
+            {projectLabel ? <span className="studio-chat__session-kind">{projectLabel}</span> : null}
+          </div>
           <div className="studio-chat__session-meta">
             {busy ? '生成中… · ' : ''}
             {formatConversationTime(session.updated_at)}

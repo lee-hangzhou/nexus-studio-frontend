@@ -178,7 +178,7 @@ export function CanvasAgentPanel({
           onClick={() => onOpenChange(true)}
           aria-controls="canvas-agent-panel"
         >
-          画布 Agent
+          画布助手
         </StudioChip>
         <Select
           className="canvas-agent-float__session-select"
@@ -202,7 +202,7 @@ export function CanvasAgentPanel({
   }
 
   return (
-    <aside className="canvas-agent-float" style={{ width }} aria-label="画布 Agent">
+    <aside className="canvas-agent-float" style={{ width }} aria-label="画布助手">
       <div
         className="canvas-agent-float__resize-handle"
         role="separator"
@@ -278,7 +278,7 @@ export function CanvasAgentPanel({
 
           {!loading && messages.length === 0 ? (
             <div className="workflow-canvas-agent-panel__feed-empty">
-              描述节点或镜头，Agent 会在这里保留完整会话。
+              暂无消息
             </div>
           ) : null}
 
@@ -303,11 +303,11 @@ export function CanvasAgentPanel({
             return (
               <article key={m.id} className="workflow-canvas-agent-panel__bubble is-assistant">
                 <span className="workflow-canvas-agent-panel__who">
-                  Agent{m.streaming ? ' · 进行中' : ''}
+                  画布助手{m.streaming ? ' · 进行中' : ''}
                 </span>
                 {steps.length > 0 ? <ToolRunTimeline steps={steps} /> : null}
                 {!body && m.streaming ? (
-                  <div className="studio-bubble__typing" aria-label="Agent 正在回复">
+                  <div className="studio-bubble__typing" aria-label="画布助手正在回复">
                     <span />
                     <span />
                     <span />
@@ -401,7 +401,7 @@ export function CanvasAgentPanel({
                 placeholder="继续描述你想改的节点或镜头…"
                 rows={3}
                 disabled={busy}
-                aria-label="画布 Agent 输入"
+                aria-label="画布助手输入"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
