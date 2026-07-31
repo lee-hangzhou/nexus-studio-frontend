@@ -1,0 +1,90 @@
+.inputWrap {
+  position: relative;
+  width: 100%;
+}
+
+.root {
+  max-height: min(240px, 40vh);
+  overflow: auto;
+  border: 1px solid var(--studio-border);
+  border-radius: 10px;
+  background: var(--studio-surface-raised, #1b1f25);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+/* portal 到 body，避免被 .studio-composer-box overflow:hidden 裁切 */
+.rootFixed {
+  position: fixed;
+  z-index: 1100;
+}
+
+.head {
+  padding: 8px 12px 4px;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+}
+
+.empty {
+  padding: 10px 12px 12px;
+  color: var(--studio-text-secondary);
+  font-size: 13px;
+}
+
+.list {
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--studio-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.itemActive,
+.item:hover {
+  background: color-mix(in srgb, var(--studio-control-selected-bg, #3a3a3a) 80%, transparent);
+}
+
+.skillMark {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--studio-border) 70%, transparent);
+  color: var(--studio-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.meta {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--studio-text-muted);
+  font-size: 12px;
+}

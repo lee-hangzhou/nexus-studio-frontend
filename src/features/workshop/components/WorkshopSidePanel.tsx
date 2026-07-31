@@ -83,7 +83,6 @@ export function WorkshopSidePanel(props: {
     project,
     expertDirectory = [],
     sessionResources,
-    onProjectUpdated,
     onClose,
     activeTab,
     onTabChange,
