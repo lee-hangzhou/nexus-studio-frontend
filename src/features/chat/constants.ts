@@ -1,4 +1,4 @@
-/** 与 app/chat/constants.py DEFAULT_CONVERSATION_TITLE 保持一致 */
+/** 与 app/server/chat/services/constants.py DEFAULT_CONVERSATION_TITLE 保持一致 */
 export const DEFAULT_CONVERSATION_TITLE = '新会话';
 
 /** 与 app/chat/message_list/constants.py DEFAULT_TURN_LIMIT 保持一致 */
