@@ -1,6 +1,6 @@
 import type { ChatMessageView, ToolStepView } from '../../api/chat';
 import { sanitizeToolResultPreview } from './toolResultPreview';
-import { isFailedToolStep } from './toolStepVisibility';
+import { isFailedToolStep, JUDGMENT_TOOL_NAMES } from './toolStepVisibility';
 
 export type TurnTimelineNarration = {
   kind: 'narration';
@@ -110,6 +110,9 @@ export function buildPersistedTurnTimeline(
     }
     if (message.role === 'tool') {
       const step = toolStepFromToolMessage(message, items.length);
+      if (JUDGMENT_TOOL_NAMES.has(step.name)) {
+        continue;
+      }
       items.push({ kind: 'tool', id: step.call_id, step });
     }
   }
@@ -156,7 +159,11 @@ export function mergeTurnTimelines(
 }
 
 export function visibleTurnTimeline(items: TurnTimelineItem[]): TurnTimelineItem[] {
-  return items.filter((item) => item.kind === 'narration' || !isFailedToolStep(item.step));
+  return items.filter((item) => {
+    if (item.kind === 'narration') return true;
+    if (JUDGMENT_TOOL_NAMES.has(item.step.name)) return false;
+    return !isFailedToolStep(item.step);
+  });
 }
 
 export function toolStepsFromTimeline(items: TurnTimelineItem[]): ToolStepView[] {

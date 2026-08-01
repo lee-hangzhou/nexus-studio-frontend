@@ -4,6 +4,7 @@ import {
   FolderOpenOutlined,
   HomeOutlined,
   LogoutOutlined,
+  DollarOutlined,
   PictureOutlined,
   UserOutlined,
 } from '@ant-design/icons';
@@ -57,6 +58,12 @@ export function AppShell() {
             icon: <UserOutlined />,
             label: user.username || '当前用户',
             disabled: true,
+          },
+          {
+            key: 'billing',
+            icon: <DollarOutlined />,
+            label: '购买积分',
+            onClick: () => navigate('/billing'),
           },
           { type: 'divider' },
           {

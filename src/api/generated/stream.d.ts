@@ -19,6 +19,7 @@ export type Stream =
   | GenerationProgressFrame
   | ToolPendingFrame
   | UserGateRequiredFrame
+  | UpgradeInviteProposedFrame
   | BrowserBlockedFrame
   | BrowserFrameEvent;
 export type Avatar = string | null;
@@ -250,15 +251,33 @@ export type ProtocolVersion13 = number;
 export type TurnId7 = string;
 export type Type19 = "user_gate_required";
 export type ConversationId1 = number;
-export type Message1 = string;
+/**
+ * @minItems 1
+ */
+export type ExpertKeys = [string, ...string[]];
+/**
+ * @minItems 1
+ */
+export type Experts = [UpgradeInviteExpertFrameItem, ...UpgradeInviteExpertFrameItem[]];
+export type Key = string;
+export type Name5 = string;
 export type ProtocolVersion14 = number;
-export type ScreenshotUrl = string | null;
+export type PrimaryExpertKey = string;
+export type ProposalId = number;
+export type ProtocolVersion15 = number;
+export type Rationale = string;
 export type TurnId8 = string;
-export type Type20 = "browser_blocked";
+export type Type20 = "upgrade_invite_proposed";
+export type ConversationId2 = number;
+export type Message1 = string;
+export type ProtocolVersion16 = number;
+export type ScreenshotUrl = string | null;
+export type TurnId9 = string;
+export type Type21 = "browser_blocked";
 export type FrameB64 = string;
 export type Height1 = number;
-export type ProtocolVersion15 = number;
-export type Type21 = "browser_frame";
+export type ProtocolVersion17 = number;
+export type Type22 = "browser_frame";
 export type Width1 = number;
 
 export interface TokenFrame {
@@ -576,18 +595,34 @@ export interface UserGateRequiredFrame {
 export interface Assets1 {
   [k: string]: unknown;
 }
-export interface BrowserBlockedFrame {
+export interface UpgradeInviteProposedFrame {
   conversation_id: ConversationId1;
-  message: Message1;
-  protocol_version?: ProtocolVersion14;
-  screenshot_url?: ScreenshotUrl;
+  expert_keys: ExpertKeys;
+  experts: Experts;
+  primary_expert_key: PrimaryExpertKey;
+  proposal_id: ProposalId;
+  protocol_version?: ProtocolVersion15;
+  rationale: Rationale;
   turn_id: TurnId8;
   type: Type20;
+}
+export interface UpgradeInviteExpertFrameItem {
+  key: Key;
+  name: Name5;
+  protocol_version?: ProtocolVersion14;
+}
+export interface BrowserBlockedFrame {
+  conversation_id: ConversationId2;
+  message: Message1;
+  protocol_version?: ProtocolVersion16;
+  screenshot_url?: ScreenshotUrl;
+  turn_id: TurnId9;
+  type: Type21;
 }
 export interface BrowserFrameEvent {
   frame_b64: FrameB64;
   height: Height1;
-  protocol_version?: ProtocolVersion15;
-  type: Type21;
+  protocol_version?: ProtocolVersion17;
+  type: Type22;
   width: Width1;
 }

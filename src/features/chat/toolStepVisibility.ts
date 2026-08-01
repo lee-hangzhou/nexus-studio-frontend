@@ -8,6 +8,13 @@ export const BROWSER_TOOL_NAMES = new Set([
   'signal_browser_blocked',
 ]);
 
+/** 双形态意图判断：协议信号，不对用户展示为业务工具步骤 */
+export const JUDGMENT_TOOL_NAMES = new Set([
+  // 历史消息可能仍含已删除工具名；继续隐藏以免时间线回放
+  'answer_directly',
+  'propose_upgrade_and_invite',
+]);
+
 function parseToolResultSuccess(preview: string): boolean | null {
   const text = preview.trim();
   if (!text.startsWith('{')) return null;
@@ -36,7 +43,9 @@ export function isFailedToolStep(step: ToolStepView): boolean {
 }
 
 export function visibleToolSteps(steps: ToolStepView[]): ToolStepView[] {
-  return steps.filter((step) => !isFailedToolStep(step));
+  return steps.filter(
+    (step) => !isFailedToolStep(step) && !JUDGMENT_TOOL_NAMES.has(step.name),
+  );
 }
 
 export function isBrowserTool(name: string): boolean {

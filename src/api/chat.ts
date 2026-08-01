@@ -22,6 +22,7 @@ export interface ConversationView {
   status: number;
   is_generating?: boolean;
   awaiting_user_gate?: boolean;
+  awaiting_upgrade_invite?: boolean;
   generating_started_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -263,6 +264,15 @@ type StreamHandlers = {
     assets?: Record<string, unknown>;
     domain?: string;
   }) => void;
+  onUpgradeInviteProposed?: (payload: {
+    turn_id: string;
+    proposal_id: number;
+    conversation_id: number;
+    expert_keys: string[];
+    primary_expert_key: string;
+    rationale: string;
+    experts: Array<{ key: string; name: string }>;
+  }) => void;
   onBrowserBlocked?: (payload: {
     turn_id: string;
     message: string;
@@ -362,6 +372,44 @@ async function consumeChatSSE(
                 domain: (frame as { domain?: string }).domain,
               });
               break;
+            case 'upgrade_invite_proposed': {
+              const proposed = frame as Extract<StreamFrame, { type: 'upgrade_invite_proposed' }>;
+              if (
+                typeof proposed.proposal_id !== 'number'
+                || typeof proposed.conversation_id !== 'number'
+                || !Array.isArray(proposed.expert_keys)
+                || proposed.expert_keys.length < 1
+                || typeof proposed.primary_expert_key !== 'string'
+                || !proposed.primary_expert_key
+                || typeof proposed.rationale !== 'string'
+                || !proposed.rationale
+                || !Array.isArray(proposed.experts)
+                || proposed.experts.length < 1
+                || proposed.experts.some(
+                  (item) =>
+                    typeof (item as { key?: unknown }).key !== 'string'
+                    || !(item as { key: string }).key
+                    || typeof (item as { name?: unknown }).name !== 'string'
+                    || !(item as { name: string }).name,
+                )
+              ) {
+                handlers.onError('internal', 'upgrade_invite_proposed frame malformed');
+                break;
+              }
+              handlers.onUpgradeInviteProposed?.({
+                turn_id: proposed.turn_id,
+                proposal_id: proposed.proposal_id,
+                conversation_id: proposed.conversation_id,
+                expert_keys: proposed.expert_keys,
+                primary_expert_key: proposed.primary_expert_key,
+                rationale: proposed.rationale,
+                experts: proposed.experts.map((item) => ({
+                  key: (item as { key: string }).key,
+                  name: (item as { name: string }).name,
+                })),
+              });
+              break;
+            }
             case 'browser_blocked':
               handlers.onBrowserBlocked?.({
                 turn_id: (frame as { turn_id?: string }).turn_id ?? '',
@@ -422,6 +470,7 @@ export async function streamMessage(
       expert_id?: string | null;
       task_id?: string | null;
       speaker_role?: string | null;
+      persist_user_message?: boolean;
     };
   },
   handlers: StreamHandlers,

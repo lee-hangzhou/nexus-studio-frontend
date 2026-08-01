@@ -5,12 +5,18 @@ import type {
   WorkshopAuthorizedOperationListResponse,
   WorkshopAuthorizedOperationView,
   WorkshopBeginShopAuthView,
+  WorkshopConfirmUpgradeInviteRequest,
+  WorkshopConfirmUpgradeInviteResultView,
   WorkshopCreateTaskProposalView,
   WorkshopDataSourcesView,
+  WorkshopDeclineUpgradeInviteRequest,
   WorkshopEventListResponse,
   WorkshopEventView,
+  WorkshopGetPendingUpgradeInviteRequest,
   WorkshopImportErrorListResponse,
+  WorkshopOkView,
   WorkshopPendingProposalListResponse,
+  WorkshopPendingUpgradeInviteResponse,
   WorkshopProjectListResponse,
   WorkshopProjectView,
   WorkshopRosterExpertView,
@@ -71,6 +77,30 @@ export function upgradeWorkshopProject(body: {
     carried_message_count: number;
     pending_task_proposal?: WorkshopCreateTaskProposalView | null;
   }>('/workshop/projects/upgrade', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function confirmUpgradeInvite(body: WorkshopConfirmUpgradeInviteRequest) {
+  return request<WorkshopConfirmUpgradeInviteResultView>(
+    '/workshop/upgrade-invite/confirm',
+    {
+      method: 'POST',
+      body: JSON.stringify(body),
+    },
+  );
+}
+
+export function declineUpgradeInvite(body: WorkshopDeclineUpgradeInviteRequest) {
+  return request<WorkshopOkView>('/workshop/upgrade-invite/decline', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function getPendingUpgradeInvite(body: WorkshopGetPendingUpgradeInviteRequest) {
+  return request<WorkshopPendingUpgradeInviteResponse>('/workshop/upgrade-invite/pending', {
     method: 'POST',
     body: JSON.stringify(body),
   });

@@ -6,6 +6,8 @@ import { RegisterPage } from '../pages/RegisterPage';
 import { ResetPasswordPage } from '../pages/ResetPasswordPage';
 import { AppShell } from '../app/layout/AppShell';
 import { AssetsPage } from '../features/assets/pages/AssetsPage';
+import { BillingPage } from '../features/billing/pages/BillingPage';
+import { BillingSuccessPage } from '../features/billing/pages/BillingSuccessPage';
 import { ChatPage } from '../features/chat/pages/ChatPage';
 import { GeneratePage } from '../features/generate/pages/GeneratePage';
 import { CanvasPage } from '../features/canvas/pages/CanvasPage';
@@ -37,6 +39,8 @@ export function AppRouter() {
         <Route path="workshop/:projectId" element={<Protected><WorkshopProjectRedirect /></Protected>} />
         <Route path="generate" element={<Protected><GeneratePage /></Protected>} />
         <Route path="assets" element={<Protected><AssetsPage /></Protected>} />
+        <Route path="billing" element={<BillingPage />} />
+        <Route path="billing/success" element={<Protected><BillingSuccessPage /></Protected>} />
         <Route path="projects" element={<Protected><ProjectsPage /></Protected>} />
         <Route path="projects/:projectId" element={<Protected><ProjectDetailPage /></Protected>} />
         <Route

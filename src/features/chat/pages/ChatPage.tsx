@@ -58,6 +58,9 @@ import {
   setChatSelectedExpert,
   upgradeWorkshopFromExpert,
   upgradeWorkshopProject,
+  confirmUpgradeInvite,
+  declineUpgradeInvite,
+  getPendingUpgradeInvite,
   addWorkshopPreset,
   beginWorkshopShopAuth,
   type ExpertDirectoryEntry,
@@ -69,6 +72,10 @@ import {
 import {
   confirmInviteUpgradeCopy,
 } from '../../workshop/utils/inviteExpertFlow';
+import {
+  UpgradeInviteConfirmModal,
+  type UpgradeInviteProposedPayload,
+} from '../../workshop/components/UpgradeInviteConfirmModal';
 import {
   findExpertByKey,
   resolveSpeakerAttribution,
@@ -357,6 +364,9 @@ export function ChatPage() {
   const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
   const [gatePending, setGatePending] = useState<UserGateState | null>(null);
   const [gateCancelling, setGateCancelling] = useState(false);
+  const [upgradeInviteProposed, setUpgradeInviteProposed] =
+    useState<UpgradeInviteProposedPayload | null>(null);
+  const [upgradeInviteConfirming, setUpgradeInviteConfirming] = useState(false);
   const [modelVisionHint, setModelVisionHint] = useState<string | null>(null);
   const [workshopProject, setWorkshopProject] = useState<WorkshopProjectView | null>(null);
   const [workshopProjects, setWorkshopProjects] = useState<WorkshopProjectView[]>([]);
@@ -410,7 +420,12 @@ export function ChatPage() {
     activeConversationId != null && loadingConversationIds.has(activeConversationId);
   const serverGenerating = Boolean(activeSession?.is_generating) && !activeConversationLoading;
   const awaitingUserGate = Boolean(activeSession?.awaiting_user_gate) || gatePending != null;
-  const conversationBusy = activeConversationLoading || Boolean(activeSession?.is_generating);
+  const awaitingUpgradeInvite =
+    Boolean(activeSession?.awaiting_upgrade_invite) || upgradeInviteProposed != null;
+  const conversationBusy =
+    activeConversationLoading
+    || Boolean(activeSession?.is_generating)
+    || awaitingUpgradeInvite;
   const effectiveAwaitingUserGate = awaitingUserGate;
 
   const streamingAssistantMessage = messages.find(
@@ -849,7 +864,9 @@ export function ChatPage() {
       return;
     }
     const needsPoll =
-      Boolean(activeSession?.is_generating) || Boolean(activeSession?.awaiting_user_gate);
+      Boolean(activeSession?.is_generating)
+      || Boolean(activeSession?.awaiting_user_gate)
+      || Boolean(activeSession?.awaiting_upgrade_invite);
     if (!needsPoll) {
       return;
     }
@@ -886,6 +903,7 @@ export function ChatPage() {
     activeConversationId,
     activeConversationLoading,
     activeSession?.awaiting_user_gate,
+    activeSession?.awaiting_upgrade_invite,
     activeSession?.is_generating,
     loadMessages,
     patchConversationUi,
@@ -923,6 +941,45 @@ export function ChatPage() {
     })();
   }, [activeConversationId, activeSession?.awaiting_user_gate, gatePending, patchConversationUi]);
 
+  // 刷新/切会话：仍有 pending 升级邀请时恢复弹窗
+  useEffect(() => {
+    if (activeConversationId == null || activeConversationLoading) {
+      return;
+    }
+    if (!activeSession?.awaiting_upgrade_invite) {
+      return;
+    }
+    if (upgradeInviteProposed?.conversation_id === activeConversationId) {
+      return;
+    }
+    const conversationId = activeConversationId;
+    void (async () => {
+      try {
+        const pending = await getPendingUpgradeInvite({ conversation_id: conversationId });
+        if (pending.proposal == null) {
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === conversationId ? { ...s, awaiting_upgrade_invite: false } : s,
+            ),
+          );
+          return;
+        }
+        if (pending.proposal.expert_keys.length < 1 || pending.proposal.experts.length < 1) {
+          antMessage.error('升级邀请数据不完整，请刷新后重试');
+          return;
+        }
+        setUpgradeInviteProposed(pending.proposal);
+      } catch (err) {
+        antMessage.error(err instanceof Error ? err.message : '恢复升级邀请失败');
+      }
+    })();
+  }, [
+    activeConversationId,
+    activeConversationLoading,
+    activeSession?.awaiting_upgrade_invite,
+    upgradeInviteProposed?.conversation_id,
+  ]);
+
   // 仅在尾部追加新消息时滚底；加载更早历史时不打断阅读位置。
   useEffect(() => {
     const prev = prevMessagesForScrollRef.current;
@@ -940,6 +997,7 @@ export function ChatPage() {
     }
     setActiveConversationId(id);
     setSelectedSkillPaths([]);
+    setUpgradeInviteProposed(null);
     if (loadingIdsRef.current.has(id)) {
       applyUiFromCache(id);
       return;
@@ -1391,6 +1449,7 @@ export function ChatPage() {
     let streamErrorCode: string | null = null;
     let publishedDeliverable: MessageAttachment | null = null;
     let gateInterrupted = false;
+    let upgradeInviteInterrupted = false;
 
     const streamHandlers = {
       onToken: (channel: 'answer' | 'think', delta: string) => {
@@ -1501,6 +1560,59 @@ export function ChatPage() {
           };
         });
       },
+      onUpgradeInviteProposed: (payload: {
+        turn_id: string;
+        proposal_id: number;
+        conversation_id: number;
+        expert_keys: string[];
+        primary_expert_key: string;
+        rationale: string;
+        experts: Array<{ key: string; name: string }>;
+      }) => {
+        if (!isCurrentTurn()) return;
+        upgradeInviteInterrupted = true;
+        if (payload.expert_keys.length < 1 || payload.experts.length < 1) return;
+        setUpgradeInviteProposed({
+          proposal_id: payload.proposal_id,
+          conversation_id: payload.conversation_id,
+          expert_keys: payload.expert_keys as [string, ...string[]],
+          primary_expert_key: payload.primary_expert_key,
+          rationale: payload.rationale,
+          experts: payload.experts.filter(
+            (item: { key: string; name: string }) => item.key && item.name,
+          ) as [{ key: string; name: string }, ...{ key: string; name: string }[]],
+        });
+        patchConversationUi(conversationId, (prev) => {
+          const flushed = flushAssistantNarration(prev, assistantTempId);
+          return {
+            ...flushed,
+            messages: flushed.messages.map((m) =>
+              m.id === assistantTempId
+                ? {
+                    ...m,
+                    metadata: {
+                      ...m.metadata,
+                      streaming: false,
+                      awaiting_upgrade_invite: true,
+                    },
+                  }
+                : m,
+            ),
+          };
+        });
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === conversationId
+              ? {
+                  ...s,
+                  is_generating: false,
+                  awaiting_upgrade_invite: true,
+                  generating_started_at: null,
+                }
+              : s,
+          ),
+        );
+      },
       onBrowserBlocked: (payload: {
         turn_id: string;
         message: string;
@@ -1588,6 +1700,33 @@ export function ChatPage() {
         if (!isCurrentTurn()) return;
         streamDone = true;
         setConversationLoading(conversationId, false);
+        if (upgradeInviteInterrupted) {
+          patchConversationUi(conversationId, (prev) => ({
+            ...prev,
+            liveTurnId: null,
+            liveTurnStartedAt: null,
+            liveTurnTimeline: [],
+            narrationCursor: 0,
+            messages: prev.messages.map((m) =>
+              m.id === assistantTempId
+                ? { ...m, metadata: { ...m.metadata, streaming: false } }
+                : m,
+            ),
+          }));
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.id === conversationId
+                ? {
+                    ...s,
+                    is_generating: false,
+                    awaiting_upgrade_invite: true,
+                    generating_started_at: null,
+                  }
+                : s,
+            ),
+          );
+          return;
+        }
         if (gateInterrupted) {
           patchConversationUi(conversationId, (prev) => ({
             ...prev,
@@ -1613,6 +1752,7 @@ export function ChatPage() {
                   ...s,
                   is_generating: false,
                   awaiting_user_gate: false,
+                  awaiting_upgrade_invite: false,
                   generating_started_at: null,
                 }
               : s,
@@ -2091,6 +2231,249 @@ export function ChatPage() {
     );
   };
 
+  const clearConversationBusy = useCallback((conversationId: number) => {
+    setConversationLoading(conversationId, false);
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === conversationId
+          ? {
+              ...s,
+              is_generating: false,
+              awaiting_upgrade_invite: false,
+              awaiting_user_gate: false,
+              generating_started_at: null,
+            }
+          : s,
+      ),
+    );
+  }, [setConversationLoading]);
+
+  const handleConfirmUpgradeInvite = useCallback(
+    async (selection: { expert_keys: string[]; primary_expert_key: string }) => {
+      if (!upgradeInviteProposed || !activeConversationId) return;
+      if (selection.expert_keys.length < 1) return;
+      const conversationId = activeConversationId;
+      const expertKeys = selection.expert_keys as [string, ...string[]];
+      setUpgradeInviteConfirming(true);
+      const proposed = upgradeInviteProposed;
+      try {
+        const result = await confirmUpgradeInvite({
+          conversation_id: proposed.conversation_id,
+          proposal_id: proposed.proposal_id,
+          expert_keys: expertKeys,
+          primary_expert_key: selection.primary_expert_key,
+          project_name: `工坊 ${dayjs().format('MM-DD HH:mm')}`,
+          carried_message_count: messages.length,
+        });
+        setUpgradeInviteProposed(null);
+        setWorkshopProject(result.project);
+        const [roster, room] = await Promise.all([
+          listWorkshopRoster(result.project.id),
+          listWorkshopRoomMembers(result.project.id),
+        ]);
+        setWorkshopRoster(roster.items ?? []);
+        setWorkshopRoomMembers(room.items ?? []);
+
+        // 先刷出 Host 说明；force 避免被 loadingIds 误跳过
+        await loadMessages(conversationId, { force: true });
+
+        const continueTurnId = crypto.randomUUID();
+        const assistantTempId = nextTempId();
+        const controller = new AbortController();
+        streamsByConversationRef.current.set(conversationId, {
+          turnId: continueTurnId,
+          controller,
+        });
+        const isCurrentTurn = () =>
+          streamsByConversationRef.current.get(conversationId)?.turnId === continueTurnId;
+
+        setConversationLoading(conversationId, true);
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.id === conversationId
+              ? {
+                  ...s,
+                  awaiting_upgrade_invite: false,
+                  is_generating: true,
+                  generating_started_at: new Date().toISOString(),
+                }
+              : s,
+          ),
+        );
+        patchConversationUi(conversationId, (prev) => ({
+          ...prev,
+          liveTurnId: continueTurnId,
+          liveTurnStartedAt: Date.now(),
+          liveTurnTimeline: [],
+          narrationCursor: 0,
+          messages: [
+            ...prev.messages,
+            {
+              id: assistantTempId,
+              role: 'assistant',
+              content: '',
+              metadata: {
+                streaming: true,
+                think: '',
+                client_turn_id: continueTurnId,
+                speaker_role: 'expert',
+              },
+              created_at: new Date().toISOString(),
+            },
+          ],
+        }));
+
+        let streamDone = false;
+        try {
+          await streamMessage(
+            {
+              request_id: crypto.randomUUID(),
+              conversation_id: conversationId,
+              content: [{ type: 'text', text: result.source_user_text }],
+              materials: [],
+              model: selectedModel,
+              enable_tools: true,
+              client_turn_id: continueTurnId,
+              turn_target: {
+                expert_id: result.primary_expert_id,
+                persist_user_message: false,
+              },
+            },
+            {
+              onToken: (channel, delta) => {
+                if (!isCurrentTurn()) return;
+                if (channel === 'think') {
+                  patchConversationUi(conversationId, (prev) => ({
+                    ...prev,
+                    messages: prev.messages.map((m) => {
+                      if (m.id !== assistantTempId) return m;
+                      const think = getMetaString(m.metadata, 'think');
+                      return {
+                        ...m,
+                        metadata: { ...m.metadata, think: `${think}${delta}`, streaming: true },
+                      };
+                    }),
+                  }));
+                  return;
+                }
+                patchConversationUi(conversationId, (prev) => ({
+                  ...prev,
+                  messages: prev.messages.map((m) =>
+                    m.id !== assistantTempId
+                      ? m
+                      : {
+                          ...m,
+                          content: `${m.content}${delta}`,
+                          metadata: { ...m.metadata, streaming: true },
+                        },
+                  ),
+                }));
+              },
+              onSpeakerAttribution: (payload) => {
+                if (!isCurrentTurn()) return;
+                patchConversationUi(conversationId, (prev) => ({
+                  ...prev,
+                  messages: prev.messages.map((m) => {
+                    if (m.id !== assistantTempId) return m;
+                    return {
+                      ...m,
+                      metadata: {
+                        ...m.metadata,
+                        ...(payload.speaker_role ? { speaker_role: payload.speaker_role } : {}),
+                        ...(payload.expert_id ? { expert_id: payload.expert_id } : {}),
+                        ...(payload.expert_name ? { expert_name: payload.expert_name } : {}),
+                        ...(payload.avatar ? { avatar: payload.avatar } : {}),
+                        ...(payload.task_id ? { task_id: payload.task_id } : {}),
+                      },
+                    };
+                  }),
+                }));
+              },
+              onToolStart: () => undefined,
+              onToolEnd: () => undefined,
+              onError: (code, message) => {
+                if (!isCurrentTurn()) return;
+                antMessage.error(message || code);
+              },
+              onCancelled: () => undefined,
+              onDone: () => {
+                if (!isCurrentTurn()) return;
+                streamDone = true;
+                patchConversationUi(conversationId, (prev) => ({
+                  ...prev,
+                  liveTurnId: null,
+                  liveTurnStartedAt: null,
+                  liveTurnTimeline: [],
+                  narrationCursor: 0,
+                  messages: prev.messages.map((m) =>
+                    m.id === assistantTempId
+                      ? { ...m, metadata: { ...m.metadata, streaming: false } }
+                      : m,
+                  ),
+                }));
+              },
+            },
+            controller.signal,
+          );
+          if (isCurrentTurn() && !streamDone) {
+            patchConversationUi(conversationId, (prev) => ({
+              ...prev,
+              messages: prev.messages.filter((m) => m.id !== assistantTempId),
+            }));
+            antMessage.error('专家回复流中断，正在刷新消息');
+          }
+        } finally {
+          if (streamsByConversationRef.current.get(conversationId)?.turnId === continueTurnId) {
+            streamsByConversationRef.current.delete(conversationId);
+          }
+          clearConversationBusy(conversationId);
+          await loadMessages(conversationId, { force: true });
+        }
+      } catch (err) {
+        antMessage.error(err instanceof Error ? err.message : '确认升级失败');
+        clearConversationBusy(conversationId);
+        try {
+          await loadMessages(conversationId, { force: true });
+        } catch {
+          // 刷新失败不遮盖确认错误
+        }
+      } finally {
+        setUpgradeInviteConfirming(false);
+      }
+    },
+    [
+      activeConversationId,
+      clearConversationBusy,
+      loadMessages,
+      messages.length,
+      patchConversationUi,
+      selectedModel,
+      setConversationLoading,
+      upgradeInviteProposed,
+    ],
+  );
+
+  const handleDeclineUpgradeInvite = useCallback(async () => {
+    if (!upgradeInviteProposed) return;
+    try {
+      await declineUpgradeInvite({
+        conversation_id: upgradeInviteProposed.conversation_id,
+        proposal_id: upgradeInviteProposed.proposal_id,
+      });
+      setUpgradeInviteProposed(null);
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === upgradeInviteProposed.conversation_id
+            ? { ...s, awaiting_upgrade_invite: false, is_generating: false, generating_started_at: null }
+            : s,
+        ),
+      );
+      antMessage.info('已拒绝升级；本会话将不再主动邀请专家');
+    } catch (err) {
+      antMessage.error(err instanceof Error ? err.message : '拒绝失败');
+    }
+  }, [upgradeInviteProposed]);
+
   if (booting) {
     return (
       <PageScaffold immersive>
@@ -2187,6 +2570,7 @@ export function ChatPage() {
       </div>
     </>
   );
+
   return (
     <PageScaffold immersive>
       <div
@@ -2425,6 +2809,17 @@ export function ChatPage() {
           onCancel={() => void cancelUserGate()}
         />
       )}
+      <UpgradeInviteConfirmModal
+        open={Boolean(upgradeInviteProposed)}
+        payload={upgradeInviteProposed}
+        confirming={upgradeInviteConfirming}
+        onConfirm={(selection) => {
+          void handleConfirmUpgradeInvite(selection);
+        }}
+        onDecline={() => {
+          void handleDeclineUpgradeInvite();
+        }}
+      />
     </PageScaffold>
   );
 }
