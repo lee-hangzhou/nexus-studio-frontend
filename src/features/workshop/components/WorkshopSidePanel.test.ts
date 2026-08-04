@@ -89,8 +89,29 @@ describe('WorkshopSidePanel copy audit', () => {
     }
   });
 
+  it('lists workshop artifacts without frontend type whitelist', () => {
+    expect(panelSource).toContain('WorkshopArtifactList');
+    expect(panelSource).toContain('setArtifacts');
+    expect(panelSource).not.toMatch(/artifact_type\s*===\s*['"]/);
+    expect(panelSource).not.toMatch(/storage_type\s*===\s*['"]/);
+  });
+
+  it('keeps overview as workflow list; run history lives inside a workflow', () => {
+    expect(panelSource).toContain('aria-label="返回"');
+    expect(panelSource).toContain('PlayCircleOutlined');
+    expect(panelSource).toContain('openWorkflow');
+    expect(panelSource).toContain('运行记录');
+    expect(panelSource).not.toContain('返回工作流');
+    expect(panelSource).not.toContain('当前工作');
+    expect(panelSource).not.toContain('>暂无任务</');
+    expect(panelSource).toContain('立即运行');
+    expect(panelSource).not.toMatch(/>\s*跑一次\s*</);
+    expect(panelSource).not.toContain('跑一次');
+  });
+
   it('uses compact factual empty states without large illustrations', () => {
-    expect(panelSource).toContain('>暂无任务</');
+    expect(panelSource).toContain('暂无已保存工作流');
+    expect(panelSource).toContain('暂无运行记录');
     expect(panelSource).not.toContain('项目产物');
     expect(panelSource).toContain('生成内容');
     // 结果 / 待确认仅在有内容时出现，不堆空壳文案

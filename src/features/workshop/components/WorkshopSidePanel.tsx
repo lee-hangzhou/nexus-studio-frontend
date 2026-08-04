@@ -1,4 +1,4 @@
-import { CloseOutlined } from '@ant-design/icons';
+import { CloseOutlined, LeftOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { Alert, Avatar, Button, Skeleton, Tabs, Tag, Tooltip, Typography, message } from 'antd';
 import {
   cloneElement,
@@ -24,8 +24,12 @@ import {
   listWorkshopRoster,
   listWorkshopTaskAssignments,
   listWorkshopTasks,
+  listWorkshopWorkflowRuns,
+  listWorkshopWorkflows,
+  manualRunWorkshopWorkflow,
   removeWorkshopExpert,
   wakeWorkshopProject,
+  type WorkshopArtifactView,
   type WorkshopConnectorEntry,
   type WorkshopDataSourcesView,
   type WorkshopProjectView,
@@ -33,8 +37,11 @@ import {
   type WorkshopRosterExpertView,
   type WorkshopTaskView,
   type WorkshopWakeDashboardView,
+  type WorkshopWorkflowRunView,
+  type WorkshopWorkflowView,
 } from '../../../api/workshop';
 import { ArtifactCards } from './ArtifactCards';
+import { WorkshopArtifactList } from './WorkshopArtifactList';
 import { DataSourcesPanel } from './DataSourcesPanel';
 import { DiffConfirmSurface, PublishReceiptList } from './DiffConfirmSurface';
 import { WorkshopMembersList } from './WorkshopMembersList';
@@ -42,6 +49,7 @@ import type { EcommerceArtifactEnvelope } from '../types';
 import {
   publishOperationLabel,
   taskStatusLabel,
+  workflowRunStatusLabel,
 } from '../utils/displayLabels';
 import { expertDisplayProfile } from '../utils/expertCatalog';
 import { type ExpertDirectoryEntry } from '../utils/expertDirectory';
@@ -65,6 +73,20 @@ function normalizeTab(tab: string | undefined, fallback: string): string {
 function projectStatusLabel(activeTask: WorkshopTaskView | null): string {
   if (activeTask) return taskStatusLabel(activeTask.status);
   return '协作中';
+}
+
+function formatRunTime(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
 }
 
 export function WorkshopSidePanel(props: {
@@ -96,7 +118,16 @@ export function WorkshopSidePanel(props: {
   const [roster, setRoster] = useState<WorkshopRosterExpertView[]>([]);
   const [roomMembers, setRoomMembers] = useState<WorkshopRoomMemberView[]>([]);
   const [tasks, setTasks] = useState<WorkshopTaskView[]>([]);
+  const [workflows, setWorkflows] = useState<WorkshopWorkflowView[]>([]);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
+  const [selectedWorkflowRuns, setSelectedWorkflowRuns] = useState<WorkshopWorkflowRunView[]>([]);
+  const [selectedRunsLoading, setSelectedRunsLoading] = useState(false);
+  const [runBusyId, setRunBusyId] = useState<string | null>(null);
   const [assignments, setAssignments] = useState<Record<string, string[]>>({});
+  const [artifacts, setArtifacts] = useState<WorkshopArtifactView[]>([]);
+  const [parsedArtifacts, setParsedArtifacts] = useState<
+    ReturnType<typeof parseWorkshopArtifacts>
+  >([]);
   const [envelopes, setEnvelopes] = useState<EcommerceArtifactEnvelope[]>([]);
   const [publishDiffs, setPublishDiffs] = useState<ReturnType<typeof findPublishDiffs>>([]);
   const [receipts, setReceipts] = useState<ReturnType<typeof findPublishReceipts>>([]);
@@ -127,6 +158,7 @@ export function WorkshopSidePanel(props: {
         assignRes,
         dataSourcesRes,
         connectorsRes,
+        workflowsRes,
       ] = await Promise.all([
         wakeWorkshopProject(projectId).catch(() => null as WorkshopWakeDashboardView | null),
         listWorkshopRoster(projectId),
@@ -136,15 +168,20 @@ export function WorkshopSidePanel(props: {
         listWorkshopTaskAssignments(projectId),
         getWorkshopDataSources(projectId).catch(() => null),
         listWorkshopConnectors({ project_id: projectId }).catch(() => ({ items: [] })),
+        listWorkshopWorkflows(projectId).catch(() => ({ items: [] })),
       ]);
       setRoster(rosterRes.items ?? []);
       setRoomMembers(roomRes.items ?? []);
       const taskItems = tasksRes.items ?? [];
       setTasks(taskItems);
+      setWorkflows(workflowsRes.items ?? []);
       const map: Record<string, string[]> = {};
       for (const row of assignRes.items ?? []) map[row.task_id] = row.expert_ids ?? [];
       setAssignments(map);
-      const parsed = parseWorkshopArtifacts(artifactsRes.items ?? []);
+      const artifactItems = artifactsRes.items ?? [];
+      setArtifacts(artifactItems);
+      const parsed = parseWorkshopArtifacts(artifactItems);
+      setParsedArtifacts(parsed);
       setEnvelopes(
         parsed
           .map((item) => item.envelope)
@@ -282,43 +319,170 @@ export function WorkshopSidePanel(props: {
     await load();
   };
 
-  const situationPanel = (
+  const selectedWorkflow = useMemo(
+    () => workflows.find((workflow) => workflow.id === selectedWorkflowId) ?? null,
+    [selectedWorkflowId, workflows],
+  );
+
+  useEffect(() => {
+    if (selectedWorkflowId && !workflows.some((workflow) => workflow.id === selectedWorkflowId)) {
+      setSelectedWorkflowId(null);
+      setSelectedWorkflowRuns([]);
+    }
+  }, [selectedWorkflowId, workflows]);
+
+  const loadSelectedWorkflowRuns = useCallback(
+    async (workflowId: string) => {
+      setSelectedRunsLoading(true);
+      try {
+        const runsRes = await listWorkshopWorkflowRuns(projectId, {
+          workflowId,
+          limit: 50,
+        });
+        setSelectedWorkflowRuns(runsRes.items ?? []);
+      } catch {
+        setSelectedWorkflowRuns([]);
+      } finally {
+        setSelectedRunsLoading(false);
+      }
+    },
+    [projectId],
+  );
+
+  const openWorkflow = useCallback(
+    (workflowId: string) => {
+      setSelectedWorkflowId(workflowId);
+      void loadSelectedWorkflowRuns(workflowId);
+    },
+    [loadSelectedWorkflowRuns],
+  );
+
+  const handleManualRun = useCallback(
+    (workflowId: string) => {
+      void (async () => {
+        setRunBusyId(workflowId);
+        try {
+          await manualRunWorkshopWorkflow(projectId, workflowId, []);
+          message.success('已排队执行');
+          await load();
+          if (selectedWorkflowId === workflowId) {
+            await loadSelectedWorkflowRuns(workflowId);
+          }
+        } catch (err) {
+          message.error(err instanceof Error ? err.message : '启动失败');
+        } finally {
+          setRunBusyId(null);
+        }
+      })();
+    },
+    [load, loadSelectedWorkflowRuns, projectId, selectedWorkflowId],
+  );
+
+  const listedArtifacts = useMemo(() => {
+    const richIds = new Set(
+      parsedArtifacts.filter((item) => item.envelope != null).map((item) => item.id),
+    );
+    // 结构化卡片另渲染；列表展示其余产物（含 oss 文件）。不做业务类型白名单。
+    return artifacts.filter((item) => !richIds.has(item.id));
+  }, [artifacts, parsedArtifacts]);
+
+  const projectArtifactCount = artifacts.length;
+  const projectArtifactsNode =
+    listedArtifacts.length > 0 || envelopes.length > 0 || receipts.length > 0 ? (
+      <>
+        {listedArtifacts.length > 0 ? (
+          <WorkshopArtifactList artifacts={listedArtifacts} />
+        ) : null}
+        {envelopes.length > 0 ? <ArtifactCards artifacts={envelopes} /> : null}
+        <PublishReceiptList receipts={receipts} />
+      </>
+    ) : null;
+
+  const situationPanel = selectedWorkflow ? (
     <div className={styles.sections}>
       <section className={styles.section}>
-        <Typography.Text strong className={styles.sectionTitle}>
-          当前工作
-        </Typography.Text>
-        {tasks.length === 0 ? (
-          <Typography.Text type="secondary">暂无任务</Typography.Text>
+        <div className={styles.workflowDetailHead}>
+          <Button
+            type="text"
+            size="small"
+            icon={<LeftOutlined />}
+            aria-label="返回"
+            className={styles.backButton}
+            onClick={() => {
+              setSelectedWorkflowId(null);
+              setSelectedWorkflowRuns([]);
+            }}
+          />
+          <Typography.Text strong className={styles.sectionTitle}>
+            运行记录
+          </Typography.Text>
+        </div>
+        {selectedRunsLoading ? (
+          <Skeleton active title={false} paragraph={{ rows: 4 }} />
+        ) : selectedWorkflowRuns.length === 0 ? (
+          <Typography.Text type="secondary">暂无运行记录</Typography.Text>
         ) : (
           <ul className={styles.taskList}>
-            {tasks.map((task) => (
-              <li key={task.id}>
-                <button
-                  type="button"
-                  className={`${styles.taskItem} ${
-                    activeTaskId === task.id ? styles.taskItemActive : ''
-                  }`}
-                  onClick={() => setActiveTaskId(task.id)}
-                >
-                  <strong>{task.title}</strong>
-                  <span>{taskStatusLabel(task.status)}</span>
-                </button>
+            {selectedWorkflowRuns.map((run) => (
+              <li key={run.id}>
+                <div className={styles.taskItem}>
+                  <strong>{formatRunTime(run.started_at ?? run.created_at)}</strong>
+                  <span>
+                    {workflowRunStatusLabel(run.status)}
+                    {run.error_message
+                      ? ` · ${
+                          run.error_message.length > 72
+                            ? `${run.error_message.slice(0, 72)}…`
+                            : run.error_message
+                        }`
+                      : ''}
+                  </span>
+                </div>
               </li>
             ))}
           </ul>
         )}
       </section>
-
-      {envelopes.length > 0 || receipts.length > 0 ? (
-        <section className={styles.section}>
-          <Typography.Text strong className={styles.sectionTitle}>
-            结果
-          </Typography.Text>
-          {envelopes.length > 0 ? <ArtifactCards artifacts={envelopes} /> : null}
-          <PublishReceiptList receipts={receipts} />
-        </section>
-      ) : null}
+    </div>
+  ) : (
+    <div className={styles.sections}>
+      <section className={styles.section}>
+        <Typography.Text strong className={styles.sectionTitle}>
+          工作流
+        </Typography.Text>
+        {workflows.length === 0 ? (
+          <Typography.Text type="secondary">暂无已保存工作流</Typography.Text>
+        ) : (
+          <ul className={styles.taskList}>
+            {workflows.map((workflow) => (
+              <li key={workflow.id}>
+                <div className={`${styles.taskItem} ${styles.workflowRow}`}>
+                  <button
+                    type="button"
+                    className={styles.workflowOpen}
+                    onClick={() => openWorkflow(workflow.id)}
+                  >
+                    <strong>{workflow.name}</strong>
+                  </button>
+                  <Tooltip title="立即运行">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<PlayCircleOutlined />}
+                      aria-label={`立即运行：${workflow.name}`}
+                      loading={runBusyId === workflow.id}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleManualRun(workflow.id);
+                      }}
+                    />
+                  </Tooltip>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {activeDiff ? (
         <section className={styles.section}>
@@ -335,15 +499,6 @@ export function WorkshopSidePanel(props: {
       ) : null}
     </div>
   );
-
-  const projectArtifactCount = envelopes.length + receipts.length;
-  const projectArtifactsNode =
-    projectArtifactCount > 0 ? (
-      <>
-        {envelopes.length > 0 ? <ArtifactCards artifacts={envelopes} /> : null}
-        <PublishReceiptList receipts={receipts} />
-      </>
-    ) : null;
 
   const resourcesPanel = (
     <div className={styles.sections}>

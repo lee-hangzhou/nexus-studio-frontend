@@ -15,7 +15,6 @@ import type {
   WorkshopGetPendingUpgradeInviteRequest,
   WorkshopImportErrorListResponse,
   WorkshopOkView,
-  WorkshopPendingProposalListResponse,
   WorkshopPendingUpgradeInviteResponse,
   WorkshopProjectListResponse,
   WorkshopProjectView,
@@ -25,6 +24,11 @@ import type {
   WorkshopTaskView,
   WorkshopToolCapability,
   WorkshopWakeDashboardView,
+  WorkshopWorkflowListResponse,
+  WorkshopWorkflowRunListResponse,
+  WorkshopWorkflowRunView,
+  WorkshopWorkflowView,
+  WorkshopManualRunResultView,
 } from './generated/workshop';
 import type {
   ExpertDirectoryEntry,
@@ -43,6 +47,8 @@ export type {
   WorkshopRosterExpertView,
   WorkshopTaskView,
   WorkshopWakeDashboardView,
+  WorkshopWorkflowRunView,
+  WorkshopWorkflowView,
 };
 
 export interface WorkshopRosterListResponse {
@@ -152,60 +158,6 @@ export function getWorkshopTask(projectId: string, taskId: string) {
   });
 }
 
-export function listWorkshopPendingProposals(projectId: string) {
-  return request<WorkshopPendingProposalListResponse>('/workshop/tasks/pending-proposals', {
-    method: 'POST',
-    body: JSON.stringify({ project_id: projectId }),
-  });
-}
-
-export function proposeWorkshopTask(body: {
-  project_id: string;
-  title: string;
-  goals: string[];
-  required_artifacts?: string[];
-}) {
-  return request<WorkshopCreateTaskProposalView>('/workshop/tasks/propose', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
-}
-
-export function confirmWorkshopTask(projectId: string, proposalId: string) {
-  return request<WorkshopTaskView>('/workshop/tasks/confirm', {
-    method: 'POST',
-    body: JSON.stringify({ project_id: projectId, proposal_id: proposalId }),
-  });
-}
-
-export function declineWorkshopTask(projectId: string, proposalId: string) {
-  return request<{ ok: true }>('/workshop/tasks/decline', {
-    method: 'POST',
-    body: JSON.stringify({ project_id: projectId, proposal_id: proposalId }),
-  });
-}
-
-export function proposeWorkshopTaskGo(projectId: string, taskId: string) {
-  return request<WorkshopTaskView>('/workshop/tasks/propose-go', {
-    method: 'POST',
-    body: JSON.stringify({ project_id: projectId, task_id: taskId }),
-  });
-}
-
-export function confirmWorkshopTaskGo(projectId: string, taskId: string) {
-  return request<WorkshopTaskView>('/workshop/tasks/confirm-go', {
-    method: 'POST',
-    body: JSON.stringify({ project_id: projectId, task_id: taskId }),
-  });
-}
-
-export function beginWorkshopTask(projectId: string, taskId: string) {
-  return request<WorkshopTaskView>('/workshop/tasks/begin', {
-    method: 'POST',
-    body: JSON.stringify({ project_id: projectId, task_id: taskId }),
-  });
-}
-
 export function blockWorkshopTask(projectId: string, taskId: string) {
   return request<WorkshopTaskView>('/workshop/tasks/block', {
     method: 'POST',
@@ -263,6 +215,42 @@ export function listWorkshopArtifacts(projectId: string, taskId?: string) {
     body: JSON.stringify({
       project_id: projectId,
       ...(taskId ? { task_id: taskId } : {}),
+    }),
+  });
+}
+
+export function listWorkshopWorkflows(projectId: string) {
+  return request<WorkshopWorkflowListResponse>('/workshop/workflows/list', {
+    method: 'POST',
+    body: JSON.stringify({ project_id: projectId }),
+  });
+}
+
+export function listWorkshopWorkflowRuns(
+  projectId: string,
+  options: { workflowId?: string; limit?: number } = {},
+) {
+  return request<WorkshopWorkflowRunListResponse>('/workshop/workflows/runs/list', {
+    method: 'POST',
+    body: JSON.stringify({
+      project_id: projectId,
+      ...(options.workflowId ? { workflow_id: options.workflowId } : {}),
+      ...(options.limit != null ? { limit: options.limit } : {}),
+    }),
+  });
+}
+
+export function manualRunWorkshopWorkflow(
+  projectId: string,
+  workflowId: string,
+  authorizedCapabilities: WorkshopToolCapability[] = [],
+) {
+  return request<WorkshopManualRunResultView>('/workshop/workflows/manual-run', {
+    method: 'POST',
+    body: JSON.stringify({
+      project_id: projectId,
+      workflow_id: workflowId,
+      authorized_capabilities: authorizedCapabilities,
     }),
   });
 }

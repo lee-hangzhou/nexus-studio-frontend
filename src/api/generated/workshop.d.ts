@@ -49,7 +49,11 @@ export type Workshop =
   | WorkshopArtifactView
   | WorkshopArtifactListRequest
   | WorkshopArtifactListResponse
-  | WorkshopWorkflowStepView
+  | WorkshopWorkflowDefinitionView
+  | WorkshopWorkflowNodeView
+  | WorkshopWorkflowRunView
+  | WorkshopWorkflowRunListResponse
+  | WorkshopListWorkflowRunsRequest
   | WorkshopDraftWorkflowRequest
   | WorkshopConfirmWorkflowRequest
   | WorkshopWorkflowView
@@ -144,7 +148,9 @@ export type WorkshopToolCapability =
   | "sandbox_execute"
   | "mcp"
   | "draft_workflow"
+  | "confirm_save_workflow"
   | "create_schedule"
+  | "manual_run_workflow"
   | "request_external_auth"
   | "propose_invite"
   | "invite_expert"
@@ -270,6 +276,7 @@ export type Passed = boolean;
 export type Reasons = string[];
 export type Content1 = string | null;
 export type CreatedAt = string;
+export type DownloadUrl = string | null;
 export type Id5 = string;
 export type Name7 = string;
 export type ProjectId21 = string;
@@ -280,20 +287,52 @@ export type UpdatedAt = string;
 export type ProjectId22 = string;
 export type TaskId9 = string | null;
 export type Items6 = WorkshopArtifactView[];
-export type ExternalCapabilities = WorkshopToolCapability[];
-export type RequiredArtifactNames = string[];
-export type Title3 = string;
-export type Name8 = string;
-export type ProjectId23 = string;
+export type From = string;
+export type To = string;
+export type Edges = WorkshopWorkflowEdgeView[];
+export type EntryNodeIds = string[] | null;
 /**
  * @minItems 1
  */
-export type Steps = [WorkshopWorkflowStepView, ...WorkshopWorkflowStepView[]];
-export type ProjectId24 = string;
-export type WorkflowId = string;
+export type Nodes = [WorkshopWorkflowNodeView, ...WorkshopWorkflowNodeView[]];
+export type PresetKey3 = string;
+export type ExternalCapabilities = WorkshopToolCapability[];
 export type Id6 = string;
+export type FromNodeId = string | null;
+export type Kind = "artifact" | "project_brief";
+export type Name8 = string;
+export type Inputs = WorkshopWorkflowNodeInputView[];
+export type Instruction = string;
+export type OnFailure = "fail_run" | "block";
 export type Name9 = string;
+export type Required = boolean;
+export type Outputs = WorkshopWorkflowNodeOutputView[];
+export type Title3 = string;
+export type CreatedAt1 = string;
+export type CurrentNodeId = string | null;
+export type ErrorMessage = string | null;
+export type FinishedAt = string | null;
+export type Id7 = string;
+export type ProjectId23 = string;
+export type ScheduleId1 = string | null;
+export type StartedAt = string | null;
+export type Status = "queued" | "running" | "succeeded" | "failed" | "blocked";
+export type Trigger = "manual" | "schedule" | "trial";
+export type WorkflowId = string;
+export type WorkflowRevision = number;
+export type Items7 = WorkshopWorkflowRunView[];
+export type Limit = number;
+export type ProjectId24 = string;
+export type WorkflowId1 = string | null;
+export type ModelKey = string;
+export type Name10 = string;
 export type ProjectId25 = string;
+export type ProjectId26 = string;
+export type WorkflowId2 = string;
+export type Id8 = string;
+export type ModelKey1 = string;
+export type Name11 = string;
+export type ProjectId27 = string;
 export type Revision1 = number;
 /**
  * 工作流草稿来源
@@ -303,45 +342,43 @@ export type WorkshopWorkflowSource = "agent" | "user";
  * 工坊工作流定义状态
  */
 export type WorkshopWorkflowStatus = "draft" | "saved";
-export type Steps1 = WorkshopWorkflowStepView[];
-export type Items7 = WorkshopWorkflowView[];
+export type Items8 = WorkshopWorkflowView[];
 export type AuthorizedCapabilities = WorkshopToolCapability[];
-export type ProjectId26 = string;
-export type WorkflowId1 = string;
-export type UsedLightConfirmation = boolean;
+export type ProjectId28 = string;
+export type WorkflowId3 = string;
 export type AuthorizedCapabilities1 = WorkshopToolCapability[];
 export type Cron = string;
-export type ProjectId27 = string;
+export type ProjectId29 = string;
 export type Timezone = string;
-export type WorkflowId2 = string;
-export type ProjectId28 = string;
-export type ScheduleId1 = string;
+export type WorkflowId4 = string;
+export type ProjectId30 = string;
+export type ScheduleId2 = string;
 export type AuthorizedAt = string;
 export type AuthorizedExternalCapabilities = WorkshopToolCapability[];
 export type Cron1 = string;
 export type Enabled = boolean;
-export type Id7 = string;
+export type Id9 = string;
 export type NextRunAt = string | null;
-export type ProjectId29 = string;
+export type ProjectId31 = string;
 export type Timezone1 = string;
-export type WorkflowId3 = string;
-export type Items8 = WorkshopScheduleView[];
-export type Id8 = string;
-export type ProjectId30 = string;
-export type ScheduleId2 = string;
+export type WorkflowId5 = string;
+export type Items9 = WorkshopScheduleView[];
+export type Id10 = string;
+export type ProjectId32 = string;
+export type ScheduleId3 = string;
 export type TaskId10 = string;
 export type TriggerKey = string;
-export type ProjectId31 = string;
-export type ScheduleId3 = string;
+export type ProjectId33 = string;
+export type ScheduleId4 = string;
 export type TriggerKey1 = string;
 export type EventIds = string[];
 export type RequiresExternalAuthPopup = boolean;
 export type Artifacts1 = ArtifactSubmissionView[];
 export type CoveredGoals1 = string[];
-export type ProjectId32 = string;
+export type ProjectId34 = string;
 export type TaskId11 = string;
 export type EventIds1 = string[];
-export type CreatedAt1 = string;
+export type CreatedAt2 = string;
 export type EventKey = string;
 /**
  * 工坊可观察事件种类
@@ -350,7 +387,7 @@ export type WorkshopEventKind = "schedule_started" | "schedule_summary" | "artif
 export type Payload =
   ScheduleStartedPayloadView | ScheduleSummaryPayloadView | ArtifactsPublishedPayloadView | ScheduleBlockedPayloadView;
 export type Message = string;
-export type ScheduleId4 = string;
+export type ScheduleId5 = string;
 export type TaskId12 = string;
 export type TriggerKey2 = string;
 export type Message1 = string;
@@ -360,24 +397,24 @@ export type TaskId14 = string;
 export type Message2 = string;
 export type Reasons1 = string[];
 export type TaskId15 = string;
-export type ProjectId33 = string;
+export type ProjectId35 = string;
 export type TaskId16 = string | null;
-export type Items9 = WorkshopEventView[];
+export type Items10 = WorkshopEventView[];
 export type Ok = true;
 export type ExpertIds1 = string[];
 export type TaskId17 = string;
-export type Items10 = WorkshopTaskAssignmentView[];
+export type Items11 = WorkshopTaskAssignmentView[];
 export type QualityIssues = string[];
 export type AppType = ("self_dev" | "subscription_isv") | null;
 export type ExpiresAt = string | null;
 export type SemanticPermissions = string[];
 export type ShopConnectionId = string;
-export type Status = "connected" | "REAUTH_REQUIRED" | "disconnected" | "unsupported";
+export type Status1 = "connected" | "REAUTH_REQUIRED" | "disconnected" | "unsupported";
 export type Detail = string | null;
 export type Key1 = string;
 export type Label = string;
 export type LastSyncedAt = string | null;
-export type Status1 =
+export type Status2 =
   | "disconnected"
   | "authorizing"
   | "connected"
@@ -390,16 +427,16 @@ export type Sources = WorkshopDataSourceStatus[];
 export type Code = string;
 export type Message3 = string;
 export type RowIndex = number;
-export type Items11 = WorkshopImportErrorView[];
+export type Items12 = WorkshopImportErrorView[];
 export type UnsupportedTemplate = boolean;
 export type AuthorizeUrl = string | null;
 export type ShopConnectionId1 = string;
-export type Status2 = "authorizing";
+export type Status3 = "authorizing";
 export type ApplicableTasks = string[];
 export type AvatarId1 = string;
 export type Key2 = string;
-export type Kind = "expert";
-export type Name10 = string;
+export type Kind1 = "expert";
+export type Name12 = string;
 export type RolePhrase1 = string;
 /**
  * @minItems 1
@@ -410,12 +447,12 @@ export type Scenes = [string, ...string[]];
  * @maxItems 3
  */
 export type Tags = [string, string] | [string, string, string];
-export type Items12 = ExpertDirectoryEntry[];
+export type Items13 = ExpertDirectoryEntry[];
 export type Description = string;
 export type Detail1 = string | null;
 export type Key3 = string;
-export type Name11 = string;
-export type Status3 =
+export type Name13 = string;
+export type Status4 =
   | "disconnected"
   | "authorizing"
   | "connected"
@@ -425,16 +462,16 @@ export type Status3 =
   | "sync_failed"
   | "incomplete"
   | "unsupported";
-export type Items13 = WorkshopConnectorEntry[];
+export type Items14 = WorkshopConnectorEntry[];
 export type ApplicableTasks1 = string[];
 export type AvatarId2 = string;
 export type Key4 = string;
-export type Kind1 = "team";
+export type Kind2 = "team";
 /**
  * @minItems 1
  */
 export type MemberKeys = [string, ...string[]];
-export type Name12 = string;
+export type Name14 = string;
 export type RolePhrase2 = string;
 /**
  * @minItems 1
@@ -445,11 +482,11 @@ export type Scenes1 = [string, ...string[]];
  * @maxItems 3
  */
 export type Tags1 = [string, string] | [string, string, string];
-export type Items14 = ExpertTeamDirectoryEntry[];
+export type Items15 = ExpertTeamDirectoryEntry[];
 export type AvatarId3 = string | null;
 export type ConversationId = number;
 export type ExpertKey = string | null;
-export type Name13 = string | null;
+export type Name15 = string | null;
 export type ConversationId1 = number;
 export type ExpertKey1 = string;
 export type ConversationId2 = number;
@@ -465,11 +502,12 @@ export type Message4 = string;
 export type RequiresUpgrade = true;
 export type TeamKey1 = string;
 export type ExpertId4 = string | null;
+export type PersistChatMessages = boolean;
 export type PersistUserMessage = boolean;
 export type SpeakerRole = string | null;
 export type TaskId18 = string | null;
 export type Key5 = string;
-export type Name14 = string;
+export type Name16 = string;
 export type ConversationId6 = number;
 /**
  * @minItems 1
@@ -712,6 +750,7 @@ export interface WorkshopWeakAcceptResultView {
 export interface WorkshopArtifactView {
   content?: Content1;
   created_at: CreatedAt;
+  download_url?: DownloadUrl;
   id: Id5;
   name: Name7;
   project_id: ProjectId21;
@@ -728,76 +767,126 @@ export interface WorkshopArtifactListRequest {
 export interface WorkshopArtifactListResponse {
   items: Items6;
 }
-export interface WorkshopWorkflowStepView {
+export interface WorkshopWorkflowDefinitionView {
+  edges?: Edges;
+  entry_node_ids?: EntryNodeIds;
+  nodes: Nodes;
+}
+export interface WorkshopWorkflowEdgeView {
+  from: From;
+  to: To;
+}
+export interface WorkshopWorkflowNodeView {
+  assignee: WorkshopWorkflowNodeAssigneeView;
   external_capabilities?: ExternalCapabilities;
-  required_artifact_names?: RequiredArtifactNames;
+  id: Id6;
+  inputs?: Inputs;
+  instruction: Instruction;
+  on_failure?: OnFailure;
+  outputs?: Outputs;
   title: Title3;
 }
-export interface WorkshopDraftWorkflowRequest {
-  name: Name8;
+export interface WorkshopWorkflowNodeAssigneeView {
+  preset_key: PresetKey3;
+}
+export interface WorkshopWorkflowNodeInputView {
+  from_node_id?: FromNodeId;
+  kind: Kind;
+  name?: Name8;
+}
+export interface WorkshopWorkflowNodeOutputView {
+  name: Name9;
+  required?: Required;
+  storage_type: WorkshopArtifactStorageType;
+}
+export interface WorkshopWorkflowRunView {
+  created_at: CreatedAt1;
+  current_node_id: CurrentNodeId;
+  error_message: ErrorMessage;
+  finished_at: FinishedAt;
+  id: Id7;
   project_id: ProjectId23;
-  steps: Steps;
+  schedule_id: ScheduleId1;
+  started_at: StartedAt;
+  status: Status;
+  trigger: Trigger;
+  workflow_id: WorkflowId;
+  workflow_revision: WorkflowRevision;
+}
+export interface WorkshopWorkflowRunListResponse {
+  items: Items7;
+}
+export interface WorkshopListWorkflowRunsRequest {
+  limit?: Limit;
+  project_id: ProjectId24;
+  workflow_id?: WorkflowId1;
+}
+export interface WorkshopDraftWorkflowRequest {
+  definition: WorkshopWorkflowDefinitionView;
+  model_key: ModelKey;
+  name: Name10;
+  project_id: ProjectId25;
 }
 export interface WorkshopConfirmWorkflowRequest {
-  project_id: ProjectId24;
-  workflow_id: WorkflowId;
+  project_id: ProjectId26;
+  workflow_id: WorkflowId2;
 }
 export interface WorkshopWorkflowView {
-  id: Id6;
-  name: Name9;
-  project_id: ProjectId25;
+  definition: WorkshopWorkflowDefinitionView;
+  id: Id8;
+  model_key: ModelKey1;
+  name: Name11;
+  project_id: ProjectId27;
   revision: Revision1;
   source: WorkshopWorkflowSource;
   status: WorkshopWorkflowStatus;
-  steps: Steps1;
 }
 export interface WorkshopWorkflowListResponse {
-  items: Items7;
+  items: Items8;
 }
 export interface WorkshopManualRunWorkflowRequest {
   authorized_capabilities?: AuthorizedCapabilities;
-  project_id: ProjectId26;
-  workflow_id: WorkflowId1;
+  project_id: ProjectId28;
+  workflow_id: WorkflowId3;
 }
 export interface WorkshopManualRunResultView {
-  task: WorkshopTaskView;
-  used_light_confirmation: UsedLightConfirmation;
+  run: WorkshopWorkflowRunView;
 }
 export interface WorkshopCreateScheduleRequest {
   authorized_capabilities?: AuthorizedCapabilities1;
   cron: Cron;
-  project_id: ProjectId27;
+  project_id: ProjectId29;
   timezone: Timezone;
-  workflow_id: WorkflowId2;
+  workflow_id: WorkflowId4;
 }
 export interface WorkshopScheduleIdRequest {
-  project_id: ProjectId28;
-  schedule_id: ScheduleId1;
+  project_id: ProjectId30;
+  schedule_id: ScheduleId2;
 }
 export interface WorkshopScheduleView {
   authorized_at: AuthorizedAt;
   authorized_external_capabilities: AuthorizedExternalCapabilities;
   cron: Cron1;
   enabled: Enabled;
-  id: Id7;
+  id: Id9;
   next_run_at: NextRunAt;
-  project_id: ProjectId29;
+  project_id: ProjectId31;
   timezone: Timezone1;
-  workflow_id: WorkflowId3;
+  workflow_id: WorkflowId5;
 }
 export interface WorkshopScheduleListResponse {
-  items: Items8;
+  items: Items9;
 }
 export interface WorkshopScheduleRunView {
-  id: Id8;
-  project_id: ProjectId30;
-  schedule_id: ScheduleId2;
+  id: Id10;
+  project_id: ProjectId32;
+  schedule_id: ScheduleId3;
   task_id: TaskId10;
   trigger_key: TriggerKey;
 }
 export interface WorkshopTriggerScheduleRequest {
-  project_id: ProjectId31;
-  schedule_id: ScheduleId3;
+  project_id: ProjectId33;
+  schedule_id: ScheduleId4;
   trigger_key: TriggerKey1;
 }
 export interface WorkshopScheduleTriggerResultView {
@@ -805,11 +894,12 @@ export interface WorkshopScheduleTriggerResultView {
   requires_external_auth_popup: RequiresExternalAuthPopup;
   run: WorkshopScheduleRunView;
   task: WorkshopTaskView;
+  workflow_run?: WorkshopWorkflowRunView | null;
 }
 export interface WorkshopCompleteScheduledRunRequest {
   artifacts?: Artifacts1;
   covered_goals?: CoveredGoals1;
-  project_id: ProjectId32;
+  project_id: ProjectId34;
   task_id: TaskId11;
 }
 export interface WorkshopScheduledCompletionResultView {
@@ -817,16 +907,16 @@ export interface WorkshopScheduledCompletionResultView {
   task_status: WorkshopTaskStatus;
 }
 export interface WorkshopEventView {
-  created_at: CreatedAt1;
+  created_at: CreatedAt2;
   event_key: EventKey;
   kind: WorkshopEventKind;
   payload: Payload;
-  project_id: ProjectId33;
+  project_id: ProjectId35;
   task_id: TaskId16;
 }
 export interface ScheduleStartedPayloadView {
   message: Message;
-  schedule_id: ScheduleId4;
+  schedule_id: ScheduleId5;
   task_id: TaskId12;
   trigger_key: TriggerKey2;
 }
@@ -844,7 +934,7 @@ export interface ScheduleBlockedPayloadView {
   task_id: TaskId15;
 }
 export interface WorkshopEventListResponse {
-  items: Items9;
+  items: Items10;
 }
 export interface WorkshopOkView {
   ok?: Ok;
@@ -854,7 +944,7 @@ export interface WorkshopTaskAssignmentView {
   task_id: TaskId17;
 }
 export interface WorkshopTaskAssignmentListResponse {
-  items: Items10;
+  items: Items11;
 }
 export interface WorkshopDataSourcesView {
   quality_issues?: QualityIssues;
@@ -869,14 +959,14 @@ export interface ShopConnectionPublic {
   expires_at?: ExpiresAt;
   semantic_permissions?: SemanticPermissions;
   shop_connection_id: ShopConnectionId;
-  status: Status;
+  status: Status1;
 }
 export interface WorkshopDataSourceStatus {
   detail?: Detail;
   key: Key1;
   label: Label;
   last_synced_at?: LastSyncedAt;
-  status: Status1;
+  status: Status2;
 }
 export interface WorkshopImportErrorView {
   code: Code;
@@ -884,29 +974,29 @@ export interface WorkshopImportErrorView {
   row_index: RowIndex;
 }
 export interface WorkshopImportErrorListResponse {
-  items: Items11;
+  items: Items12;
   unsupported_template?: UnsupportedTemplate;
 }
 export interface WorkshopBeginShopAuthView {
   authorize_url?: AuthorizeUrl;
   shop_connection_id: ShopConnectionId1;
-  status?: Status2;
+  status?: Status3;
 }
 export interface ExpertDirectoryEntry {
   applicable_tasks?: ApplicableTasks;
   avatar_id: AvatarId1;
   key: Key2;
-  kind?: Kind;
-  name: Name10;
+  kind?: Kind1;
+  name: Name12;
   role_phrase: RolePhrase1;
   scenes: Scenes;
   tags: Tags;
 }
 export interface ExpertDirectoryResponse {
-  items: Items12;
+  items: Items13;
 }
 export interface WorkshopConnectorDirectoryResponse {
-  items: Items13;
+  items: Items14;
 }
 /**
  * 可验证连接器目录项（状态来自真实 data_sources，非静态冒充）
@@ -915,28 +1005,28 @@ export interface WorkshopConnectorEntry {
   description: Description;
   detail?: Detail1;
   key: Key3;
-  name: Name11;
-  status: Status3;
+  name: Name13;
+  status: Status4;
 }
 export interface ExpertTeamDirectoryEntry {
   applicable_tasks?: ApplicableTasks1;
   avatar_id: AvatarId2;
   key: Key4;
-  kind?: Kind1;
+  kind?: Kind2;
   member_keys: MemberKeys;
-  name: Name12;
+  name: Name14;
   role_phrase: RolePhrase2;
   scenes: Scenes1;
   tags: Tags1;
 }
 export interface ExpertTeamDirectoryResponse {
-  items: Items14;
+  items: Items15;
 }
 export interface ChatSelectedExpertView {
   avatar_id?: AvatarId3;
   conversation_id: ConversationId;
   expert_key?: ExpertKey;
-  name?: Name13;
+  name?: Name15;
 }
 export interface SetChatSelectedExpertRequest {
   conversation_id: ConversationId1;
@@ -969,13 +1059,14 @@ export interface WorkshopTeamSelectRequiresUpgradeView {
 }
 export interface WorkshopTurnTarget {
   expert_id?: ExpertId4;
+  persist_chat_messages?: PersistChatMessages;
   persist_user_message?: PersistUserMessage;
   speaker_role?: SpeakerRole;
   task_id?: TaskId18;
 }
 export interface WorkshopUpgradeInviteExpertView {
   key: Key5;
-  name: Name14;
+  name: Name16;
 }
 /**
  * LLM 提议升级并邀请专家（待用户确认）

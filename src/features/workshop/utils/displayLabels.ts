@@ -17,6 +17,17 @@ export function taskStatusLabel(status: WorkshopTaskStatus | string): string {
   return labels[status] ?? '未知状态';
 }
 
+export function workflowRunStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    queued: '排队中',
+    running: '执行中',
+    succeeded: '已成功',
+    failed: '失败',
+    blocked: '已阻塞',
+  };
+  return labels[status] ?? '未知状态';
+}
+
 export function proposalStatusLabel(status: string): string {
   if (status === 'pending') return '待确认';
   if (status === 'confirmed') return '已确认';
