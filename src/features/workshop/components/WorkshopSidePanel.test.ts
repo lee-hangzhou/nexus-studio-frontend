@@ -109,6 +109,14 @@ describe('WorkshopSidePanel copy audit', () => {
     expect(panelSource).not.toContain('跑一次');
   });
 
+  it('exposes start stop and delete for workflow lifecycle', () => {
+    expect(panelSource).toContain('startWorkshopWorkflowExecution');
+    expect(panelSource).toContain('stopWorkshopWorkflowExecution');
+    expect(panelSource).toContain('deleteWorkshopWorkflow');
+    expect(panelSource).toContain('开启执行');
+    expect(panelSource).toContain('停止执行');
+  });
+
   it('uses compact factual empty states without large illustrations', () => {
     expect(panelSource).toContain('暂无已保存工作流');
     expect(panelSource).toContain('暂无运行记录');

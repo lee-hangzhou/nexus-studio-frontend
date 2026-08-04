@@ -184,6 +184,27 @@
   color: inherit;
   text-align: left;
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workflowOpen strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflowMeta {
+  font-size: 12px;
+  color: var(--studio-text-secondary);
+}
+
+.workflowActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0;
 }
 
 .workflowOpen:focus-visible {

@@ -1,5 +1,12 @@
-import { CloseOutlined, LeftOutlined, PlayCircleOutlined } from '@ant-design/icons';
-import { Alert, Avatar, Button, Skeleton, Tabs, Tag, Tooltip, Typography, message } from 'antd';
+import {
+  CloseOutlined,
+  DeleteOutlined,
+  LeftOutlined,
+  PauseCircleOutlined,
+  PlayCircleOutlined,
+  PoweroffOutlined,
+} from '@ant-design/icons';
+import { Alert, Avatar, Button, Modal, Skeleton, Tabs, Tag, Tooltip, Typography, message } from 'antd';
 import {
   cloneElement,
   isValidElement,
@@ -27,6 +34,9 @@ import {
   listWorkshopWorkflowRuns,
   listWorkshopWorkflows,
   manualRunWorkshopWorkflow,
+  startWorkshopWorkflowExecution,
+  stopWorkshopWorkflowExecution,
+  deleteWorkshopWorkflow,
   removeWorkshopExpert,
   wakeWorkshopProject,
   type WorkshopArtifactView,
@@ -123,6 +133,7 @@ export function WorkshopSidePanel(props: {
   const [selectedWorkflowRuns, setSelectedWorkflowRuns] = useState<WorkshopWorkflowRunView[]>([]);
   const [selectedRunsLoading, setSelectedRunsLoading] = useState(false);
   const [runBusyId, setRunBusyId] = useState<string | null>(null);
+  const [lifecycleBusyId, setLifecycleBusyId] = useState<string | null>(null);
   const [assignments, setAssignments] = useState<Record<string, string[]>>({});
   const [artifacts, setArtifacts] = useState<WorkshopArtifactView[]>([]);
   const [parsedArtifacts, setParsedArtifacts] = useState<
@@ -378,8 +389,73 @@ export function WorkshopSidePanel(props: {
     [load, loadSelectedWorkflowRuns, projectId, selectedWorkflowId],
   );
 
-  const listedArtifacts = useMemo(() => {
-    const richIds = new Set(
+  const handleStartExecution = useCallback(
+    (workflowId: string) => {
+      void (async () => {
+        setLifecycleBusyId(workflowId);
+        try {
+          await startWorkshopWorkflowExecution(projectId, workflowId);
+          message.success('已开启执行');
+          await load();
+        } catch (err) {
+          message.error(err instanceof Error ? err.message : '开启失败');
+        } finally {
+          setLifecycleBusyId(null);
+        }
+      })();
+    },
+    [load, projectId],
+  );
+
+  const handleStopExecution = useCallback(
+    (workflowId: string) => {
+      void (async () => {
+        setLifecycleBusyId(workflowId);
+        try {
+          await stopWorkshopWorkflowExecution(projectId, workflowId);
+          message.success('已停止执行');
+          await load();
+        } catch (err) {
+          message.error(err instanceof Error ? err.message : '停止失败');
+        } finally {
+          setLifecycleBusyId(null);
+        }
+      })();
+    },
+    [load, projectId],
+  );
+
+  const handleDeleteWorkflow = useCallback(
+    (workflow: WorkshopWorkflowView) => {
+      Modal.confirm({
+        title: `删除工作流「${workflow.name}」？`,
+        content: '将取消进行中的运行并移除关联定时，此操作不可恢复。',
+        okText: '删除',
+        okType: 'danger',
+        cancelText: '取消',
+        onOk: async () => {
+          setLifecycleBusyId(workflow.id);
+          try {
+            await deleteWorkshopWorkflow(projectId, workflow.id);
+            message.success('已删除');
+            if (selectedWorkflowId === workflow.id) {
+              setSelectedWorkflowId(null);
+              setSelectedWorkflowRuns([]);
+            }
+            await load();
+          } catch (err) {
+            message.error(err instanceof Error ? err.message : '删除失败');
+            throw err;
+          } finally {
+            setLifecycleBusyId(null);
+          }
+        },
+      });
+    },
+    [load, projectId, selectedWorkflowId],
+  );
+
+  const listedArtifacts = useMemo(() => {    const richIds = new Set(
       parsedArtifacts.filter((item) => item.envelope != null).map((item) => item.id),
     );
     // 结构化卡片另渲染；列表展示其余产物（含 oss 文件）。不做业务类型白名单。
@@ -454,32 +530,91 @@ export function WorkshopSidePanel(props: {
           <Typography.Text type="secondary">暂无已保存工作流</Typography.Text>
         ) : (
           <ul className={styles.taskList}>
-            {workflows.map((workflow) => (
-              <li key={workflow.id}>
-                <div className={`${styles.taskItem} ${styles.workflowRow}`}>
-                  <button
-                    type="button"
-                    className={styles.workflowOpen}
-                    onClick={() => openWorkflow(workflow.id)}
-                  >
-                    <strong>{workflow.name}</strong>
-                  </button>
-                  <Tooltip title="立即运行">
-                    <Button
-                      type="text"
-                      size="small"
-                      icon={<PlayCircleOutlined />}
-                      aria-label={`立即运行：${workflow.name}`}
-                      loading={runBusyId === workflow.id}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        handleManualRun(workflow.id);
-                      }}
-                    />
-                  </Tooltip>
-                </div>
-              </li>
-            ))}
+            {workflows.map((workflow) => {
+              const hasSchedule = Boolean(workflow.schedule_id);
+              const scheduleOn = workflow.schedule_enabled === true;
+              const lifecycleBusy = lifecycleBusyId === workflow.id;
+              return (
+                <li key={workflow.id}>
+                  <div className={`${styles.taskItem} ${styles.workflowRow}`}>
+                    <button
+                      type="button"
+                      className={styles.workflowOpen}
+                      onClick={() => openWorkflow(workflow.id)}
+                    >
+                      <strong>{workflow.name}</strong>
+                      <span className={styles.workflowMeta}>
+                        {hasSchedule
+                          ? `${scheduleOn ? '定时已开启' : '定时已停止'}${
+                              workflow.schedule_cron ? ` · ${workflow.schedule_cron}` : ''
+                            }`
+                          : '未创建定时'}
+                      </span>
+                    </button>
+                    <div className={styles.workflowActions}>
+                      <Tooltip title="立即运行">
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<PlayCircleOutlined />}
+                          aria-label={`立即运行：${workflow.name}`}
+                          loading={runBusyId === workflow.id}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleManualRun(workflow.id);
+                          }}
+                        />
+                      </Tooltip>
+                      {scheduleOn ? (
+                        <Tooltip title="停止执行">
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<PauseCircleOutlined />}
+                            aria-label={`停止执行：${workflow.name}`}
+                            disabled={!hasSchedule}
+                            loading={lifecycleBusy}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleStopExecution(workflow.id);
+                            }}
+                          />
+                        </Tooltip>
+                      ) : (
+                        <Tooltip title={hasSchedule ? '开启执行' : '请先创建定时'}>
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<PoweroffOutlined />}
+                            aria-label={`开启执行：${workflow.name}`}
+                            disabled={!hasSchedule}
+                            loading={lifecycleBusy}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleStartExecution(workflow.id);
+                            }}
+                          />
+                        </Tooltip>
+                      )}
+                      <Tooltip title="删除">
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          aria-label={`删除：${workflow.name}`}
+                          loading={lifecycleBusy}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleDeleteWorkflow(workflow);
+                          }}
+                        />
+                      </Tooltip>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

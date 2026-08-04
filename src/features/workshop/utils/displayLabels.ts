@@ -24,6 +24,7 @@ export function workflowRunStatusLabel(status: string): string {
     succeeded: '已成功',
     failed: '失败',
     blocked: '已阻塞',
+    cancelled: '已取消',
   };
   return labels[status] ?? '未知状态';
 }

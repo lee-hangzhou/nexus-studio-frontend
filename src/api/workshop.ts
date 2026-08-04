@@ -19,6 +19,7 @@ import type {
   WorkshopProjectListResponse,
   WorkshopProjectView,
   WorkshopRosterExpertView,
+  WorkshopScheduleListResponse,
   WorkshopTaskAssignmentListResponse,
   WorkshopTaskListResponse,
   WorkshopTaskView,
@@ -252,6 +253,27 @@ export function manualRunWorkshopWorkflow(
       workflow_id: workflowId,
       authorized_capabilities: authorizedCapabilities,
     }),
+  });
+}
+
+export function startWorkshopWorkflowExecution(projectId: string, workflowId: string) {
+  return request<WorkshopScheduleListResponse>('/workshop/workflows/start-execution', {
+    method: 'POST',
+    body: JSON.stringify({ project_id: projectId, workflow_id: workflowId }),
+  });
+}
+
+export function stopWorkshopWorkflowExecution(projectId: string, workflowId: string) {
+  return request<WorkshopScheduleListResponse>('/workshop/workflows/stop-execution', {
+    method: 'POST',
+    body: JSON.stringify({ project_id: projectId, workflow_id: workflowId }),
+  });
+}
+
+export function deleteWorkshopWorkflow(projectId: string, workflowId: string) {
+  return request<WorkshopOkView>('/workshop/workflows/delete', {
+    method: 'POST',
+    body: JSON.stringify({ project_id: projectId, workflow_id: workflowId }),
   });
 }
 

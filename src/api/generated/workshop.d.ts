@@ -150,6 +150,9 @@ export type WorkshopToolCapability =
   | "draft_workflow"
   | "confirm_save_workflow"
   | "create_schedule"
+  | "start_workflow_execution"
+  | "stop_workflow_execution"
+  | "delete_workflow"
   | "manual_run_workflow"
   | "request_external_auth"
   | "propose_invite"
@@ -316,7 +319,7 @@ export type Id7 = string;
 export type ProjectId23 = string;
 export type ScheduleId1 = string | null;
 export type StartedAt = string | null;
-export type Status = "queued" | "running" | "succeeded" | "failed" | "blocked";
+export type Status = "queued" | "running" | "succeeded" | "failed" | "blocked" | "cancelled";
 export type Trigger = "manual" | "schedule" | "trial";
 export type WorkflowId = string;
 export type WorkflowRevision = number;
@@ -334,6 +337,10 @@ export type ModelKey1 = string;
 export type Name11 = string;
 export type ProjectId27 = string;
 export type Revision1 = number;
+export type ScheduleCron = string | null;
+export type ScheduleEnabled = boolean | null;
+export type ScheduleId2 = string | null;
+export type ScheduleNextRunAt = string | null;
 /**
  * 工作流草稿来源
  */
@@ -352,7 +359,7 @@ export type ProjectId29 = string;
 export type Timezone = string;
 export type WorkflowId4 = string;
 export type ProjectId30 = string;
-export type ScheduleId2 = string;
+export type ScheduleId3 = string;
 export type AuthorizedAt = string;
 export type AuthorizedExternalCapabilities = WorkshopToolCapability[];
 export type Cron1 = string;
@@ -365,11 +372,11 @@ export type WorkflowId5 = string;
 export type Items9 = WorkshopScheduleView[];
 export type Id10 = string;
 export type ProjectId32 = string;
-export type ScheduleId3 = string;
+export type ScheduleId4 = string;
 export type TaskId10 = string;
 export type TriggerKey = string;
 export type ProjectId33 = string;
-export type ScheduleId4 = string;
+export type ScheduleId5 = string;
 export type TriggerKey1 = string;
 export type EventIds = string[];
 export type RequiresExternalAuthPopup = boolean;
@@ -387,7 +394,7 @@ export type WorkshopEventKind = "schedule_started" | "schedule_summary" | "artif
 export type Payload =
   ScheduleStartedPayloadView | ScheduleSummaryPayloadView | ArtifactsPublishedPayloadView | ScheduleBlockedPayloadView;
 export type Message = string;
-export type ScheduleId5 = string;
+export type ScheduleId6 = string;
 export type TaskId12 = string;
 export type TriggerKey2 = string;
 export type Message1 = string;
@@ -838,6 +845,10 @@ export interface WorkshopWorkflowView {
   name: Name11;
   project_id: ProjectId27;
   revision: Revision1;
+  schedule_cron?: ScheduleCron;
+  schedule_enabled?: ScheduleEnabled;
+  schedule_id?: ScheduleId2;
+  schedule_next_run_at?: ScheduleNextRunAt;
   source: WorkshopWorkflowSource;
   status: WorkshopWorkflowStatus;
 }
@@ -861,7 +872,7 @@ export interface WorkshopCreateScheduleRequest {
 }
 export interface WorkshopScheduleIdRequest {
   project_id: ProjectId30;
-  schedule_id: ScheduleId2;
+  schedule_id: ScheduleId3;
 }
 export interface WorkshopScheduleView {
   authorized_at: AuthorizedAt;
@@ -880,13 +891,13 @@ export interface WorkshopScheduleListResponse {
 export interface WorkshopScheduleRunView {
   id: Id10;
   project_id: ProjectId32;
-  schedule_id: ScheduleId3;
+  schedule_id: ScheduleId4;
   task_id: TaskId10;
   trigger_key: TriggerKey;
 }
 export interface WorkshopTriggerScheduleRequest {
   project_id: ProjectId33;
-  schedule_id: ScheduleId4;
+  schedule_id: ScheduleId5;
   trigger_key: TriggerKey1;
 }
 export interface WorkshopScheduleTriggerResultView {
@@ -916,7 +927,7 @@ export interface WorkshopEventView {
 }
 export interface ScheduleStartedPayloadView {
   message: Message;
-  schedule_id: ScheduleId5;
+  schedule_id: ScheduleId6;
   task_id: TaskId12;
   trigger_key: TriggerKey2;
 }
