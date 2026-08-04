@@ -1,5 +1,6 @@
 import { apiOriginUrl, apiUrl, fetchWithAuth, getAccessToken, request } from './base';
 import type { Stream as GeneratedStreamFrame } from './generated/stream';
+import { consumeSSE } from './stream';
 import type { TurnContentBlock, TurnMaterialBlock, TurnUserInput } from './turnContent';
 import { toolPendingFromFrame, type ToolPendingState } from './toolPending';
 import { filterSelectableModels } from '../shared/utils/hiddenSelectableModels';
@@ -319,186 +320,246 @@ export type UserGateRequiredPayload = NonNullable<StreamHandlers['onUserGateRequ
   ? P
   : never;
 
-async function consumeChatSSE(
-  path: string,
-  body: Record<string, unknown>,
+function isChatTerminalFrame(frame: StreamFrame): boolean {
+  return frame.type === 'done' || frame.type === 'cancelled' || frame.type === 'error';
+}
+
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'));
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    const onAbort = () => {
+      window.clearTimeout(timer);
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+function dispatchChatFrame(frame: StreamFrame, handlers: StreamHandlers): void {
+  handlers.onActivity?.();
+  switch (frame.type) {
+    case 'token':
+      if (
+        'speaker_role' in frame
+        || 'expert_id' in frame
+        || 'expert_name' in frame
+        || 'avatar' in frame
+        || 'task_id' in frame
+      ) {
+        handlers.onSpeakerAttribution?.({
+          speaker_role: (frame as { speaker_role?: string | null }).speaker_role,
+          expert_id: (frame as { expert_id?: string | null }).expert_id,
+          expert_name: (frame as { expert_name?: string | null }).expert_name,
+          avatar: (frame as { avatar?: string | null }).avatar,
+          task_id: (frame as { task_id?: string | null }).task_id,
+        });
+      }
+      if (frame.text) {
+        handlers.onToken(frame.channel === 'think' ? 'think' : 'answer', frame.text);
+      }
+      break;
+    case 'tool_start':
+      handlers.onToolStart(frame.call_id ?? '', frame.name ?? '', frame.args ?? {});
+      break;
+    case 'tool_end':
+      handlers.onToolEnd(
+        frame.call_id ?? '',
+        frame.name ?? '',
+        frame.ok ?? false,
+        frame.preview ?? '',
+        frame.data,
+      );
+      break;
+    case 'user_gate_required':
+      handlers.onUserGateRequired?.({
+        turn_id: frame.turn_id ?? '',
+        gate_id: frame.gate_id ?? '',
+        gate_type: frame.gate_type ?? 'credentials',
+        prompt: frame.prompt ?? '',
+        fields: (frame.fields ?? []) as GateFieldDef[],
+        choices: ((frame as { choices?: Array<{ id: string; label: string }> }).choices ?? []),
+        phase: (frame as { phase?: string }).phase,
+        assets: (frame.assets ?? {}) as Record<string, unknown>,
+        domain: (frame as { domain?: string }).domain,
+      });
+      break;
+    case 'upgrade_invite_proposed': {
+      const proposed = frame as Extract<StreamFrame, { type: 'upgrade_invite_proposed' }>;
+      if (
+        typeof proposed.proposal_id !== 'number'
+        || typeof proposed.conversation_id !== 'number'
+        || !Array.isArray(proposed.expert_keys)
+        || typeof proposed.primary_expert_key !== 'string'
+        || typeof proposed.rationale !== 'string'
+        || !proposed.rationale
+        || !Array.isArray(proposed.experts)
+        || proposed.experts.some(
+          (item) =>
+            typeof (item as { key?: unknown }).key !== 'string'
+            || !(item as { key: string }).key
+            || typeof (item as { name?: unknown }).name !== 'string'
+            || !(item as { name: string }).name,
+        )
+        || (
+          proposed.expert_keys.length > 0
+          && (
+            !proposed.primary_expert_key
+            || !proposed.expert_keys.includes(proposed.primary_expert_key)
+          )
+        )
+      ) {
+        handlers.onError('internal', 'upgrade_invite_proposed frame malformed');
+        break;
+      }
+      handlers.onUpgradeInviteProposed?.({
+        turn_id: proposed.turn_id,
+        proposal_id: proposed.proposal_id,
+        conversation_id: proposed.conversation_id,
+        expert_keys: proposed.expert_keys,
+        primary_expert_key: proposed.primary_expert_key,
+        rationale: proposed.rationale,
+        experts: proposed.experts.map((item) => ({
+          key: (item as { key: string }).key,
+          name: (item as { name: string }).name,
+        })),
+      });
+      break;
+    }
+    case 'browser_blocked':
+      handlers.onBrowserBlocked?.({
+        turn_id: (frame as { turn_id?: string }).turn_id ?? '',
+        message: (frame as { message?: string }).message ?? '这个页面需要一个我在这里没法完成的验证。',
+        conversation_id: (frame as { conversation_id?: number }).conversation_id ?? 0,
+      });
+      break;
+    case 'tool_pending': {
+      const pending = toolPendingFromFrame(frame as Parameters<typeof toolPendingFromFrame>[0]);
+      if (pending) {
+        handlers.onToolPending?.(pending);
+      }
+      break;
+    }
+    case 'error':
+      handlers.onError(frame.code ?? 'error', frame.message ?? 'unknown error');
+      break;
+    case 'cancelled':
+      handlers.onCancelled(frame.reason ?? 'cancelled');
+      break;
+    case 'done':
+      handlers.onDone({
+        turn_id: frame.turn_id ?? '',
+        message_ids: frame.message_ids ?? [],
+      });
+      break;
+    case 'conversation_title':
+      if (frame.conversation_id != null && frame.title) {
+        handlers.onConversationTitle?.({
+          conversation_id: frame.conversation_id,
+          title: frame.title,
+          updated_at: frame.updated_at,
+        });
+      }
+      break;
+    case 'composer_prompt_applied':
+      if (!Array.isArray(frame.content)) {
+        handlers.onError('internal', 'composer_prompt_applied missing content');
+        break;
+      }
+      handlers.onComposerPromptApplied?.({
+        turn_id: frame.turn_id,
+        prompt: frame.prompt,
+        content: frame.content,
+        ref_asset_ids: Array.isArray(frame.ref_asset_ids) ? frame.ref_asset_ids : [],
+      });
+      break;
+    default:
+      break;
+  }
+}
+
+/** 非终态断流后按 Last-Event-ID 走 /chat/turn/reconnect 续传 */
+async function consumeChatTurnWithReplay(
+  openPath: string,
+  openBody: Record<string, unknown>,
+  reconnectBody: { request_id: string; conversation_id: number },
   handlers: StreamHandlers,
   signal?: AbortSignal,
-) {
-  const response = await fetchWithAuth(apiUrl(path), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    signal,
-  });
-  if (response.status === 409) {
-    throw new Error('conversation_busy');
-  }
-  if (!response.ok || !response.body) {
-    throw new Error(`stream request failed: ${response.status}`);
-  }
+): Promise<void> {
+  let lastEventId: string | null = null;
+  let terminal = false;
+  let opened = false;
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
+  const trackFrame = (frame: StreamFrame) => {
+    if (isChatTerminalFrame(frame)) terminal = true;
+    dispatchChatFrame(frame, handlers);
+  };
 
   while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const events = buffer.split('\n\n');
-    buffer = events.pop() ?? '';
-    for (const event of events) {
-      const lines = event.split('\n');
-      for (const line of lines) {
-        if (!line.startsWith('data:')) continue;
-        const data = line.slice(5).trim();
-        if (!data) continue;
-        try {
-          const frame = JSON.parse(data) as StreamFrame;
-          handlers.onActivity?.();
-          switch (frame.type) {
-            case 'token':
-              if (
-                'speaker_role' in frame ||
-                'expert_id' in frame ||
-                'expert_name' in frame ||
-                'avatar' in frame ||
-                'task_id' in frame
-              ) {
-                handlers.onSpeakerAttribution?.({
-                  speaker_role: (frame as { speaker_role?: string | null }).speaker_role,
-                  expert_id: (frame as { expert_id?: string | null }).expert_id,
-                  expert_name: (frame as { expert_name?: string | null }).expert_name,
-                  avatar: (frame as { avatar?: string | null }).avatar,
-                  task_id: (frame as { task_id?: string | null }).task_id,
-                });
-              }
-              if (frame.text) {
-                handlers.onToken(frame.channel === 'think' ? 'think' : 'answer', frame.text);
-              }
-              break;
-            case 'tool_start':
-              handlers.onToolStart(frame.call_id ?? '', frame.name ?? '', frame.args ?? {});
-              break;
-            case 'tool_end':
-              handlers.onToolEnd(
-                frame.call_id ?? '',
-                frame.name ?? '',
-                frame.ok ?? false,
-                frame.preview ?? '',
-                frame.data,
-              );
-              break;
-            case 'user_gate_required':
-              handlers.onUserGateRequired?.({
-                turn_id: frame.turn_id ?? '',
-                gate_id: frame.gate_id ?? '',
-                gate_type: frame.gate_type ?? 'credentials',
-                prompt: frame.prompt ?? '',
-                fields: (frame.fields ?? []) as GateFieldDef[],
-                choices: ((frame as { choices?: Array<{ id: string; label: string }> }).choices ?? []),
-                phase: (frame as { phase?: string }).phase,
-                assets: (frame.assets ?? {}) as Record<string, unknown>,
-                domain: (frame as { domain?: string }).domain,
-              });
-              break;
-            case 'upgrade_invite_proposed': {
-              const proposed = frame as Extract<StreamFrame, { type: 'upgrade_invite_proposed' }>;
-              if (
-                typeof proposed.proposal_id !== 'number'
-                || typeof proposed.conversation_id !== 'number'
-                || !Array.isArray(proposed.expert_keys)
-                || typeof proposed.primary_expert_key !== 'string'
-                || typeof proposed.rationale !== 'string'
-                || !proposed.rationale
-                || !Array.isArray(proposed.experts)
-                || proposed.experts.some(
-                  (item) =>
-                    typeof (item as { key?: unknown }).key !== 'string'
-                    || !(item as { key: string }).key
-                    || typeof (item as { name?: unknown }).name !== 'string'
-                    || !(item as { name: string }).name,
-                )
-                || (
-                  proposed.expert_keys.length > 0
-                  && (
-                    !proposed.primary_expert_key
-                    || !proposed.expert_keys.includes(proposed.primary_expert_key)
-                  )
-                )
-              ) {
-                handlers.onError('internal', 'upgrade_invite_proposed frame malformed');
-                break;
-              }
-              handlers.onUpgradeInviteProposed?.({
-                turn_id: proposed.turn_id,
-                proposal_id: proposed.proposal_id,
-                conversation_id: proposed.conversation_id,
-                expert_keys: proposed.expert_keys,
-                primary_expert_key: proposed.primary_expert_key,
-                rationale: proposed.rationale,
-                experts: proposed.experts.map((item) => ({
-                  key: (item as { key: string }).key,
-                  name: (item as { name: string }).name,
-                })),
-              });
-              break;
-            }
-            case 'browser_blocked':
-              handlers.onBrowserBlocked?.({
-                turn_id: (frame as { turn_id?: string }).turn_id ?? '',
-                message: (frame as { message?: string }).message ?? '这个页面需要一个我在这里没法完成的验证。',
-                conversation_id: (frame as { conversation_id?: number }).conversation_id ?? 0,
-              });
-              break;
-            case 'tool_pending': {
-              const pending = toolPendingFromFrame(frame as Parameters<typeof toolPendingFromFrame>[0]);
-              if (pending) {
-                handlers.onToolPending?.(pending);
-              }
-              break;
-            }
-            case 'error':
-              handlers.onError(frame.code ?? 'error', frame.message ?? 'unknown error');
-              break;
-            case 'cancelled':
-              handlers.onCancelled(frame.reason ?? 'cancelled');
-              break;
-            case 'done':
-              handlers.onDone({
-                turn_id: frame.turn_id ?? '',
-                message_ids: frame.message_ids ?? [],
-              });
-              break;
-            case 'conversation_title':
-              if (frame.conversation_id != null && frame.title) {
-                handlers.onConversationTitle?.({
-                  conversation_id: frame.conversation_id,
-                  title: frame.title,
-                  updated_at: frame.updated_at,
-                });
-              }
-              break;
-            case 'composer_prompt_applied':
-              if (!Array.isArray(frame.content)) {
-                handlers.onError('internal', 'composer_prompt_applied missing content');
-                break;
-              }
-              handlers.onComposerPromptApplied?.({
-                turn_id: frame.turn_id,
-                prompt: frame.prompt,
-                content: frame.content,
-                ref_asset_ids: Array.isArray(frame.ref_asset_ids) ? frame.ref_asset_ids : [],
-              });
-              break;
-            default:
-              break;
-          }
-        } catch {
-          // ignore malformed frame
-        }
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+    const isReconnect = opened;
+    let madeProgress = false;
+    const onFrameTracked = (frame: StreamFrame) => {
+      madeProgress = true;
+      trackFrame(frame);
+    };
+    const onIdTracked = (eventId: string) => {
+      madeProgress = true;
+      lastEventId = eventId;
+    };
+    try {
+      if (!opened) {
+        await consumeSSE(
+          openPath,
+          openBody,
+          {
+            onFrame: (raw) => onFrameTracked(raw as StreamFrame),
+            onEventId: onIdTracked,
+            onHttpError: (status) => {
+              if (status === 409) throw new Error('conversation_busy');
+            },
+          },
+          signal,
+          { lastEventId },
+        );
+        opened = true;
+      } else {
+        await consumeSSE(
+          '/chat/turn/reconnect',
+          reconnectBody,
+          {
+            onFrame: (raw) => onFrameTracked(raw as StreamFrame),
+            onEventId: onIdTracked,
+            onHttpError: (status) => {
+              if (status === 409) throw new Error('conversation_busy');
+            },
+          },
+          signal,
+          { lastEventId },
+        );
       }
+      if (terminal || signal?.aborted) return;
+      if (isReconnect && !madeProgress) return;
+      await sleep(600, signal);
+    } catch (err) {
+      if (signal?.aborted || (err instanceof DOMException && err.name === 'AbortError')) {
+        throw err;
+      }
+      if (err instanceof Error && err.message === 'conversation_busy') {
+        throw err;
+      }
+      if (lastEventId != null) opened = true;
+      if (!opened) throw err;
+      if (terminal) return;
+      await sleep(800, signal);
     }
   }
 }
@@ -524,7 +585,13 @@ export async function streamMessage(
   handlers: StreamHandlers,
   signal?: AbortSignal,
 ) {
-  await consumeChatSSE('/chat/message/stream', body, handlers, signal);
+  await consumeChatTurnWithReplay(
+    '/chat/message/stream',
+    body as unknown as Record<string, unknown>,
+    { request_id: body.request_id, conversation_id: body.conversation_id },
+    handlers,
+    signal,
+  );
 }
 
 export async function streamResume(
@@ -540,7 +607,13 @@ export async function streamResume(
   handlers: StreamHandlers,
   signal?: AbortSignal,
 ) {
-  await consumeChatSSE('/chat/turn/resume', body, handlers, signal);
+  await consumeChatTurnWithReplay(
+    '/chat/turn/resume',
+    body as unknown as Record<string, unknown>,
+    { request_id: body.request_id, conversation_id: body.conversation_id },
+    handlers,
+    signal,
+  );
 }
 
 export async function uploadAttachment(conversationId: number, file: File): Promise<UploadedAttachment> {
