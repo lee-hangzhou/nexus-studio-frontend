@@ -378,19 +378,23 @@ async function consumeChatSSE(
                 typeof proposed.proposal_id !== 'number'
                 || typeof proposed.conversation_id !== 'number'
                 || !Array.isArray(proposed.expert_keys)
-                || proposed.expert_keys.length < 1
                 || typeof proposed.primary_expert_key !== 'string'
-                || !proposed.primary_expert_key
                 || typeof proposed.rationale !== 'string'
                 || !proposed.rationale
                 || !Array.isArray(proposed.experts)
-                || proposed.experts.length < 1
                 || proposed.experts.some(
                   (item) =>
                     typeof (item as { key?: unknown }).key !== 'string'
                     || !(item as { key: string }).key
                     || typeof (item as { name?: unknown }).name !== 'string'
                     || !(item as { name: string }).name,
+                )
+                || (
+                  proposed.expert_keys.length > 0
+                  && (
+                    !proposed.primary_expert_key
+                    || !proposed.expert_keys.includes(proposed.primary_expert_key)
+                  )
                 )
               ) {
                 handlers.onError('internal', 'upgrade_invite_proposed frame malformed');

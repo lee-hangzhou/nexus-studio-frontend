@@ -964,10 +964,6 @@ export function ChatPage() {
           );
           return;
         }
-        if (pending.proposal.expert_keys.length < 1 || pending.proposal.experts.length < 1) {
-          antMessage.error('升级邀请数据不完整，请刷新后重试');
-          return;
-        }
         setUpgradeInviteProposed(pending.proposal);
       } catch (err) {
         antMessage.error(err instanceof Error ? err.message : '恢复升级邀请失败');
@@ -1571,16 +1567,15 @@ export function ChatPage() {
       }) => {
         if (!isCurrentTurn()) return;
         upgradeInviteInterrupted = true;
-        if (payload.expert_keys.length < 1 || payload.experts.length < 1) return;
         setUpgradeInviteProposed({
           proposal_id: payload.proposal_id,
           conversation_id: payload.conversation_id,
-          expert_keys: payload.expert_keys as [string, ...string[]],
+          expert_keys: payload.expert_keys,
           primary_expert_key: payload.primary_expert_key,
           rationale: payload.rationale,
           experts: payload.experts.filter(
             (item: { key: string; name: string }) => item.key && item.name,
-          ) as [{ key: string; name: string }, ...{ key: string; name: string }[]],
+          ),
         });
         patchConversationUi(conversationId, (prev) => {
           const flushed = flushAssistantNarration(prev, assistantTempId);
@@ -2251,9 +2246,8 @@ export function ChatPage() {
   const handleConfirmUpgradeInvite = useCallback(
     async (selection: { expert_keys: string[]; primary_expert_key: string }) => {
       if (!upgradeInviteProposed || !activeConversationId) return;
-      if (selection.expert_keys.length < 1) return;
       const conversationId = activeConversationId;
-      const expertKeys = selection.expert_keys as [string, ...string[]];
+      const expertKeys = selection.expert_keys;
       setUpgradeInviteConfirming(true);
       const proposed = upgradeInviteProposed;
       try {
@@ -2261,7 +2255,8 @@ export function ChatPage() {
           conversation_id: proposed.conversation_id,
           proposal_id: proposed.proposal_id,
           expert_keys: expertKeys,
-          primary_expert_key: selection.primary_expert_key,
+          primary_expert_key:
+            expertKeys.length > 0 ? selection.primary_expert_key : '',
           project_name: `工坊 ${dayjs().format('MM-DD HH:mm')}`,
           carried_message_count: messages.length,
         });
@@ -2316,7 +2311,10 @@ export function ChatPage() {
                 streaming: true,
                 think: '',
                 client_turn_id: continueTurnId,
-                speaker_role: 'expert',
+                speaker_role: result.primary_expert_id ? 'expert' : 'host',
+                ...(result.primary_expert_id
+                  ? {}
+                  : { expert_name: '项目助手', avatar: '/avatars/experts/host.png' }),
               },
               created_at: new Date().toISOString(),
             },
@@ -2335,7 +2333,7 @@ export function ChatPage() {
               enable_tools: true,
               client_turn_id: continueTurnId,
               turn_target: {
-                expert_id: result.primary_expert_id,
+                expert_id: result.primary_expert_id ?? null,
                 persist_user_message: false,
               },
             },

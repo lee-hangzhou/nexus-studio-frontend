@@ -131,7 +131,7 @@ export function UnifiedChatSidePanel(props: {
                     当前工作
                   </Typography.Text>
                   <Typography.Text type="secondary">
-                    升级为工坊项目并邀请专家，在项目里推进任务
+                    升级为工坊项目，在项目里推进任务
                   </Typography.Text>
                 </section>
               </div>

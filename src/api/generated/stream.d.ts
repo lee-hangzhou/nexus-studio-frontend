@@ -251,17 +251,11 @@ export type ProtocolVersion13 = number;
 export type TurnId7 = string;
 export type Type19 = "user_gate_required";
 export type ConversationId1 = number;
-/**
- * @minItems 1
- */
-export type ExpertKeys = [string, ...string[]];
-/**
- * @minItems 1
- */
-export type Experts = [UpgradeInviteExpertFrameItem, ...UpgradeInviteExpertFrameItem[]];
+export type ExpertKeys = string[];
 export type Key = string;
 export type Name5 = string;
 export type ProtocolVersion14 = number;
+export type Experts = UpgradeInviteExpertFrameItem[];
 export type PrimaryExpertKey = string;
 export type ProposalId = number;
 export type ProtocolVersion15 = number;
@@ -597,9 +591,9 @@ export interface Assets1 {
 }
 export interface UpgradeInviteProposedFrame {
   conversation_id: ConversationId1;
-  expert_keys: ExpertKeys;
-  experts: Experts;
-  primary_expert_key: PrimaryExpertKey;
+  expert_keys?: ExpertKeys;
+  experts?: Experts;
+  primary_expert_key?: PrimaryExpertKey;
   proposal_id: ProposalId;
   protocol_version?: ProtocolVersion15;
   rationale: Rationale;

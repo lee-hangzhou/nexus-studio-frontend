@@ -516,23 +516,14 @@ export type TaskId18 = string | null;
 export type Key5 = string;
 export type Name16 = string;
 export type ConversationId6 = number;
-/**
- * @minItems 1
- */
-export type ExpertKeys = [string, ...string[]];
-/**
- * @minItems 1
- */
-export type Experts = [WorkshopUpgradeInviteExpertView, ...WorkshopUpgradeInviteExpertView[]];
+export type ExpertKeys = string[];
+export type Experts = WorkshopUpgradeInviteExpertView[];
 export type PrimaryExpertKey = string;
 export type ProposalId5 = number;
 export type Rationale = string;
 export type CarriedMessageCount3 = number;
 export type ConversationId7 = number;
-/**
- * @minItems 1
- */
-export type ExpertKeys1 = [string, ...string[]];
+export type ExpertKeys1 = string[];
 export type PrimaryExpertKey1 = string;
 export type ProjectName2 = string;
 export type ProposalId6 = number;
@@ -541,7 +532,7 @@ export type ProposalId7 = number;
 export type ConversationId9 = number;
 export type CarriedMessageCount4 = number;
 export type HostNarration = string;
-export type PrimaryExpertId = string;
+export type PrimaryExpertId = string | null;
 export type SourceUserText = string;
 
 export interface WorkshopCreateProjectRequest {
@@ -1080,21 +1071,21 @@ export interface WorkshopUpgradeInviteExpertView {
   name: Name16;
 }
 /**
- * LLM 提议升级并邀请专家（待用户确认）
+ * LLM 提议升级为工坊项目；专家名单可空（仅建项目）
  */
 export interface WorkshopUpgradeInviteProposedView {
   conversation_id: ConversationId6;
-  expert_keys: ExpertKeys;
-  experts: Experts;
-  primary_expert_key: PrimaryExpertKey;
+  expert_keys?: ExpertKeys;
+  experts?: Experts;
+  primary_expert_key?: PrimaryExpertKey;
   proposal_id: ProposalId5;
   rationale: Rationale;
 }
 export interface WorkshopConfirmUpgradeInviteRequest {
   carried_message_count: CarriedMessageCount3;
   conversation_id: ConversationId7;
-  expert_keys: ExpertKeys1;
-  primary_expert_key: PrimaryExpertKey1;
+  expert_keys?: ExpertKeys1;
+  primary_expert_key?: PrimaryExpertKey1;
   project_name: ProjectName2;
   proposal_id: ProposalId6;
 }
@@ -1111,7 +1102,7 @@ export interface WorkshopPendingUpgradeInviteResponse {
 export interface WorkshopConfirmUpgradeInviteResultView {
   carried_message_count: CarriedMessageCount4;
   host_narration: HostNarration;
-  primary_expert_id: PrimaryExpertId;
+  primary_expert_id?: PrimaryExpertId;
   project: WorkshopProjectView;
   source_user_text: SourceUserText;
 }

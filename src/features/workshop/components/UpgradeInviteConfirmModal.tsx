@@ -20,24 +20,28 @@ export function UpgradeInviteConfirmModal(props: {
 
   useEffect(() => {
     if (!payload) return;
-    setSelected([...payload.expert_keys]);
-    setPrimary(payload.primary_expert_key);
+    setSelected([...(payload.expert_keys ?? [])]);
+    setPrimary(payload.primary_expert_key ?? '');
   }, [payload]);
 
   const options = useMemo(() => payload?.experts ?? [], [payload]);
-  const canConfirm = selected.length >= 1 && selected.includes(primary);
+  const canConfirm =
+    selected.length === 0 || (selected.length >= 1 && selected.includes(primary));
 
   return (
     <Modal
       open={open}
-      title="升级为工坊项目并邀请专家"
+      title="升级为工坊项目"
       okText="确认升级"
       cancelText="拒绝"
       confirmLoading={confirming}
       okButtonProps={{ disabled: !canConfirm }}
       onOk={() => {
         if (!canConfirm) return;
-        onConfirm({ expert_keys: selected, primary_expert_key: primary });
+        onConfirm({
+          expert_keys: selected,
+          primary_expert_key: selected.length > 0 ? primary : '',
+        });
       }}
       onCancel={onDecline}
       destroyOnClose
@@ -47,43 +51,46 @@ export function UpgradeInviteConfirmModal(props: {
         <Typography.Paragraph className="upgrade-invite-modal__rationale">
           {payload?.rationale ?? ''}
         </Typography.Paragraph>
-        <Typography.Text type="secondary">至少选择一位专家；主答须在所选名单内。</Typography.Text>
-        <Checkbox.Group
-          value={selected}
-          onChange={(values) => {
-            const next = values.map(String);
-            setSelected(next);
-            if (next.length > 0 && !next.includes(primary)) {
-              setPrimary(next[0]!);
-            }
-          }}
-          className="upgrade-invite-modal__experts"
-        >
-          <Space direction="vertical">
-            {options.map((expert) => (
-              <Checkbox key={expert.key} value={expert.key}>
-                <Space>
-                  <span>{expert.name}</span>
-                  {primary === expert.key ? (
-                    <Typography.Text type="secondary">（主答）</Typography.Text>
-                  ) : (
-                    <Typography.Link
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        if (selected.includes(expert.key)) {
-                          setPrimary(expert.key);
-                        }
-                      }}
-                    >
-                      设为主答
-                    </Typography.Link>
-                  )}
-                </Space>
-              </Checkbox>
-            ))}
-          </Space>
-        </Checkbox.Group>
+        {options.length > 0 ? (
+          <Checkbox.Group
+            value={selected}
+            onChange={(values) => {
+              const next = values.map(String);
+              setSelected(next);
+              if (next.length === 0) {
+                setPrimary('');
+              } else if (!next.includes(primary)) {
+                setPrimary(next[0]!);
+              }
+            }}
+            className="upgrade-invite-modal__experts"
+          >
+            <Space direction="vertical">
+              {options.map((expert) => (
+                <Checkbox key={expert.key} value={expert.key}>
+                  <Space>
+                    <span>{expert.name}</span>
+                    {primary === expert.key ? (
+                      <Typography.Text type="secondary">（主答）</Typography.Text>
+                    ) : (
+                      <Typography.Link
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          if (selected.includes(expert.key)) {
+                            setPrimary(expert.key);
+                          }
+                        }}
+                      >
+                        设为主答
+                      </Typography.Link>
+                    )}
+                  </Space>
+                </Checkbox>
+              ))}
+            </Space>
+          </Checkbox.Group>
+        ) : null}
       </Space>
     </Modal>
   );
