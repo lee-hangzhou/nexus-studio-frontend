@@ -944,6 +944,12 @@ body.studio-chat-panel--resizing {
   z-index: 30;
 }
 
+/* 侧栏打开时绝不显示浮层芯片，避免压在历史/助手面板上 */
+.studio-create--history-open .studio-create__history-toggle,
+.studio-create--assistant-open .studio-create__history-toggle {
+  display: none;
+}
+
 .studio-chat__content {
   max-width: min(1080px, calc(100vw - 560px));
 }
@@ -1072,6 +1078,11 @@ body.studio-chat-panel--resizing {
   grid-template-columns: minmax(0, 1fr) var(--studio-create-history-w);
 }
 
+.studio-create--assistant-open {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--studio-create-history-w);
+}
+
 
 .studio-create__center {
   min-width: 0;
@@ -1161,6 +1172,7 @@ body.studio-chat-panel--resizing {
 .studio-create__mode-btn,
 .studio-create__params-capsule,
 .studio-create__at-btn,
+.studio-create__prompt-assistant,
 .studio-create__task-select.ant-select .ant-select-selector,
 .studio-create__model-select.ant-select .ant-select-selector {
   border-radius: 4px;
@@ -1179,20 +1191,23 @@ body.studio-chat-panel--resizing {
 
 .studio-create__mode-btn,
 .studio-create__params-capsule,
-.studio-create__at-btn {
+.studio-create__at-btn,
+.studio-create__prompt-assistant {
   background: #1a1e24;
   color: var(--studio-text-secondary);
 }
 
 .studio-create__params-capsule:hover,
-.studio-create__at-btn:hover {
+.studio-create__at-btn:hover,
+.studio-create__prompt-assistant:hover {
   color: var(--studio-control-hover-fg);
   border-color: var(--studio-control-hover-border);
   background: var(--studio-control-hover-bg);
 }
 
 .studio-create__mode-btn--active,
-.studio-create__params-capsule--active {
+.studio-create__params-capsule--active,
+.studio-create__prompt-assistant--active {
   color: var(--studio-control-selected-fg);
   border-color: var(--studio-control-selected-border);
   background: var(--studio-control-selected-bg);
@@ -1333,10 +1348,6 @@ body.studio-chat-panel--resizing {
 .studio-create__frame-swap {
   border-color: rgba(255, 255, 255, 0.14);
   background: #1a1e24;
-}
-
-.studio-create__prompt-assistant {
-  color: var(--studio-primary-hover);
 }
 
 .studio-create__composer-box {
@@ -1737,6 +1748,11 @@ body.studio-chat-panel--resizing {
   }
 
   .studio-create--history-open {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(280px, 42vh);
+  }
+
+  .studio-create--assistant-open {
     grid-template-columns: 1fr;
     grid-template-rows: minmax(0, 1fr) minmax(280px, 42vh);
   }

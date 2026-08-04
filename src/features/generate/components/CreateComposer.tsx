@@ -1,4 +1,5 @@
 import { message, Select } from 'antd';
+import { BulbOutlined } from '@ant-design/icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { listAssets } from '../../../api/assets';
 import { uploadGenerateMaterial } from '../../../api/generate';
@@ -52,10 +53,22 @@ export interface CreateComposerSubmitPayload {
 interface CreateComposerProps {
   kind: GenerateKind;
   params: CreateComposerParams;
-  draft?: { key: string; prompt: string; refImages?: RefImage[] } | null;
+  draft?: {
+    key: string;
+    prompt: string;
+    content?: CanvasPromptEditorPayload['content'];
+    refImages?: RefImage[];
+  } | null;
   onKindChange: (kind: GenerateKind) => void;
   onParamsChange: (params: Partial<CreateComposerParams>) => void;
   onSubmit: (payload: CreateComposerSubmitPayload) => void;
+  onPromptAssistantClick?: () => void;
+  promptAssistantActive?: boolean;
+  onComposerSnapshotChange?: (snapshot: {
+    prompt: string;
+    content: CanvasPromptEditorPayload['content'];
+    refImages: RefImage[];
+  }) => void;
 }
 
 export function CreateComposer({
@@ -65,8 +78,12 @@ export function CreateComposer({
   onKindChange,
   onParamsChange,
   onSubmit,
+  onPromptAssistantClick,
+  promptAssistantActive = false,
+  onComposerSnapshotChange,
 }: CreateComposerProps) {
   const [prompt, setPrompt] = useState('');
+  const [promptContent, setPromptContent] = useState<CanvasPromptEditorPayload['content']>([]);
   const [promptKey, setPromptKey] = useState(0);
   const [uploadedAssets, setUploadedAssets] = useState<(RefImage | null)[]>([]);
   const [materialsUploading, setMaterialsUploading] = useState(false);
@@ -173,6 +190,7 @@ export function CreateComposer({
     const refs = draft.refImages ?? [];
     setUploadedAssets(refs);
     setPrompt(draft.prompt);
+    setPromptContent(draft.content ?? []);
     promptDraftRef.current = draft.prompt;
     setPromptKey((k) => k + 1);
   }, [draft]);
@@ -335,7 +353,16 @@ export function CreateComposer({
   const handlePromptChange = useCallback((payload: CanvasPromptEditorPayload) => {
     promptDraftRef.current = payload.prompt;
     setPrompt(payload.prompt);
+    setPromptContent(payload.content);
   }, []);
+
+  useEffect(() => {
+    onComposerSnapshotChange?.({
+      prompt,
+      content: promptContent,
+      refImages: filledRefs(uploadedAssets),
+    });
+  }, [onComposerSnapshotChange, prompt, promptContent, uploadedAssets]);
 
   const capLabel = buildParamsCapsuleLabel({
     kind,
@@ -383,6 +410,7 @@ export function CreateComposer({
           <GenerationPromptEditor
             key={promptKey}
             prompt={prompt}
+            content={promptContent.length > 0 ? promptContent : undefined}
             placeholder={editorPlaceholderForMode(kind, params.referenceMode)}
             enableMention={!frameSlotMode}
             mentionProvider={mentionProvider}
@@ -444,6 +472,21 @@ export function CreateComposer({
             >
               @
             </button>
+            {onPromptAssistantClick ? (
+              <button
+                type="button"
+                className={`studio-create__prompt-assistant${
+                  promptAssistantActive ? ' studio-create__prompt-assistant--active' : ''
+                }`}
+                title="创作提示词助手"
+                aria-label="打开创作提示词助手"
+                aria-pressed={promptAssistantActive}
+                onClick={onPromptAssistantClick}
+              >
+                <BulbOutlined aria-hidden />
+                <span>助手</span>
+              </button>
+            ) : null}
           </>
         )}
         footerRight={(

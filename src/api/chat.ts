@@ -20,6 +20,7 @@ export interface ConversationView {
   title: string;
   default_model: string;
   status: number;
+  kind: 'chat' | 'prompt_assistant';
   is_generating?: boolean;
   awaiting_user_gate?: boolean;
   awaiting_upgrade_invite?: boolean;
@@ -81,6 +82,13 @@ export async function listChatModels() {
 
 export function createConversation(body: { title?: string; model: string }) {
   return request<ConversationView>('/chat/conversation/create', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function getOrCreatePromptAssistantSession(body: { model: string }) {
+  return request<ConversationView>('/chat/prompt-assistant/session/get-or-create', {
     method: 'POST',
     body: JSON.stringify(body),
   });
@@ -228,6 +236,23 @@ export function cancelGate(conversationId: number, turnId: string, gateId: strin
   });
 }
 
+export type ComposerPromptAppliedContent = NonNullable<
+  Extract<StreamFrame, { type: 'composer_prompt_applied' }>['content']
+>;
+
+export type GenerateComposerContextPayload = {
+  kind: 'image' | 'video' | 'audio';
+  prompt?: string;
+  content?: ComposerPromptAppliedContent;
+  model_id?: string;
+  ratio?: string | null;
+  resolution?: string | null;
+  count?: number | null;
+  duration?: number | null;
+  reference_mode?: number | null;
+  ref_asset_ids?: number[];
+};
+
 type StreamHandlers = {
   onToken: (channel: 'answer' | 'think', text: string) => void;
   onSpeakerAttribution?: (payload: {
@@ -277,6 +302,12 @@ type StreamHandlers = {
     turn_id: string;
     message: string;
     conversation_id: number;
+  }) => void;
+  onComposerPromptApplied?: (payload: {
+    turn_id: string;
+    prompt: string;
+    content: ComposerPromptAppliedContent;
+    ref_asset_ids: number[];
   }) => void;
   onToolPending?: (payload: ToolPendingState) => void;
   onActivity?: () => void;
@@ -449,6 +480,18 @@ async function consumeChatSSE(
                 });
               }
               break;
+            case 'composer_prompt_applied':
+              if (!Array.isArray(frame.content)) {
+                handlers.onError('internal', 'composer_prompt_applied missing content');
+                break;
+              }
+              handlers.onComposerPromptApplied?.({
+                turn_id: frame.turn_id,
+                prompt: frame.prompt,
+                content: frame.content,
+                ref_asset_ids: Array.isArray(frame.ref_asset_ids) ? frame.ref_asset_ids : [],
+              });
+              break;
             default:
               break;
           }
@@ -476,6 +519,7 @@ export async function streamMessage(
       speaker_role?: string | null;
       persist_user_message?: boolean;
     };
+    composer_context?: GenerateComposerContextPayload;
   },
   handlers: StreamHandlers,
   signal?: AbortSignal,

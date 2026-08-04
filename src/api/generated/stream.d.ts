@@ -21,7 +21,8 @@ export type Stream =
   | UserGateRequiredFrame
   | UpgradeInviteProposedFrame
   | BrowserBlockedFrame
-  | BrowserFrameEvent;
+  | BrowserFrameEvent
+  | ComposerPromptAppliedFrame;
 export type Avatar = string | null;
 export type TokenChannel = "answer" | "think";
 export type ExpertId = string | null;
@@ -273,6 +274,19 @@ export type Height1 = number;
 export type ProtocolVersion17 = number;
 export type Type22 = "browser_frame";
 export type Width1 = number;
+export type Text3 = string;
+export type Type23 = "text";
+export type AssetId5 = number | null;
+export type Type24 = "image_url" | "video_url" | "audio_url";
+export type Url4 = string;
+export type Text4 = string;
+export type Type25 = "text_ref";
+export type Content2 = (ComposerPromptTextSegment | ComposerPromptMediaSegment | ComposerPromptTextRefSegment)[];
+export type Prompt3 = string;
+export type ProtocolVersion18 = number;
+export type RefAssetIds1 = number[];
+export type TurnId10 = string;
+export type Type26 = "composer_prompt_applied";
 
 export interface TokenFrame {
   avatar?: Avatar;
@@ -619,4 +633,25 @@ export interface BrowserFrameEvent {
   protocol_version?: ProtocolVersion17;
   type: Type22;
   width: Width1;
+}
+export interface ComposerPromptAppliedFrame {
+  content?: Content2;
+  prompt: Prompt3;
+  protocol_version?: ProtocolVersion18;
+  ref_asset_ids?: RefAssetIds1;
+  turn_id: TurnId10;
+  type: Type26;
+}
+export interface ComposerPromptTextSegment {
+  text: Text3;
+  type: Type23;
+}
+export interface ComposerPromptMediaSegment {
+  asset_id?: AssetId5;
+  type: Type24;
+  url?: Url4;
+}
+export interface ComposerPromptTextRefSegment {
+  text: Text4;
+  type: Type25;
 }

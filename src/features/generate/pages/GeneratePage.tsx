@@ -15,9 +15,14 @@ import type { GenerateTaskCursor } from '../../../api/generate';
 import type { CreateComposerParams, CreateComposerSubmitPayload } from '../components/CreateComposer';
 import { CreateComposer } from '../components/CreateComposer';
 import { CreateHistoryPanel } from '../components/CreateHistoryPanel';
+import {
+  PromptAssistantPanel,
+  type PromptAssistantApplyPayload,
+} from '../components/PromptAssistantPanel';
 import { CreateStage } from '../components/CreateStage';
 import { StudioChip } from '../../../shared/ui/StudioChip';
 import type { GenerateFeedItem, GenerateKind, HistoryFilters } from '../types';
+import type { WorkflowPromptContent } from '../composer/promptContent';
 import { DEFAULT_HISTORY_FILTERS } from '../types';
 import { toFeedItem, toFeedItemFromTaskList, toHistoryListPatch } from '../utils/feedItemMappers';
 import { buildPreviewSlides } from '../utils/previewGallery';
@@ -66,10 +71,21 @@ export function GeneratePage() {
   const [historyHasMore, setHistoryHasMore] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyInitialLoading, setHistoryInitialLoading] = useState(true);
-  const [historyOpen, setHistoryOpen] = useState(true);
-  const [composerDraft, setComposerDraft] = useState<
-    { key: string; prompt: string; refImages?: GenerateFeedItem['refImages'] } | null
-  >(null);
+  /** 右侧栏：历史与助手互斥，禁止同时打开造成叠层 */
+  const [sidePanel, setSidePanel] = useState<'history' | 'assistant' | null>('history');
+  const historyOpen = sidePanel === 'history';
+  const assistantOpen = sidePanel === 'assistant';
+  const [composerDraft, setComposerDraft] = useState<{
+    key: string;
+    prompt: string;
+    content?: WorkflowPromptContent;
+    refImages?: GenerateFeedItem['refImages'];
+  } | null>(null);
+  const [composerLive, setComposerLive] = useState<{
+    prompt: string;
+    content: WorkflowPromptContent;
+    refImages: NonNullable<GenerateFeedItem['refImages']>;
+  }>({ prompt: '', content: [], refImages: [] });
   const foyerHandoffConsumedRef = useRef(false);
   const handleSubmitRef = useRef<
     ((payload: CreateComposerSubmitPayload) => Promise<void>) | null
@@ -447,13 +463,38 @@ export function GeneratePage() {
     if (patch.model?.includes('video')) setKind('video');
   };
 
+  const handleAssistantApply = useCallback((payload: PromptAssistantApplyPayload) => {
+    setComposerDraft({
+      key: `assistant-${Date.now()}`,
+      prompt: payload.prompt,
+      content: payload.content,
+      refImages: payload.refImages,
+    });
+  }, []);
+
+  const openHistoryPanel = useCallback(() => {
+    setSidePanel('history');
+  }, []);
+
+  const openAssistantPanel = useCallback(() => {
+    setSidePanel((prev) => (prev === 'assistant' ? null : 'assistant'));
+  }, []);
+
+  const closeSidePanel = useCallback(() => {
+    setSidePanel(null);
+  }, []);
+
   return (
-    <div className={`studio-create${historyOpen ? ' studio-create--history-open' : ''}`}>
-      {!historyOpen ? (
+    <div
+      className={`studio-create${historyOpen ? ' studio-create--history-open' : ''}${
+        assistantOpen ? ' studio-create--assistant-open' : ''
+      }`}
+    >
+      {sidePanel === null ? (
         <StudioChip
           className="studio-create__history-toggle"
           icon={<HistoryOutlined aria-hidden />}
-          onClick={() => setHistoryOpen(true)}
+          onClick={openHistoryPanel}
         >
           最近生成
         </StudioChip>
@@ -488,8 +529,29 @@ export function GeneratePage() {
           onKindChange={setKind}
           onParamsChange={handleParamsChange}
           onSubmit={handleSubmit}
+          onPromptAssistantClick={openAssistantPanel}
+          promptAssistantActive={assistantOpen}
+          onComposerSnapshotChange={setComposerLive}
         />
       </div>
+
+      {assistantOpen ? (
+        <aside className="studio-create__history-panel" aria-label="创作提示词助手">
+          <PromptAssistantPanel
+            open={assistantOpen}
+            snapshot={{
+              kind,
+              prompt: composerLive.prompt,
+              content: composerLive.content,
+              params,
+              refImages: composerLive.refImages,
+            }}
+            onClose={closeSidePanel}
+            onOpenHistory={openHistoryPanel}
+            onApply={handleAssistantApply}
+          />
+        </aside>
+      ) : null}
 
       {historyOpen ? (
         <aside className="studio-create__history-panel">
@@ -509,7 +571,7 @@ export function GeneratePage() {
             onLoadMore={loadMoreHistory}
             loadingMore={historyLoading}
             initialLoading={historyInitialLoading}
-            onClose={() => setHistoryOpen(false)}
+            onClose={closeSidePanel}
           />
         </aside>
       ) : null}

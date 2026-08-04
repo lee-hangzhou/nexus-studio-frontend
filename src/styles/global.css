@@ -3496,22 +3496,36 @@ a:hover {
   cursor: not-allowed;
 }
 
-/* 提示词助手 */
+/* 提示词助手：与参数胶囊同规格，横排图标+文案 */
 .studio-create__prompt-assistant {
   display: inline-flex;
+  flex-direction: row;
   align-items: center;
+  justify-content: center;
   gap: 5px;
-  padding: 2px 12px 6px 14px;
-  background: none;
-  border: none;
-  font-size: 12px;
+  height: 32px;
+  width: auto;
+  padding: 0 12px;
+  border: 1px solid var(--studio-border);
+  border-radius: 8px;
+  background: transparent;
   color: var(--studio-text-secondary);
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
-  transition: color 0.12s;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
 }
 
-.studio-create__prompt-assistant:hover {
-  color: var(--studio-primary);
+.studio-create__prompt-assistant .anticon {
+  font-size: 14px;
+}
+
+.studio-create__prompt-assistant--active {
+  color: var(--studio-control-selected-fg, var(--studio-primary));
+  border-color: var(--studio-control-selected-border, var(--studio-primary));
+  background: var(--studio-control-selected-bg, color-mix(in srgb, var(--studio-primary) 14%, transparent));
 }
 
 /* 底部胶囊行 */
@@ -5431,7 +5445,7 @@ a:hover {
   }
 
   .studio-create__prompt-assistant {
-    display: none;
+    display: inline-flex;
   }
 
   .studio-create__capsule-row {
