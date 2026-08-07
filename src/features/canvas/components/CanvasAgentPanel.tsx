@@ -193,15 +193,6 @@ export function CanvasAgentPanel({
     && Boolean(modelKey)
     && activeSessionId != null;
 
-  const sessionOptions = useMemo(
-    () =>
-      sessions.map((session) => ({
-        value: session.id,
-        label: session.title?.trim() || CANVAS_DEFAULT_SESSION_TITLE,
-      })),
-    [sessions],
-  );
-
   if (!open) {
     return (
       <div className="canvas-agent-float canvas-agent-float--collapsed">
@@ -212,18 +203,6 @@ export function CanvasAgentPanel({
         >
           画布助手
         </StudioChip>
-        <Select
-          className="canvas-agent-float__session-select"
-          size="small"
-          popupMatchSelectWidth={false}
-          value={activeSessionId ?? undefined}
-          options={sessionOptions}
-          loading={sessionsLoading}
-          disabled={sessionsLoading || sessions.length === 0}
-          onChange={(sessionId) => onSessionChange(sessionId)}
-          placeholder={CANVAS_DEFAULT_SESSION_TITLE}
-          aria-label="切换会话"
-        />
         {busy ? (
           <StudioButton variant="primary" size="sm" onClick={onStop} aria-label="停止生成">
             停止

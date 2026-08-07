@@ -12,6 +12,7 @@ import {
 import { useCallback, useMemo, useRef, type MouseEvent } from 'react';
 import type { CanvasNodeKind, CanvasPatchOpInput, CanvasPatchResult } from '../api/canvasTypes';
 import { CanvasAgentCanvasPickBanner } from '../components/CanvasAgentCanvasPickBanner';
+import { CanvasOperationBar } from '../components/CanvasOperationBar';
 import { useCanvasAgentPick } from '../context/CanvasAgentPickContext';
 import { CanvasAddNodeMenu } from '../storyflow/menus/CanvasAddNodeMenu';
 import { ConnectionDropMenu } from '../storyflow/menus/ConnectionDropMenu';
@@ -155,6 +156,24 @@ export function WorkflowCanvasFlow({
     [hoveredEdgeId, setHoveredEdgeId, scheduleClearHoveredEdge],
   );
 
+  const getViewportCenterFlowPosition = useCallback(() => {
+    const instance = reactFlowRef.current;
+    const stage = containerRef.current?.querySelector<HTMLElement>('.workflow-canvas-flow__stage');
+    const rect = stage?.getBoundingClientRect();
+    const screenCenter = {
+      x: rect ? rect.left + rect.width / 2 : window.innerWidth / 2,
+      y: rect ? rect.top + rect.height / 2 : window.innerHeight / 2,
+    };
+    return instance?.screenToFlowPosition(screenCenter) ?? { x: 0, y: 0 };
+  }, []);
+
+  const handleOperationBarAddNode = useCallback(
+    (kind: CanvasNodeKind) => {
+      onQuickAdd(kind, getViewportCenterFlowPosition());
+    },
+    [getViewportCenterFlowPosition, onQuickAdd],
+  );
+
   return (
     <CanvasActionsContext.Provider value={actionsValue}>
       <CanvasEdgeHoverContext.Provider value={edgeHoverValue}>
@@ -173,6 +192,10 @@ export function WorkflowCanvasFlow({
           />
           <div className="workflow-canvas-flow__stage">
             {isPickMode ? <CanvasAgentCanvasPickBanner onExit={exitPickMode} /> : null}
+            <CanvasOperationBar
+              disabled={isPickMode}
+              onAddNode={handleOperationBarAddNode}
+            />
             <ReactFlow
               onInit={(instance) => {
                 reactFlowRef.current = instance as unknown as ReactFlowInstance;
