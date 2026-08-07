@@ -1,4 +1,5 @@
-import { apiUrl, fetchWithAuth, request, type ApiResponse } from './base';
+import { request } from './base';
+import { directUploadAsset } from './directUpload';
 import type { AssetBase, AssetKind, AssetSource } from '../domains/asset/types';
 
 interface AssetListItem {
@@ -108,18 +109,27 @@ export async function getAsset(assetId: string): Promise<AssetBase> {
   return toAsset(item);
 }
 
-export async function uploadAsset(file: File): Promise<AssetBase> {
-  const body = new FormData();
-  body.append('file', file);
-  const response = await fetchWithAuth(apiUrl('/assets/upload'), {
-    method: 'POST',
-    body,
+export async function uploadAsset(file: File, signal?: AbortSignal): Promise<AssetBase> {
+  const item = await directUploadAsset({
+    file,
+    sourceType: 'manual_upload',
+    signal,
   });
-  const payload = (await response.json().catch(() => null)) as ApiResponse<AssetListItem> | null;
-  if (!response.ok || payload === null || payload.code !== 0 || !payload.data) {
-    throw new Error(payload?.msg ?? `上传失败: ${response.status}`);
+  if (!item.created_at || !item.preview_url) {
+    throw new Error('上传响应缺少必要字段');
   }
-  return toAsset(payload.data);
+  return toAsset({
+    id: item.id,
+    filename: item.filename,
+    mime_type: item.mime_type,
+    asset_type: item.asset_type,
+    source_type: item.source_type,
+    metadata: item.metadata,
+    status: item.status,
+    favorite: item.favorite,
+    preview_url: item.preview_url,
+    created_at: item.created_at,
+  });
 }
 
 export async function updateAssetFavorite(assetId: string, favorite: boolean): Promise<AssetBase> {

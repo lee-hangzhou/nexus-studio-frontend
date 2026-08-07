@@ -110,6 +110,7 @@ export function collectSubmitMaterialRefs(params: {
   connectedAssetIds: number[];
   manualRefs?: ManualMaterialRef[];
   previewMediaRefs?: WorkflowMentionItem[];
+  selfLibraryRefs?: number[];
 }): SubmitMaterialRefs {
   const ref_asset_ids: number[] = [];
   const seenAssets = new Set<number>();
@@ -129,6 +130,9 @@ export function collectSubmitMaterialRefs(params: {
     }
     pushUniqueId(ref_asset_ids, seenAssets, ref.assetId);
   }
+  for (const id of params.selfLibraryRefs ?? []) {
+    pushUniqueId(ref_asset_ids, seenAssets, id);
+  }
 
   return { ref_asset_ids };
 }
@@ -143,6 +147,7 @@ export function buildSubmitPromptAndRefs(params: {
   /** @deprecated 用 manualRefs */
   manualAssetIds?: number[];
   previewMediaRefs?: WorkflowMentionItem[];
+  selfLibraryRefs?: number[];
 }): { prompt: string; ref_asset_ids: number[] } {
   const prompt = buildPlainSubmitPrompt({
     content: params.content,
@@ -160,6 +165,7 @@ export function buildSubmitPromptAndRefs(params: {
     connectedAssetIds: params.connectedAssetIds,
     manualRefs,
     previewMediaRefs: params.previewMediaRefs,
+    selfLibraryRefs: params.selfLibraryRefs,
   });
 
   return { prompt, ...refs };

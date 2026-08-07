@@ -1,10 +1,12 @@
 import { apiUrl, fetchWithAuth, request } from '../../../api/base';
 import { consumeSSE } from '../../../api/stream';
+import { directUploadAsset } from '../../../api/directUpload';
 import { CanvasApiError } from './canvasErrors';
 import type {
   CanvasAgentAssetView,
   CanvasMessageRecord,
   CanvasNodeGenerateResponse,
+  CanvasNodeRecord,
   CanvasPatchRequest,
   CanvasPatchResult,
   CanvasResumeBody,
@@ -15,52 +17,69 @@ import type {
   NodeGenerateBody,
 } from './canvasTypes';
 
+/** 绑定已登记资产到节点上传结果 */
+export async function bindCanvasNodeUpload(
+  episodeId: number,
+  nodeId: string,
+  assetId: number,
+  signal?: AbortSignal,
+): Promise<CanvasNodeRecord> {
+  return request<CanvasNodeRecord>(
+    `/canvas/episodes/${episodeId}/nodes/${nodeId}/bind-upload`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ asset_id: assetId }),
+      signal,
+    },
+  );
+}
+
+/** 节点结果直传后绑定 */
+export async function uploadCanvasNodeAsset(
+  episodeId: number,
+  nodeId: string,
+  file: File,
+  signal?: AbortSignal,
+): Promise<CanvasNodeRecord> {
+  const asset = await directUploadAsset({
+    file,
+    sourceType: 'agent_upload',
+    episodeId,
+    signal,
+  });
+  return bindCanvasNodeUpload(episodeId, nodeId, asset.id, signal);
+}
+
+/** Agent 会话素材直传登记 */
 export async function uploadCanvasAgentAsset(
   episodeId: number,
   file: File,
   signal?: AbortSignal,
 ): Promise<CanvasAgentAssetView> {
-  const body = new FormData();
-  body.append('file', file);
-  const response = await fetchWithAuth(apiUrl(`/canvas/episodes/${episodeId}/agent-upload`), {
-    method: 'POST',
-    body,
+  const asset = await directUploadAsset({
+    file,
+    sourceType: 'agent_upload',
+    episodeId,
     signal,
   });
-  const payloadText = await response.text();
-  let payload: {
-    code: number;
-    data: CanvasAgentAssetView | null;
-    msg: string;
+  if (!Number.isFinite(asset.id) || asset.id < 1) {
+    throw new CanvasApiError('上传成功但缺少有效 asset id', 0, null);
+  }
+  if (typeof asset.filename !== 'string' || typeof asset.mime_type !== 'string') {
+    throw new CanvasApiError('上传响应缺少文件元数据', 0, null);
+  }
+  if (asset.project_id == null) {
+    throw new CanvasApiError('上传成功但缺少 project_id', 0, null);
+  }
+  return {
+    id: asset.id,
+    project_id: asset.project_id,
+    filename: asset.filename,
+    mime_type: asset.mime_type,
+    asset_type: asset.asset_type,
+    source_type: asset.source_type,
+    preview_url: asset.preview_url,
   };
-  try {
-    payload = JSON.parse(payloadText) as {
-      code: number;
-      data: CanvasAgentAssetView | null;
-      msg: string;
-    };
-  } catch {
-    throw new CanvasApiError(
-      `上传响应不是 JSON: ${response.status}`,
-      response.status,
-      null,
-    );
-  }
-  if (!response.ok || payload.code !== 0 || payload.data == null) {
-    throw new CanvasApiError(
-      payload.msg || `上传失败: ${response.status}`,
-      payload.code ?? response.status,
-      null,
-    );
-  }
-  const data = payload.data;
-  if (!Number.isFinite(data.id) || data.id < 1) {
-    throw new CanvasApiError('上传成功但缺少有效 asset id', payload.code, null);
-  }
-  if (typeof data.filename !== 'string' || typeof data.mime_type !== 'string') {
-    throw new CanvasApiError('上传响应缺少文件元数据', payload.code, null);
-  }
-  return data;
 }
 
 export async function getCanvasSnapshot(episodeId: number): Promise<CanvasSnapshot> {

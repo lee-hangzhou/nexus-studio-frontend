@@ -19,7 +19,8 @@ export type Canvas =
   | PendingCanvasPatchOperation
   | PendingGenerateOperation
   | PendingSkillWriteOperation
-  | (PendingCanvasPatchOperation | PendingGenerateOperation | PendingSkillWriteOperation);
+  | (PendingCanvasPatchOperation | PendingGenerateOperation | PendingSkillWriteOperation)
+  | CanvasBindUploadRequest;
 export type CanvasEdgeType = "dependency";
 export type Id = string;
 export type Revision = number;
@@ -174,6 +175,7 @@ export type RevisionInvalid = boolean | null;
 export type Scope = "user" | "project";
 export type Surface = "chat" | "canvas";
 export type Type6 = "skill_write";
+export type AssetId5 = number;
 
 export interface CanvasSnapshot {
   edges: Edges;
@@ -461,4 +463,10 @@ export interface PendingSkillWriteOperation {
   scope?: Scope;
   surface?: Surface;
   type: Type6;
+}
+/**
+ * 将已登记资产绑定为节点上传结果
+ */
+export interface CanvasBindUploadRequest {
+  asset_id: AssetId5;
 }

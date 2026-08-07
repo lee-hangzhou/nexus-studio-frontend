@@ -1,0 +1,36 @@
+{
+  "name": "upload_idle_plus_edge",
+  "target_node_id": "00000000-0000-4000-8000-0000000000v6",
+  "nodes": [
+    {
+      "id": "00000000-0000-4000-8000-0000000000i6",
+      "data": {
+        "status": "idle",
+        "output_asset_ids": [501],
+        "output_source": "upload"
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-0000000000v6",
+      "data": {
+        "status": "idle",
+        "input_prompt": "引用上传图"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "00000000-0000-4000-8000-0000000000i6",
+      "target": "00000000-0000-4000-8000-0000000000v6",
+      "data": { "source_port": "output_asset", "target_port": "reference_asset" }
+    }
+  ],
+  "submit": {
+    "content": [{ "type": "text", "text": "引用上传图" }],
+    "storedPrompt": "引用上传图",
+    "connectedPromptTexts": [],
+    "manualRefs": [],
+    "previewMediaRefs": [],
+    "referenceAssets": []
+  }
+}

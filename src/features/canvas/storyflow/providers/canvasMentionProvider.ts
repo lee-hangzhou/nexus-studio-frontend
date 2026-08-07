@@ -32,8 +32,19 @@ function connectedNodeMentionName(title: string | undefined): string | undefined
 }
 
 function firstAssetUrl(data: CanvasNodeData): string | undefined {
-  const url = data.output_asset_urls?.[0]?.trim();
-  return url || undefined;
+  const fromSigned = data.output_asset_urls?.[0];
+  if (typeof fromSigned === 'string' && fromSigned.trim() !== '') {
+    return fromSigned.trim();
+  }
+  const path = data.payload?.path;
+  if (typeof path === 'string' && path.trim() !== '') {
+    return path.trim();
+  }
+  const preview = data.payload?.preview_url;
+  if (typeof preview === 'string' && preview.trim() !== '') {
+    return preview.trim();
+  }
+  return undefined;
 }
 
 function firstAssetId(data: CanvasNodeData): number | undefined {

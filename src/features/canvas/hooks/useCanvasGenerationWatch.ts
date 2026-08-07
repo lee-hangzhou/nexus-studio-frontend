@@ -1,56 +1,97 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { getTasksStatus } from '../../../api/generate';
-import type { CanvasFlowNode } from '../schema/canvasSchema';
 import { isTaskInProgress } from '../../../domains/task/types';
+import type { CanvasFlowNode } from '../schema/canvasSchema';
+import { activePollTaskIds, terminalPollTaskIds } from './canvasTaskPolling';
 
 const POLL_MS = 5000;
 
-/** 节点 running 且已有 task_id 时轮询; 发现终态后走 onTasksTerminal 对齐整图, 不旁路改 revision */
+/**
+ * 按节点 generate_task_id 轮询任务终态；终态后对齐画布快照一次。
+ * chained setTimeout + 页面不可见暂停。
+ */
 export function useCanvasGenerationWatch(
   nodes: CanvasFlowNode[],
   onTasksTerminal: () => void | Promise<void>,
+  onNonTerminalTasks?: (taskIds: number[]) => void,
 ) {
   const onTasksTerminalRef = useRef(onTasksTerminal);
   onTasksTerminalRef.current = onTasksTerminal;
+  const onNonTerminalTasksRef = useRef(onNonTerminalTasks);
+  onNonTerminalTasksRef.current = onNonTerminalTasks;
 
-  const pollingTaskKey = Array.from(
-    new Set(
-      nodes
-        .filter((node) => node.data.status === 'running' && node.data.task_id)
-        .map((node) => node.data.task_id!),
-    ),
-  ).join(',');
+  const alignedTaskIdsRef = useRef<Set<number>>(new Set());
+
+  const pollTaskKey = useMemo(
+    () => activePollTaskIds(nodes, alignedTaskIdsRef.current).join(','),
+    [nodes],
+  );
 
   useEffect(() => {
-    if (!pollingTaskKey) return;
+    if (!pollTaskKey) return;
 
-    const taskIds = pollingTaskKey.split(',').map(Number);
-    let cancelled = false;
+    const taskIds = pollTaskKey.split(',').map(Number);
+    let active = true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     let inFlight = false;
 
-    const tick = async () => {
-      if (cancelled || inFlight) return;
+    const pendingIds = () => taskIds.filter((id) => !alignedTaskIdsRef.current.has(id));
+
+    const pollOnce = async () => {
+      if (!active || inFlight) return;
+      const ids = pendingIds();
+      if (ids.length === 0) return;
       inFlight = true;
       try {
-        const response = await getTasksStatus(taskIds);
-        if (cancelled) return;
-        const missingIds = new Set(response.missing_task_ids);
-        const hasTerminal =
-          response.items.some((view) => !isTaskInProgress(view.status)) || missingIds.size > 0;
-        if (!hasTerminal) return;
+        const response = await getTasksStatus(ids);
+        if (!active) return;
+        const runningIds = response.items
+          .filter((view) => isTaskInProgress(view.status))
+          .map((view) => view.task_id);
+        if (runningIds.length > 0) {
+          onNonTerminalTasksRef.current?.(runningIds);
+        }
+        const terminalIds = terminalPollTaskIds(response.items, response.missing_task_ids);
+        if (terminalIds.length === 0) return;
         await onTasksTerminalRef.current();
+        if (!active) return;
+        for (const id of terminalIds) {
+          alignedTaskIdsRef.current.add(id);
+        }
       } catch {
-        /* 轮询失败保持 running，等待下次 tick */
+        /* 轮询或对齐失败保持等待, 下次 tick 重试 */
       } finally {
         inFlight = false;
       }
     };
 
-    void tick();
-    const timer = setInterval(() => void tick(), POLL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
+    const schedule = () => {
+      if (!active) return;
+      timer = window.setTimeout(() => {
+        void (async () => {
+          if (document.visibilityState === 'visible') {
+            await pollOnce();
+          }
+          if (active && pendingIds().length > 0) {
+            schedule();
+          }
+        })();
+      }, POLL_MS);
     };
-  }, [pollingTaskKey]);
+
+    const handleVisible = () => {
+      if (active && document.visibilityState === 'visible') {
+        void pollOnce();
+      }
+    };
+
+    void pollOnce();
+    schedule();
+    document.addEventListener('visibilitychange', handleVisible);
+    return () => {
+      active = false;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener('visibilitychange', handleVisible);
+    };
+  }, [pollTaskKey]);
 }

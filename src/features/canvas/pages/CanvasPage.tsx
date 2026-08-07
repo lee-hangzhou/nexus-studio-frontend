@@ -22,6 +22,7 @@ import {
   updateCanvasSession,
   uploadCanvasAgentAsset,
 } from '../api/canvas';
+import { submitGenerate, isGenerateApiError } from '../../../api/generate';
 import { CANVAS_API_CODE, isCanvasApiError } from '../api/canvasErrors';
 import type {
   CanvasNodeGenerateResponse,
@@ -242,9 +243,29 @@ function CanvasPageInner() {
   replaceGraphQueuedRef.current = replaceGraphQueued;
 
   // 轮询发现终态后走 replaceGraphQueued 对齐 revision, 不旁路 setNodes
-  useCanvasGenerationWatch(nodes, async () => {
-    await syncCanvasFromServer();
-  });
+  useCanvasGenerationWatch(
+    nodes,
+    async () => {
+      await syncCanvasFromServer();
+    },
+    (runningTaskIds) => {
+      const running = new Set(runningTaskIds);
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.data.task_id == null || !running.has(n.data.task_id)) return n;
+          if (n.data.status === 'running') return n;
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              status: 'running',
+              payload: { ...n.data.payload, status: 'running' },
+            },
+          };
+        }),
+      );
+    },
+  );
   const busy = activeSessionId != null && busySessionIds.has(activeSessionId);
   activeSessionIdRef.current = activeSessionId;
 
@@ -586,25 +607,25 @@ function CanvasPageInner() {
 
   const handleNodeGenerateError = useCallback(
     (err: unknown, nodeId: string) => {
-      if (isCanvasApiError(err)) {
-        if (err.code === CANVAS_API_CODE.NODE_GENERATION_IN_PROGRESS) {
-          message.warning('该节点已有生成任务进行中');
-          return;
-        }
-        if (err.code === CANVAS_API_CODE.REVISION_CONFLICT) {
-          void syncCanvasFromServer();
-          return;
-        }
-        if (err.code === CANVAS_API_CODE.SUBMIT_REF_MISMATCH) {
-          message.warning('画布引用已变化，正在同步后请重试');
-          void syncCanvasFromServer();
-          setNodes((nds) =>
-            nds.map((n) =>
-              n.id === nodeId ? { ...n, data: { ...n.data, generatePending: false } } : n,
-            ),
-          );
-          return;
-        }
+      const code =
+        isCanvasApiError(err) || isGenerateApiError(err) ? err.code : null;
+      if (code === CANVAS_API_CODE.NODE_GENERATION_IN_PROGRESS) {
+        message.warning('该节点已有生成任务进行中');
+        return;
+      }
+      if (code === CANVAS_API_CODE.REVISION_CONFLICT) {
+        void syncCanvasFromServer();
+        return;
+      }
+      if (code === CANVAS_API_CODE.SUBMIT_REF_MISMATCH) {
+        message.warning('画布引用已变化，正在同步后请重试');
+        void syncCanvasFromServer();
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === nodeId ? { ...n, data: { ...n.data, generatePending: false } } : n,
+          ),
+        );
+        return;
       }
       message.error(err instanceof Error ? err.message : '生成失败');
       setNodes((nds) =>
@@ -872,8 +893,10 @@ function CanvasPageInner() {
       if (pendingNodeIds.has(nodeId)) return;
       const node = graphRef.current.nodes.find((n) => n.id === nodeId);
       if (!node) return;
-      // 文本同步生成：返回即终态，在途只看 pendingNodeIds；媒体异步才看 running
-      if (node.data.kind !== 'text' && node.data.status === 'running') return;
+      // 文本同步生成：返回即终态，在途只看 pendingNodeIds；媒体看绑定的非终态任务
+      if (node.data.kind !== 'text' && node.data.task_id != null && node.data.status === 'running') {
+        return;
+      }
 
       const kind = node.data.kind;
       const prompt =
@@ -885,11 +908,9 @@ function CanvasPageInner() {
         return;
       }
 
-      const body: NodeGenerateBody = {
-        node_id: nodeId,
-        kind,
-        prompt,
-      };
+      const storedInputPrompt =
+        extra?.input_prompt?.trim() || node.data.input_prompt?.trim() || prompt;
+      const submitContent = extra?.submit_content;
 
       if (kind === 'text') {
         const modelKey = chatModelCatalog.resolveModelKey(node.data.model_id);
@@ -897,61 +918,95 @@ function CanvasPageInner() {
           message.warning('请先选择对话模型');
           return;
         }
-        body.model_key = modelKey;
-      } else if (kind === 'audio') {
-        const modelId = modelCatalog.resolveModelId('audio', node.data.model_id);
-        if (!hasResolvedModelId(modelId)) {
-          message.warning('请先选择 TTS 模型');
-          return;
+        const body: NodeGenerateBody = {
+          node_id: nodeId,
+          kind,
+          prompt,
+          model_key: modelKey,
+        };
+        const nextPayload = foldSubmitContentIntoNodeData(
+          kind,
+          {
+            plain_prompt: storedInputPrompt,
+            submit_content: submitContent,
+            model_id: modelKey,
+          },
+          node.data.payload,
+        );
+        setNodes((nds) =>
+          nds.map((n) => {
+            if (n.id !== nodeId) return n;
+            const flat = flattenNodeData(kind, nextPayload);
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                ...flat,
+                kind,
+                payload: nextPayload,
+              },
+            };
+          }),
+        );
+        nodeAbortRef.current.get(nodeId)?.abort();
+        const ac = new AbortController();
+        nodeAbortRef.current.set(nodeId, ac);
+        setNodePending(nodeId, true);
+        setNodeGeneratePending(nodeId, true);
+        try {
+          const saved = await commitOps([
+            buildUpdateNodeOpInput(
+              nodeId,
+              { data: nextPayload },
+              { kind, existingPayload: node.data.payload },
+            ),
+          ]);
+          if (!saved) return;
+          const result = await submitCanvasNodeGenerate(episodeId, nodeId, body, ac.signal);
+          applyGenerateResult(result);
+        } catch (err) {
+          if (err instanceof Error && err.name === 'AbortError') return;
+          handleNodeGenerateError(err, nodeId);
+        } finally {
+          setNodeGeneratePending(nodeId, false);
+          setNodePending(nodeId, false);
+          nodeAbortRef.current.delete(nodeId);
         }
-        body.model_id = modelId;
-        body.voice_id = node.data.voice_id;
-      } else if (kind === 'image' || kind === 'video') {
-        const modelId = extra?.model_id ?? modelCatalog.resolveModelId(kind, node.data.model_id);
-        if (!hasResolvedModelId(modelId)) {
-          message.warning('请先选择生成模型');
-          return;
-        }
-        body.model_id = modelId;
-        body.ratio = extra?.ratio ?? node.data.ratio;
-        body.resolution = extra?.resolution ?? node.data.resolution;
-        body.duration = extra?.duration ?? node.data.duration_sec;
-        body.reference_mode = extra?.reference_mode;
-        if (kind === 'image' && extra?.count != null) {
-          body.count = extra.count;
-        }
-        body.ref_asset_ids = extra?.ref_asset_ids;
-        if (extra?.submit_content?.length) {
-          body.submit_content = extra.submit_content;
-        }
-        if (extra?.manual_refs?.length) {
-          body.manual_refs = extra.manual_refs;
-        }
-        if (extra?.preview_media_asset_ids?.length) {
-          body.preview_media_asset_ids = extra.preview_media_asset_ids;
-        }
-      } else {
         return;
       }
 
-      const storedInputPrompt =
-        extra?.input_prompt?.trim() || node.data.input_prompt?.trim() || prompt;
-      const submitContent = extra?.submit_content;
+      if (kind !== 'audio' && kind !== 'image' && kind !== 'video') {
+        return;
+      }
+
+      const modelId =
+        kind === 'audio'
+          ? modelCatalog.resolveModelId('audio', node.data.model_id)
+          : (extra?.model_id ?? modelCatalog.resolveModelId(kind, node.data.model_id));
+      if (!hasResolvedModelId(modelId)) {
+        message.warning(kind === 'audio' ? '请先选择 TTS 模型' : '请先选择生成模型');
+        return;
+      }
+
+      const ratio = kind === 'image' || kind === 'video' ? (extra?.ratio ?? node.data.ratio) : undefined;
+      const resolution =
+        kind === 'image' || kind === 'video'
+          ? (extra?.resolution ?? node.data.resolution)
+          : undefined;
+      const duration =
+        kind === 'image' || kind === 'video'
+          ? (extra?.duration ?? node.data.duration_sec)
+          : undefined;
       const nextPayload = foldSubmitContentIntoNodeData(
         kind,
         {
           plain_prompt: storedInputPrompt,
           submit_content: submitContent,
-          model_id:
-            kind === 'text'
-              ? body.model_key
-              : kind === 'audio' || kind === 'image' || kind === 'video'
-                ? body.model_id
-                : undefined,
-          voice_id: kind === 'audio' ? body.voice_id : undefined,
-          ratio: kind === 'image' || kind === 'video' ? body.ratio : undefined,
-          resolution: kind === 'image' || kind === 'video' ? body.resolution : undefined,
-          duration_sec: kind === 'image' || kind === 'video' ? body.duration : undefined,
+          model_id: modelId,
+          voice_id: kind === 'audio' ? node.data.voice_id : undefined,
+          ratio,
+          resolution,
+          duration_sec: duration,
         },
         node.data.payload,
       );
@@ -987,8 +1042,43 @@ function CanvasPageInner() {
         ]);
         if (!saved) return;
 
-        const result = await submitCanvasNodeGenerate(episodeId, nodeId, body, ac.signal);
-        applyGenerateResult(result);
+        const submitted = await submitGenerate({
+          kind,
+          prompt,
+          model_id: modelId,
+          voice_id: kind === 'audio' ? node.data.voice_id : undefined,
+          ratio,
+          resolution,
+          count: kind === 'image' ? (extra?.count ?? 1) : undefined,
+          duration: duration ?? null,
+          reference_mode: extra?.reference_mode,
+          ref_asset_ids: extra?.ref_asset_ids,
+          episode_id: episodeId,
+          node_id: nodeId,
+          submit_content: extra?.submit_content,
+          manual_refs: extra?.manual_refs?.map((item) => ({ asset_id: item.asset_id })),
+          preview_media_asset_ids: extra?.preview_media_asset_ids,
+        });
+        if (ac.signal.aborted) return;
+        setNodes((nds) =>
+          nds.map((n) => {
+            if (n.id !== nodeId) return n;
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                status: 'running',
+                task_id: submitted.task_id,
+                generatePending: false,
+                payload: {
+                  ...n.data.payload,
+                  status: 'running',
+                  generate_task_id: submitted.task_id,
+                },
+              },
+            };
+          }),
+        );
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') return;
         handleNodeGenerateError(err, nodeId);

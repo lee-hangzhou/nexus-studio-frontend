@@ -2,23 +2,23 @@ import { ArrowUpOutlined } from '@ant-design/icons';
 import { Button, Dropdown, message } from 'antd';
 import { useStore } from '@xyflow/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { uploadGenerateMaterial } from '../../../../../api/generate';
-import type { GenerateRefImage } from '../../../../generate/types';
+import type { AssetBase } from '../../../../../domains/asset/types';
 import {
   buildParamsCapsuleLabel,
   editorPlaceholderForMode,
-  filledRefs,
   GenerationParamsCapsule,
   GenerationRefRail,
   isFrameSlotMode,
   normalizeRatioOptions,
-  normalizeUploadedAssetsForMode,
   resolveMaxReferenceImages,
 } from '../../../../generate/composer';
+import type { GenerateRefImage } from '../../../../generate/types';
 import { useCanvasActions } from '../../context/CanvasActionsContext';
 import { useCanvasGenerate } from '../../../context/CanvasGenerateContext';
 import { NodeFloatPromptPanel } from '../../components/NodeFloatPromptPanel';
+import { CanvasAssetPickerModal } from '../../components/CanvasAssetPickerModal';
 import { useCanvasGenerateModels } from '../../hooks/useCanvasGenerateModels';
+import { useLibraryRefAssets } from '../../hooks/useLibraryRefAssets';
 import { useWorkflowSingleNodeSelected } from '../../hooks/useWorkflowSingleNodeSelected';
 import type { CanvasNodeData } from '../../../schema/canvasSchema';
 import { CanvasPromptEditor } from '../../components/CanvasPromptEditor';
@@ -37,6 +37,35 @@ import { resolveFloatPromptWidth } from '../shared/promptPanelWidth';
 import '../shared/GenerationPromptEditor.less';
 import '../shared/ImagePrompt.less';
 import './VideoPrompt.less';
+
+type LibraryRefWrite = {
+  asset_id: number;
+  url: string;
+  name?: string;
+  thumb_url?: string;
+  type?: string;
+};
+
+function assetsToLibraryRefs(assets: AssetBase[]): LibraryRefWrite[] {
+  return assets.map((asset) => ({
+    asset_id: Number(asset.id),
+    url: asset.previewUrl || '',
+    thumb_url: asset.previewUrl || undefined,
+    name: asset.title || asset.filename || undefined,
+    type: asset.kind === 'video' ? 'video' : 'image',
+  }));
+}
+
+function refsFromRail(items: (GenerateRefImage | null)[]): LibraryRefWrite[] {
+  return items
+    .filter((item): item is GenerateRefImage => item != null && item.assetId != null)
+    .map((item) => ({
+      asset_id: item.assetId!,
+      url: item.url,
+      name: item.name,
+      type: item.mimeType.startsWith('video/') ? 'video' : 'image',
+    }));
+}
 
 export function VideoNodePrompt({
   nodeId,
@@ -77,6 +106,7 @@ export function VideoNodePrompt({
     materialLimit: maxReferenceImages ?? IMAGE_PROMPT_MAX_REFERENCE_IMAGES,
   });
 
+  const { libraryAssets, libraryMentionItems, selfLibraryRefs } = useLibraryRefAssets(data);
   const {
     mentionProvider,
     previewMediaRefs,
@@ -86,15 +116,15 @@ export function VideoNodePrompt({
   } = useConnectedPredecessorRefs(nodeId, visible, {
     allowedTypes: frameSlotMode ? ['image'] : ['image', 'video', 'audio'],
     maxReferenceCount: maxRefs,
+    extraReferenceItems: libraryMentionItems,
   });
   const handleRemoveConnectedRef = useDisconnectConnectedRef(nodeId);
   const promptContentRef = useRef<WorkflowPromptContent>([]);
   const promptDraftRef = useRef(data.input_prompt ?? '');
-  const [uploadedAssets, setUploadedAssets] = useState<(GenerateRefImage | null)[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const uploadTargetIndexRef = useRef<number | null>(null);
-  const isGenerating = data.status === 'running';
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const slotTargetRef = useRef<number | null>(null);
+  const isGenerating = data.status === 'running' || Boolean(data.generatePending);
 
   const ratio = data.ratio ?? ratioOptions[0] ?? '16:9';
   const resolution = data.resolution ?? resolutionOptions[0] ?? '2k';
@@ -111,15 +141,21 @@ export function VideoNodePrompt({
     durationFallback: durationOptions[0],
   });
 
+  const railAssets = useMemo((): (GenerateRefImage | null)[] => {
+    if (frameSlotMode && referenceMode === 1) {
+      return libraryAssets.slice(0, 1);
+    }
+    if (frameSlotMode && referenceMode === 2) {
+      return [libraryAssets[0] ?? null, libraryAssets[1] ?? null];
+    }
+    return libraryAssets;
+  }, [frameSlotMode, libraryAssets, referenceMode]);
+
   useEffect(() => {
     if (!referenceModeOptions.some((o) => o.value === referenceMode)) {
       setReferenceMode(referenceModeOptions[0]?.value ?? 3);
     }
   }, [referenceModeOptions, referenceMode]);
-
-  useEffect(() => {
-    setUploadedAssets((prev) => normalizeUploadedAssetsForMode('video', referenceMode, prev));
-  }, [referenceMode]);
 
   useEffect(() => {
     if (!ratioOptions.length) return;
@@ -145,63 +181,71 @@ export function VideoNodePrompt({
     }
   }, [durationOptions, data.duration_sec, nodeId, onNodeChange]);
 
-  const handleAddRef = useCallback((slotIndex?: number) => {
-    uploadTargetIndexRef.current = slotIndex ?? null;
-    fileInputRef.current?.click();
-  }, []);
+  const persistRefs = useCallback(
+    (refs: LibraryRefWrite[]) => {
+      onNodeChange({
+        nodeId,
+        patch: { library_refs: refs },
+        persist: 'immediate',
+      });
+    },
+    [nodeId, onNodeChange],
+  );
 
-  const handleRefFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = '';
-    if (!files.length) return;
-    const targetIndex = uploadTargetIndexRef.current;
-    uploadTargetIndexRef.current = null;
-    const imageOnly = frameSlotMode;
-    const accepted = imageOnly ? files.filter((f) => f.type.startsWith('image/')) : files;
-    if (!accepted.length) {
-      message.warning('当前参考模式仅支持图片');
-      return;
-    }
-
-    const uploadOne = async (file: File): Promise<GenerateRefImage> => {
-      const asset = await uploadGenerateMaterial(file);
-      return {
-        id: `ref-${asset.asset_id}`,
-        assetId: asset.asset_id,
-        url: asset.url,
-        name: asset.filename || file.name,
-        mimeType: asset.mime_type || file.type,
-      };
-    };
-
-    try {
+  const handlePick = useCallback(
+    (assets: AssetBase[]) => {
+      const mapped = assetsToLibraryRefs(assets);
       if (frameSlotMode && (referenceMode === 1 || referenceMode === 2)) {
         if (referenceMode === 1) {
-          setUploadedAssets([await uploadOne(accepted[0])]);
+          persistRefs(mapped.slice(0, 1));
           return;
         }
-        const slotsNow = [uploadedAssets[0] ?? null, uploadedAssets[1] ?? null] as const;
-        const slot = targetIndex === 1 ? 1 : targetIndex === 0 ? 0 : slotsNow[0] ? 1 : 0;
-        const next = await uploadOne(accepted[0]);
-        setUploadedAssets((prev) => {
-          const slots: [GenerateRefImage | null, GenerateRefImage | null] = [
-            prev[0] ?? null,
-            prev[1] ?? null,
-          ];
-          slots[slot] = next;
-          return slots;
-        });
+        const slots: [GenerateRefImage | null, GenerateRefImage | null] = [
+          libraryAssets[0] ?? null,
+          libraryAssets[1] ?? null,
+        ];
+        const slot =
+          slotTargetRef.current === 1
+            ? 1
+            : slotTargetRef.current === 0
+              ? 0
+              : slots[0]
+                ? 1
+                : 0;
+        slotTargetRef.current = null;
+        const picked = mapped[0];
+        if (!picked) return;
+        const asRail: GenerateRefImage = {
+          id: `library-${picked.asset_id}`,
+          assetId: picked.asset_id,
+          url: picked.url,
+          name: picked.name || '',
+          mimeType: 'image/*',
+        };
+        slots[slot] = asRail;
+        persistRefs(refsFromRail(slots));
         return;
       }
-      const current = filledRefs(uploadedAssets);
-      const room = maxRefs - current.length;
-      const selected = accepted.slice(0, Math.max(room, 0));
-      const uploaded = await Promise.all(selected.map(uploadOne));
-      setUploadedAssets((prev) => [...filledRefs(prev), ...uploaded].slice(0, maxRefs));
-    } catch {
-      message.error('参考素材上传失败');
-    }
-  };
+      const room = Math.max(maxRefs - selfLibraryRefs.length, 0);
+      const existing = (data.payload.library_refs ?? []).map((ref) => ({
+        asset_id: ref.asset_id,
+        url: ref.url,
+        name: ref.name ?? undefined,
+        thumb_url: ref.thumb_url ?? undefined,
+        type: ref.type ?? undefined,
+      }));
+      persistRefs([...existing, ...mapped.slice(0, room)]);
+    },
+    [
+      data.payload.library_refs,
+      frameSlotMode,
+      libraryAssets,
+      maxRefs,
+      persistRefs,
+      referenceMode,
+      selfLibraryRefs.length,
+    ],
+  );
 
   const handlePromptChange = useCallback((payload: { prompt: string; content: WorkflowPromptContent }) => {
     promptContentRef.current = payload.content;
@@ -210,22 +254,14 @@ export function VideoNodePrompt({
 
   const handleSubmit = useCallback(async () => {
     if (submitting || isGenerating) return;
-    const refs = filledRefs(uploadedAssets);
-    if (referenceMode === 1 && refs.length !== 1) {
-      message.warning('请上传首帧参考图');
+    if (referenceMode === 1 && selfLibraryRefs.length !== 1) {
+      message.warning('请选择首帧参考图');
       return;
     }
-    if (referenceMode === 2 && (refs.length !== 2 || !uploadedAssets[0] || !uploadedAssets[1])) {
-      message.warning(uploadedAssets[0] ? '请上传尾帧参考图' : '请上传首帧参考图');
+    if (referenceMode === 2 && selfLibraryRefs.length !== 2) {
+      message.warning(selfLibraryRefs.length >= 1 ? '请选择尾帧参考图' : '请选择首帧参考图');
       return;
     }
-    const ordered =
-      referenceMode === 2 && uploadedAssets[0] && uploadedAssets[1]
-        ? [uploadedAssets[0], uploadedAssets[1]]
-        : refs;
-    const manualRefs = ordered
-      .filter((item) => item.assetId != null)
-      .map((item) => ({ assetId: item.assetId! }));
     const content = promptContentRef.current;
     const { prompt: submitPrompt, ref_asset_ids } = buildSubmitPromptAndRefs({
       content,
@@ -233,12 +269,13 @@ export function VideoNodePrompt({
       referenceAssets: mentionProvider.getReferenceAssets(),
       connectedPromptTexts,
       connectedAssetIds,
-      manualRefs,
+      manualRefs: [],
       previewMediaRefs,
+      selfLibraryRefs,
     });
     const refValidation = buildSubmitRefValidationPayload({
       content,
-      manualRefs,
+      manualRefs: [],
       previewMediaRefs,
     });
     if (!submitPrompt.trim() && ref_asset_ids.length === 0) {
@@ -277,8 +314,8 @@ export function VideoNodePrompt({
     ratio,
     referenceMode,
     resolution,
+    selfLibraryRefs,
     submitting,
-    uploadedAssets,
   ]);
 
   const leadingSlot = useMemo(
@@ -334,25 +371,26 @@ export function VideoNodePrompt({
           <GenerationRefRail
             kind="video"
             referenceMode={referenceMode}
-            assets={uploadedAssets}
+            assets={railAssets}
             maxOmniAssets={maxRefs}
             leadingSlot={leadingSlot}
-            onAdd={handleAddRef}
+            onAdd={(slotIndex?: number) => {
+              slotTargetRef.current = slotIndex ?? null;
+              setPickerOpen(true);
+            }}
             onRemove={(id) => {
-              setUploadedAssets((prev) => filledRefs(prev).filter((x) => x.id !== id));
+              persistRefs(refsFromRail(libraryAssets.filter((item) => item.id !== id)));
             }}
             onRemoveSlot={(index) => {
-              setUploadedAssets((prev) => {
-                const slots: [GenerateRefImage | null, GenerateRefImage | null] = [
-                  prev[0] ?? null,
-                  prev[1] ?? null,
-                ];
-                slots[index] = null;
-                return slots;
-              });
+              const slots: [GenerateRefImage | null, GenerateRefImage | null] = [
+                libraryAssets[0] ?? null,
+                libraryAssets[1] ?? null,
+              ];
+              slots[index] = null;
+              persistRefs(refsFromRail(slots));
             }}
             onSwapFrames={() => {
-              setUploadedAssets((prev) => [prev[1] ?? null, prev[0] ?? null]);
+              persistRefs(refsFromRail([libraryAssets[1] ?? null, libraryAssets[0] ?? null]));
             }}
           />
         )}
@@ -379,13 +417,15 @@ export function VideoNodePrompt({
           onChange={handlePromptChange}
         />
       </NodeFloatPromptPanel>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={frameSlotMode ? 'image/*' : 'image/*,video/*,audio/*'}
-        multiple={!frameSlotMode}
-        hidden
-        onChange={(e) => void handleRefFileChange(e)}
+      <CanvasAssetPickerModal
+        open={pickerOpen}
+        onCancel={() => setPickerOpen(false)}
+        allowKinds={frameSlotMode ? ['image'] : ['image', 'video']}
+        maxCount={frameSlotMode ? 1 : Math.max(maxRefs - selfLibraryRefs.length, 1)}
+        onSelect={(assets) => {
+          handlePick(assets);
+          setPickerOpen(false);
+        }}
       />
     </>
   );

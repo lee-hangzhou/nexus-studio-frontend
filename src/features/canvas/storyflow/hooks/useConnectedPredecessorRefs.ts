@@ -1,5 +1,9 @@
 import { useMemo, useRef } from 'react';
-import type { CanvasMentionProvider, WorkflowMentionMediaType } from '../components/CanvasPromptEditor/types';
+import type {
+  CanvasMentionProvider,
+  WorkflowMentionItem,
+  WorkflowMentionMediaType,
+} from '../components/CanvasPromptEditor/types';
 import {
   assignMentionLabels,
   createCanvasMentionProvider,
@@ -19,12 +23,15 @@ import { IMAGE_PROMPT_MAX_REFERENCE_IMAGES } from '../constants';
 type Options = {
   allowedTypes?: WorkflowMentionMediaType[];
   maxReferenceCount?: number;
+  /** 额外可 @ 引用项（如本节点已上传素材），仅进 mention 数据源，不进连线预览轨道 */
+  extraReferenceItems?: WorkflowMentionItem[];
 };
 
 /** 连线前置节点：顶栏预览 + @ 数据源 + 提交 asset id */
 export function useConnectedPredecessorRefs(nodeId: string, active: boolean, options?: Options) {
   const allowedTypes = options?.allowedTypes ?? ['image', 'video', 'audio'];
   const maxReferenceCount = options?.maxReferenceCount ?? IMAGE_PROMPT_MAX_REFERENCE_IMAGES;
+  const extraReferenceItems = options?.extraReferenceItems ?? [];
   const predecessors = useDirectPredecessors(nodeId, active);
   const graphNodes = useStore(useCallback((s) => (active ? s.nodes : []), [active]));
   const graphEdges = useStore(useCallback((s) => (active ? s.edges : []), [active]));
@@ -71,8 +78,8 @@ export function useConnectedPredecessorRefs(nodeId: string, active: boolean, opt
   );
 
   const referenceAssets = useMemo(
-    () => assignMentionLabels(connectedMentionItems),
-    [connectedMentionItems],
+    () => assignMentionLabels([...connectedMentionItems, ...extraReferenceItems]),
+    [connectedMentionItems, extraReferenceItems],
   );
 
   const assetsRef = useRef(referenceAssets);

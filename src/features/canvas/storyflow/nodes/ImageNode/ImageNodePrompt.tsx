@@ -2,11 +2,9 @@ import { ArrowUpOutlined } from '@ant-design/icons';
 import { Button, Dropdown, message } from 'antd';
 import { useStore } from '@xyflow/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { uploadGenerateMaterial } from '../../../../../api/generate';
-import type { GenerateRefImage } from '../../../../generate/types';
+import type { AssetBase } from '../../../../../domains/asset/types';
 import {
   buildParamsCapsuleLabel,
-  filledRefs,
   GenerationParamsCapsule,
   GenerationRefRail,
   normalizeRatioOptions,
@@ -15,7 +13,9 @@ import {
 import { useCanvasActions } from '../../context/CanvasActionsContext';
 import { useCanvasGenerate } from '../../../context/CanvasGenerateContext';
 import { NodeFloatPromptPanel } from '../../components/NodeFloatPromptPanel';
+import { CanvasAssetPickerModal } from '../../components/CanvasAssetPickerModal';
 import { useCanvasGenerateModels } from '../../hooks/useCanvasGenerateModels';
+import { useLibraryRefAssets } from '../../hooks/useLibraryRefAssets';
 import { useWorkflowSingleNodeSelected } from '../../hooks/useWorkflowSingleNodeSelected';
 import type { CanvasNodeData } from '../../../schema/canvasSchema';
 import { CanvasPromptEditor } from '../../components/CanvasPromptEditor';
@@ -34,6 +34,16 @@ import { GenerationRunningLabel } from '../shared/GenerationRunningLabel';
 import { resolveFloatPromptWidth } from '../shared/promptPanelWidth';
 import '../shared/GenerationPromptEditor.less';
 import '../shared/ImagePrompt.less';
+
+function assetsToLibraryRefs(assets: AssetBase[]) {
+  return assets.map((asset) => ({
+    asset_id: Number(asset.id),
+    url: asset.previewUrl || '',
+    thumb_url: asset.previewUrl || undefined,
+    name: asset.title || asset.filename || undefined,
+    type: asset.kind === 'video' ? 'video' : 'image',
+  }));
+}
 
 export function ImageNodePrompt({
   nodeId,
@@ -60,6 +70,7 @@ export function ImageNodePrompt({
     kind: 'image',
     materialLimit: maxReferenceImages ?? IMAGE_PROMPT_MAX_REFERENCE_IMAGES,
   });
+  const { libraryAssets, libraryMentionItems, selfLibraryRefs } = useLibraryRefAssets(data);
   const {
     mentionProvider,
     previewMediaRefs,
@@ -69,18 +80,18 @@ export function ImageNodePrompt({
   } = useConnectedPredecessorRefs(nodeId, visible, {
     allowedTypes: ['image'],
     maxReferenceCount: maxRefs,
+    extraReferenceItems: libraryMentionItems,
   });
   const handleRemoveConnectedRef = useDisconnectConnectedRef(nodeId);
   const promptContentRef = useRef<WorkflowPromptContent>([]);
   const promptDraftRef = useRef(data.input_prompt ?? '');
-  const [uploadedAssets, setUploadedAssets] = useState<(GenerateRefImage | null)[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [count, setCount] = useState(1);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const ratio = data.ratio ?? ratioOptions[0] ?? '16:9';
   const resolution = data.resolution ?? resolutionOptions[0] ?? '2k';
-  const isGenerating = data.status === 'running';
+  const isGenerating = data.status === 'running' || Boolean(data.generatePending);
   const ratioShapes = normalizeRatioOptions(ratioOptions);
   const resolvedCount = countOptions.includes(count) ? count : (countOptions[0] ?? 1);
   const capLabel = buildParamsCapsuleLabel({
@@ -111,38 +122,37 @@ export function ImageNodePrompt({
     }
   }, [resolutionOptions, data.resolution, nodeId, onNodeChange]);
 
-  const handleAddRef = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
+  const persistLibraryRefs = useCallback(
+    (assets: AssetBase[]) => {
+      const room = Math.max(maxRefs - selfLibraryRefs.length, 0);
+      const next = [...(data.payload.library_refs ?? []), ...assetsToLibraryRefs(assets.slice(0, room))];
+      onNodeChange({
+        nodeId,
+        patch: { library_refs: next },
+        persist: 'immediate',
+      });
+    },
+    [data.payload.library_refs, maxRefs, nodeId, onNodeChange, selfLibraryRefs.length],
+  );
 
-  const handleRefFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = '';
-    if (!files.length) return;
-    const images = files.filter((f) => f.type.startsWith('image/'));
-    if (!images.length) {
-      message.warning('图片节点仅支持图片参考');
-      return;
-    }
-    const room = maxRefs - filledRefs(uploadedAssets).length;
-    try {
-      const uploaded = await Promise.all(
-        images.slice(0, Math.max(room, 0)).map(async (file) => {
-          const asset = await uploadGenerateMaterial(file);
-          return {
-            id: `ref-${asset.asset_id}`,
-            assetId: asset.asset_id,
-            url: asset.url,
-            name: asset.filename || file.name,
-            mimeType: asset.mime_type || file.type,
-          } satisfies GenerateRefImage;
-        }),
-      );
-      setUploadedAssets((prev) => [...filledRefs(prev), ...uploaded].slice(0, maxRefs));
-    } catch {
-      message.error('参考图上传失败');
-    }
-  };
+  const removeLibraryRef = useCallback(
+    (railId: string) => {
+      const next = libraryAssets
+        .filter((item) => item.id !== railId)
+        .map((item) => ({
+          asset_id: item.assetId!,
+          url: item.url,
+          name: item.name,
+          type: item.mimeType.startsWith('video/') ? 'video' : 'image',
+        }));
+      onNodeChange({
+        nodeId,
+        patch: { library_refs: next },
+        persist: 'immediate',
+      });
+    },
+    [libraryAssets, nodeId, onNodeChange],
+  );
 
   const handlePromptChange = useCallback((payload: { prompt: string; content: WorkflowPromptContent }) => {
     promptContentRef.current = payload.content;
@@ -151,9 +161,6 @@ export function ImageNodePrompt({
 
   const handleSubmit = useCallback(async () => {
     if (submitting || isGenerating) return;
-    const manualRefs = filledRefs(uploadedAssets)
-      .filter((item) => item.assetId != null)
-      .map((item) => ({ assetId: item.assetId! }));
     const content = promptContentRef.current;
     const { prompt: submitPrompt, ref_asset_ids } = buildSubmitPromptAndRefs({
       content,
@@ -161,12 +168,13 @@ export function ImageNodePrompt({
       referenceAssets: mentionProvider.getReferenceAssets(),
       connectedPromptTexts,
       connectedAssetIds,
-      manualRefs,
+      manualRefs: [],
       previewMediaRefs,
+      selfLibraryRefs,
     });
     const refValidation = buildSubmitRefValidationPayload({
       content,
-      manualRefs,
+      manualRefs: [],
       previewMediaRefs,
     });
     if (!submitPrompt.trim() && ref_asset_ids.length === 0) {
@@ -203,8 +211,8 @@ export function ImageNodePrompt({
     ratio,
     resolution,
     resolvedCount,
+    selfLibraryRefs,
     submitting,
-    uploadedAssets,
   ]);
 
   const leadingSlot = useMemo(
@@ -257,13 +265,11 @@ export function ImageNodePrompt({
         topSlot={(
           <GenerationRefRail
             kind="image"
-            assets={uploadedAssets}
+            assets={libraryAssets}
             maxOmniAssets={maxRefs}
             leadingSlot={leadingSlot}
-            onAdd={handleAddRef}
-            onRemove={(id) => {
-              setUploadedAssets((prev) => filledRefs(prev).filter((x) => x.id !== id));
-            }}
+            onAdd={() => setPickerOpen(true)}
+            onRemove={removeLibraryRef}
           />
         )}
         bottomStartSlot={bottomStartSlot}
@@ -288,13 +294,15 @@ export function ImageNodePrompt({
           onChange={handlePromptChange}
         />
       </NodeFloatPromptPanel>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        hidden
-        onChange={(e) => void handleRefFileChange(e)}
+      <CanvasAssetPickerModal
+        open={pickerOpen}
+        onCancel={() => setPickerOpen(false)}
+        allowKinds={['image']}
+        maxCount={Math.max(maxRefs - selfLibraryRefs.length, 1)}
+        onSelect={(assets) => {
+          persistLibraryRefs(assets);
+          setPickerOpen(false);
+        }}
       />
     </>
   );

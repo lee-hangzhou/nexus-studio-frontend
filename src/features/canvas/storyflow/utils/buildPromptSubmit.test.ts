@@ -42,6 +42,7 @@ type NodeSubmitFixture = {
     manualRefs?: ManualRef[];
     previewMediaRefs?: WorkflowMentionItem[];
     referenceAssets?: WorkflowMentionItem[];
+    selfLibraryRefs?: number[];
   };
 };
 
@@ -79,6 +80,7 @@ function runFixture(fixture: NodeSubmitFixture): ExpectedRefs {
     connectedAssetIds,
     manualRefs: fixture.submit.manualRefs,
     previewMediaRefs: fixture.submit.previewMediaRefs,
+    selfLibraryRefs: fixture.submit.selfLibraryRefs,
   });
 
   return { ref_asset_ids };

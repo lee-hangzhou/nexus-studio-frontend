@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const schemaDirectory = path.join(root, 'contracts', 'schema');
 const generatedDirectory = path.join(root, 'src', 'api', 'generated');
 const contractNames = [
+  'assets',
   'billing',
   'canvas',
   'ecommerce',

@@ -23,7 +23,7 @@ describe('API URL helpers', () => {
     const { API_ORIGIN, apiOriginUrl, apiUrl } = await loadApiUrls(' https://api.example.com/// ');
 
     expect(API_ORIGIN).toBe('https://api.example.com');
-    expect(apiUrl('assets/upload')).toBe('https://api.example.com/api/v1/assets/upload');
+    expect(apiUrl('assets/upload-url')).toBe('https://api.example.com/api/v1/assets/upload-url');
     expect(apiOriginUrl('/api/v1/chat/gate/asset')).toBe(
       'https://api.example.com/api/v1/chat/gate/asset',
     );

@@ -73,7 +73,7 @@ export function mergePredecessorTextForPlainPrompt(
   return `${mergedPrefix}\n\n${user}`;
 }
 
-/** @deprecated 用 pickConnectedReferenceAssetIds，按边端口与终态过滤 */
+/** @deprecated 用 pickConnectedReferenceAssetIds */
 export function pickPredecessorAssetIds(predecessors: DirectPredecessor[]): number[] {
   const ids: number[] = [];
   const seen = new Set<number>();
@@ -93,10 +93,10 @@ export function pickPredecessorAssetIds(predecessors: DirectPredecessor[]): numb
   return ids;
 }
 
-/** 连线参考素材：仅 REFERENCE_ASSET 边 + 源节点 SUCCESS + output_asset */
+/** 连线参考素材：REFERENCE_ASSET 边且源节点已有 output_asset_ids，不依赖 status */
 export function pickConnectedReferenceAssetIds(
   nodeId: string,
-  nodes: ReadonlyArray<{ id: string; data: { status?: string; output_asset_ids?: number[] } }>,
+  nodes: ReadonlyArray<{ id: string; data: { output_asset_ids?: number[] } }>,
   edges: ReadonlyArray<{
     source: string;
     target: string;
@@ -114,10 +114,13 @@ export function pickConnectedReferenceAssetIds(
       continue;
     }
     const source = nodes.find((node) => node.id === edge.source);
-    if (!source || source.data.status !== 'success') {
+    if (source === undefined) {
       continue;
     }
-    const rawIds = source.data.output_asset_ids ?? [];
+    const rawIds = source.data.output_asset_ids;
+    if (rawIds === undefined || rawIds.length === 0) {
+      continue;
+    }
     for (const assetId of rawIds) {
       if (typeof assetId !== 'number' || assetId <= 0 || seen.has(assetId)) {
         continue;

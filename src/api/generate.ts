@@ -1,4 +1,5 @@
 import { apiUrl, fetchWithAuth, request } from './base';
+import { directUploadAsset } from './directUpload';
 import type {
   GenerateTaskListRequest,
   GenerateTaskListResponse,
@@ -55,6 +56,11 @@ export interface SubmitGenerateParams {
   duration?: number | null;
   reference_mode?: number;
   ref_asset_ids?: number[];
+  episode_id?: number;
+  node_id?: string;
+  submit_content?: unknown[];
+  manual_refs?: { asset_id: number }[];
+  preview_media_asset_ids?: number[];
 }
 
 export interface GenerateMaterialUploadResult {
@@ -86,25 +92,64 @@ export interface GenerateModelItem {
   };
 }
 
-export function submitGenerate(params: SubmitGenerateParams) {
-  return request<{ task_id: number; status: GenerationTaskStatus }>('/generate/submit', {
-    method: 'POST',
-    body: JSON.stringify(params),
-  });
+/** 与 ErrorCode 对齐的业务错误（画布提交等可按 code 分支） */
+export class GenerateApiError extends Error {
+  readonly code: number;
+  readonly details: Record<string, unknown> | null | undefined;
+
+  constructor(message: string, code: number, details?: Record<string, unknown> | null) {
+    super(message);
+    this.name = 'GenerateApiError';
+    this.code = code;
+    this.details = details;
+  }
 }
 
-export async function uploadGenerateMaterial(file: File) {
-  const form = new FormData();
-  form.append('file', file);
-  const response = await fetchWithAuth(apiUrl('/generate/material/upload'), {
+export function isGenerateApiError(err: unknown): err is GenerateApiError {
+  return err instanceof GenerateApiError;
+}
+
+export async function submitGenerate(params: SubmitGenerateParams) {
+  const response = await fetchWithAuth(apiUrl('/generate/submit'), {
     method: 'POST',
-    body: form,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
   });
-  const payload = await response.json();
-  if (!response.ok || payload.code !== 0) {
-    throw new Error(payload.msg ?? 'upload failed');
+  const payload = (await response.json().catch(() => null)) as {
+    code: number;
+    data: { task_id: number; status: GenerationTaskStatus } | Record<string, unknown> | null;
+    msg: string;
+  } | null;
+  if (!response.ok || payload === null || payload.code !== 0) {
+    throw new GenerateApiError(
+      payload?.msg ?? `请求失败: ${response.status}`,
+      payload?.code ?? response.status,
+      payload?.data && typeof payload.data === 'object'
+        ? (payload.data as Record<string, unknown>)
+        : null,
+    );
   }
-  return payload.data as GenerateMaterialUploadResult;
+  return payload.data as { task_id: number; status: GenerationTaskStatus };
+}
+
+export async function uploadGenerateMaterial(
+  file: File,
+  signal?: AbortSignal,
+): Promise<GenerateMaterialUploadResult> {
+  const asset = await directUploadAsset({
+    file,
+    sourceType: 'generate_material',
+    signal,
+  });
+  if (!asset.preview_url) {
+    throw new Error('上传响应缺少预览地址');
+  }
+  return {
+    asset_id: asset.id,
+    filename: asset.filename,
+    mime_type: asset.mime_type,
+    url: asset.preview_url,
+  };
 }
 
 export function getTaskStatus(taskId: number) {

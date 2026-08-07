@@ -14,13 +14,26 @@ export type Generation =
   | GenerateParamOptions;
 export type Count = number;
 export type Duration = number | null;
+export type EpisodeId = number | null;
 export type GenerationKind = "image" | "video" | "audio";
+export type AssetId = number;
+export type ManualRefs = SubmitGenerateManualRef[];
 export type ModelId = string;
+export type NodeId = string | null;
+export type PreviewMediaAssetIds = number[];
 export type Prompt = string;
 export type Ratio = string | null;
 export type RefAssetIds = number[];
 export type ReferenceMode = 1 | 2 | 3 | 4;
 export type Resolution = string | null;
+/**
+ * 画布编辑器 content，人手绑定时用于 refs 校验
+ */
+export type SubmitContent =
+  | {
+      [k: string]: unknown;
+    }[]
+  | null;
 export type VoiceId = string | null;
 export type CreatedAt = string;
 export type Duration1 = number | null;
@@ -32,7 +45,7 @@ export type Prompt1 = string;
 export type QueuePosition = number | null;
 export type QueueTotal = number | null;
 export type Ratio1 = string | null;
-export type AssetId = number;
+export type AssetId1 = number;
 export type Filename = string;
 export type MimeType = string;
 export type SourceType = string | null;
@@ -92,17 +105,34 @@ export type ReferenceModes = ReferenceModeOption[];
 export type Resolutions = string[];
 export type SupportsVision = boolean;
 
+/**
+ * 提交生成；可选绑定画布节点（episode_id+node_id 须同时出现或不出现）
+ *
+ * 绑定语义：任务入队成功后只写节点 generate_task_id，不维护节点生命周期 status
+ */
 export interface SubmitGenerateRequest {
   count?: Count;
   duration?: Duration;
+  episode_id?: EpisodeId;
   kind: GenerationKind;
+  manual_refs?: ManualRefs;
   model_id: ModelId;
+  node_id?: NodeId;
+  preview_media_asset_ids?: PreviewMediaAssetIds;
   prompt: Prompt;
   ratio?: Ratio;
   ref_asset_ids?: RefAssetIds;
   reference_mode?: ReferenceMode | null;
   resolution?: Resolution;
+  submit_content?: SubmitContent;
   voice_id?: VoiceId;
+  [k: string]: unknown;
+}
+/**
+ * 画布人手提交时的参考资产（与前端 manual_refs 对齐）
+ */
+export interface SubmitGenerateManualRef {
+  asset_id: AssetId;
   [k: string]: unknown;
 }
 export interface GenerateTaskView {
@@ -128,7 +158,7 @@ export interface GenerateTaskView {
   [k: string]: unknown;
 }
 export interface GenerateRefMaterial {
-  asset_id: AssetId;
+  asset_id: AssetId1;
   filename: Filename;
   mime_type: MimeType;
   source_type?: SourceType;

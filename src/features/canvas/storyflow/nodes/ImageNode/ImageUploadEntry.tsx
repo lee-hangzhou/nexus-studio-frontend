@@ -1,14 +1,19 @@
 import { UploadOutlined } from '@ant-design/icons';
 import { message } from 'antd';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useCanvasProject } from '../../../context/CanvasProjectContext';
+import { uploadCanvasNodeAsset } from '../../../api/canvas';
 
-/** 无图时节点上方「上传」入口（视觉对齐 storyflow，上传能力待后端素材接口） */
+/** 无图时节点上方「上传」入口：上传素材并写回节点 data(output_source=upload) */
 export function ImageUploadEntry({ nodeId }: { nodeId: string }) {
+  const { episodeId } = useCanvasProject();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   const openPicker = useCallback(() => {
+    if (uploading) return;
     inputRef.current?.click();
-  }, []);
+  }, [uploading]);
 
   const onFileChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -19,9 +24,12 @@ export function ImageUploadEntry({ nodeId }: { nodeId: string }) {
         message.warning('请上传图片文件');
         return;
       }
-      message.info(`节点 ${nodeId}：本地上传待接入素材服务`);
+      setUploading(true);
+      uploadCanvasNodeAsset(episodeId, nodeId, file).catch((err) => {
+        message.error(err instanceof Error ? err.message : '上传失败');
+      }).finally(() => setUploading(false));
     },
-    [nodeId],
+    [episodeId, nodeId],
   );
 
   return (
@@ -33,9 +41,14 @@ export function ImageUploadEntry({ nodeId }: { nodeId: string }) {
         className="workflow-image-node__upload-input"
         onChange={onFileChange}
       />
-      <button type="button" className="workflow-image-node__upload-btn nodrag nopan" onClick={openPicker}>
+      <button
+        type="button"
+        className="workflow-image-node__upload-btn nodrag nopan"
+        disabled={uploading}
+        onClick={openPicker}
+      >
         <UploadOutlined />
-        <span>上传图片</span>
+        <span>{uploading ? '上传中…' : '上传图片'}</span>
       </button>
     </>
   );

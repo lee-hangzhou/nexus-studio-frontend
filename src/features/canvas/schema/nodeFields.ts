@@ -50,6 +50,8 @@ export type FlatNodeFields = {
   task_id?: number;
   output_asset_ids?: number[];
   error_message?: string;
+  /** 资产库引用标签（提示栏 +）；可写回 */
+  library_refs?: ApiCanvasNodeData['library_refs'];
 };
 
 /** 前端可经扁平 patch 写入的字段；投影字段不得经 fold 进 data */
@@ -62,6 +64,7 @@ export const PATCH_WRITABLE_FLAT_KEYS = new Set([
   'ratio',
   'duration_sec',
   'resolution',
+  'library_refs',
 ]);
 
 function segmentText(content: unknown): string {
@@ -148,6 +151,9 @@ export function foldFlatIntoNodeData(
   if (flat.duration_sec !== undefined) {
     config.duration_sec = flat.duration_sec ?? null;
     config.duration = flat.duration_sec != null ? String(flat.duration_sec) : null;
+  }
+  if (flat.library_refs !== undefined) {
+    base.library_refs = flat.library_refs ?? null;
   }
   if (kind === 'text') {
     // text：input_prompt → prompt + prompt_content；output_text → content 正文
