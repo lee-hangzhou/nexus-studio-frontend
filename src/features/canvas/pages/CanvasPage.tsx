@@ -3,7 +3,7 @@ import '../styles/workflow-canvas.entry.less';
 
 import { ReactFlowProvider, type OnNodeDrag, type OnNodesChange } from '@xyflow/react';
 import { message } from 'antd';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getProject, type EpisodeView } from '../../../api/projects';
 import type { ToolStepView } from '../../../api/chat';
@@ -39,6 +39,7 @@ import type { ToolPendingState, TurnMaterialBlock } from '../../skills/types';
 import { toWireMaterials, turnMaterialFromAgentAsset } from '../lib/turnMaterialFromAsset';
 import { CanvasAgentPanel } from '../components/CanvasAgentPanel';
 import { buildTurnId } from '../components/CanvasAgentPanel.utils';
+import { CanvasAgentPickProvider, useCanvasAgentPick } from '../context/CanvasAgentPickContext';
 import { CanvasGenerateProvider, type NodeGenerateExtra } from '../context/CanvasGenerateContext';
 import { ChatModelCatalogProvider, useChatModelCatalog } from '../context/ChatModelCatalogContext';
 import { GenerateModelCatalogProvider } from '../context/GenerateModelCatalogContext';
@@ -94,6 +95,13 @@ function CanvasPageInner() {
   const { pendingNodeIds, setNodePending } = useCanvasTask();
   const modelCatalog = useGenerateModelCatalog();
   const chatModelCatalog = useChatModelCatalog();
+  const {
+    pickedNodeIds,
+    clearPickedNodes,
+    exitPickMode,
+    isPickMode,
+    replacePickedNodes,
+  } = useCanvasAgentPick();
   const [projectName, setProjectName] = useState<string | undefined>();
   const [episodeName, setEpisodeName] = useState<string | undefined>();
   const [episodes, setEpisodes] = useState<EpisodeView[]>([]);
@@ -128,8 +136,25 @@ function CanvasPageInner() {
     setMaterialPreviewUrls(
       cached?.materialPreviewUrls ? new Map(cached.materialPreviewUrls) : new Map(),
     );
-    setMaterials(cached?.materials ?? []);
-  }, []);
+    const raw = cached?.materials ?? [];
+    const media = raw.filter((item) => item.type !== 'node');
+    const nodeIds = raw
+      .filter((item): item is TurnMaterialBlock & { type: 'node' } => item.type === 'node')
+      .map((item) => item.nodeId);
+    setMaterials(media);
+    replacePickedNodes(nodeIds);
+  }, [replacePickedNodes]);
+
+  const materialsWithPickedNodes = useCallback(
+    (base: TurnMaterialBlock[], nodeIds: string[]): TurnMaterialBlock[] => {
+      const media = base.filter((item) => item.type !== 'node');
+      return [
+        ...media,
+        ...nodeIds.map((nodeId) => ({ type: 'node' as const, nodeId })),
+      ];
+    },
+    [],
+  );
 
   const handleMaterialsChange = useCallback((next: TurnMaterialBlock[]) => {
     const nextAssetIds = new Set(
@@ -209,6 +234,14 @@ function CanvasPageInner() {
   const graph = useCanvasGraph((ops) => commitOpsRef.current(ops));
   const { nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange, onNodeDragStop } = graph;
   graphRef.current = { nodes, edges };
+
+  const canvasNodesById = useMemo(() => {
+    const map = new Map<string, CanvasFlowNode>();
+    for (const node of nodes) {
+      map.set(node.id, node);
+    }
+    return map;
+  }, [nodes]);
 
   const syncCanvasFromServer = useCallback(async () => {
     const snap = await refetchSnapshot();
@@ -654,7 +687,11 @@ function CanvasPageInner() {
     if (modelKey !== agentModelKey) {
       setAgentModelKey(modelKey);
     }
-    const userInput = buildTurnUserInput(text, selectedSkillPaths, toWireMaterials(materials));
+    const userInput = buildTurnUserInput(
+      text,
+      selectedSkillPaths,
+      toWireMaterials(materialsWithPickedNodes(materials, pickedNodeIds)),
+    );
     const content = userInput.content;
     const sentMaterials = userInput.materials;
     const clientTurnId = buildTurnId();
@@ -677,6 +714,10 @@ function CanvasPageInner() {
     setComposer('');
     setSelectedSkillPaths([]);
     handleMaterialsChange([]);
+    clearPickedNodes();
+    if (isPickMode) {
+      exitPickMode();
+    }
     appendUser(compileHumanTextFromBlocks(content), clientTurnId, userInput);
     appendAssistantStream(clientTurnId);
     setLiveToolSteps([]);
@@ -701,6 +742,11 @@ function CanvasPageInner() {
     composer,
     selectedSkillPaths,
     materials,
+    materialsWithPickedNodes,
+    pickedNodeIds,
+    clearPickedNodes,
+    exitPickMode,
+    isPickMode,
     busy,
     activeSessionId,
     episodeId,
@@ -742,7 +788,7 @@ function CanvasPageInner() {
         uiBySessionRef.current.set(activeSessionId, {
           composer,
           selectedSkillPaths,
-          materials,
+          materials: materialsWithPickedNodes(materials, pickedNodeIds),
           materialPreviewUrls: new Map(materialPreviewUrls),
           mode,
           agentModelKey,
@@ -783,7 +829,9 @@ function CanvasPageInner() {
       selectedSkillPaths,
       materials,
       materialPreviewUrls,
+      materialsWithPickedNodes,
       mode,
+      pickedNodeIds,
       reattachSessionStream,
       restoreSessionMaterials,
       toolPending,
@@ -850,6 +898,7 @@ function CanvasPageInner() {
           setActiveSessionId(null);
           setComposer('');
           setMaterials([]);
+          clearPickedNodes();
           setMaterialPreviewUrls(new Map());
           setSelectedSkillPaths([]);
           setToolPending(null);
@@ -881,6 +930,7 @@ function CanvasPageInner() {
       activeSessionId,
       busySessionIds,
       clearMessages,
+      clearPickedNodes,
       episodeId,
       reattachSessionStream,
       restoreSessionMaterials,
@@ -1212,6 +1262,7 @@ function CanvasPageInner() {
           materials={materials}
           materialPreviewUrls={materialPreviewUrls}
           onMaterialsChange={handleMaterialsChange}
+          canvasNodesById={canvasNodesById}
           onUploadFile={handleUploadFile}
           projectId={projectId}
           onSend={() => void sendTurn()}
@@ -1353,7 +1404,9 @@ export function CanvasPage() {
         <ChatModelCatalogProvider>
           <GenerateModelCatalogProvider>
             <CanvasTaskProvider>
-              <CanvasPageInner />
+              <CanvasAgentPickProvider>
+                <CanvasPageInner />
+              </CanvasAgentPickProvider>
             </CanvasTaskProvider>
           </GenerateModelCatalogProvider>
         </ChatModelCatalogProvider>

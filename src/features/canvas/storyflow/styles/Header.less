@@ -1,34 +1,36 @@
 .workflow-canvas-header {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 16px;
+  left: 16px;
   z-index: 20;
+  width: max-content;
+  max-width: min(720px, calc(100% - 32px));
   pointer-events: none;
 }
 
 .workflow-canvas-header__content {
   pointer-events: auto;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  height: 52px;
-  padding: 0 16px 0 12px;
-  background: color-mix(in srgb, var(--studio-bg) 94%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--studio-text) 8%, transparent);
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 14px 0 10px;
+  border: 1px solid color-mix(in srgb, var(--studio-text) 10%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--studio-bg) 92%, transparent);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(16px);
 }
 
 .workflow-canvas-header__left {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
 }
 
 .workflow-canvas-header__crumb {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   min-width: 0;

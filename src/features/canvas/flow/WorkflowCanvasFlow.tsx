@@ -3,13 +3,16 @@ import {
   Controls,
   ReactFlow,
   SelectionMode,
+  type Node,
   type OnEdgesChange,
   type OnNodeDrag,
   type OnNodesChange,
   type ReactFlowInstance,
 } from '@xyflow/react';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useRef, type MouseEvent } from 'react';
 import type { CanvasNodeKind, CanvasPatchOpInput, CanvasPatchResult } from '../api/canvasTypes';
+import { CanvasAgentCanvasPickBanner } from '../components/CanvasAgentCanvasPickBanner';
+import { useCanvasAgentPick } from '../context/CanvasAgentPickContext';
 import { CanvasAddNodeMenu } from '../storyflow/menus/CanvasAddNodeMenu';
 import { ConnectionDropMenu } from '../storyflow/menus/ConnectionDropMenu';
 import {
@@ -71,6 +74,7 @@ export function WorkflowCanvasFlow({
   nodesRef.current = nodes;
   edgesRef.current = edges;
 
+  const { isPickMode, addPickedNode, exitPickMode } = useCanvasAgentPick();
   const { hoveredEdgeId, setHoveredEdgeId, scheduleClearHoveredEdge } = useCanvasEdgeHover();
 
   const {
@@ -82,6 +86,15 @@ export function WorkflowCanvasFlow({
     onPaneContextMenu,
     markSkipNextPaneClick,
   } = useCanvasOverlayMenus();
+
+  const onNodeClick = useCallback(
+    (_event: MouseEvent, node: Node) => {
+      if (isPickMode) {
+        addPickedNode(node.id);
+      }
+    },
+    [addPickedNode, isPickMode],
+  );
 
   const {
     onConnect,
@@ -145,7 +158,11 @@ export function WorkflowCanvasFlow({
   return (
     <CanvasActionsContext.Provider value={actionsValue}>
       <CanvasEdgeHoverContext.Provider value={edgeHoverValue}>
-        <div ref={containerRef} className="workflow-canvas-flow" tabIndex={0}>
+        <div
+          ref={containerRef}
+          className={`workflow-canvas-flow${isPickMode ? ' workflow-canvas-flow--agent-pick' : ''}`}
+          tabIndex={0}
+        >
           <CanvasHeader
             projectId={projectId}
             episodeId={episodeId}
@@ -155,6 +172,7 @@ export function WorkflowCanvasFlow({
             busy={busy}
           />
           <div className="workflow-canvas-flow__stage">
+            {isPickMode ? <CanvasAgentCanvasPickBanner onExit={exitPickMode} /> : null}
             <ReactFlow
               onInit={(instance) => {
                 reactFlowRef.current = instance as unknown as ReactFlowInstance;
@@ -167,18 +185,20 @@ export function WorkflowCanvasFlow({
               isValidConnection={isValidConnection}
               onConnectStart={onConnectStart}
               onConnectEnd={onConnectEnd}
+              onNodeClick={onNodeClick}
               onNodeMouseEnter={onNodeMouseEnter}
               onNodeMouseLeave={onNodeMouseLeave}
               connectionRadius={80}
               onPaneClick={onPaneClick}
               onPaneContextMenu={onPaneContextMenu}
-              onNodeDragStop={onNodeDragStop as OnNodeDrag}
+              onNodeDragStop={isPickMode ? undefined : (onNodeDragStop as OnNodeDrag)}
               nodeTypes={workflowNodeTypes}
               edgeTypes={workflowEdgeTypes}
               elementsSelectable
-              nodesDraggable
+              nodesDraggable={!isPickMode}
+              nodesConnectable={!isPickMode}
               selectionMode={SelectionMode.Partial}
-              selectionOnDrag
+              selectionOnDrag={!isPickMode}
               multiSelectionKeyCode="Shift"
               deleteKeyCode={['Backspace', 'Delete']}
               panOnDrag={[2]}

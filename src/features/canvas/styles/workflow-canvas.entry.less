@@ -56,7 +56,7 @@
 @import '../storyflow/nodes/AudioNode/AudioNode.less';
 @import '../storyflow/styles/Header.less';
 
-/* 右侧 Agent 浮层：贴顶栏下沿，可收起；左侧拖拽调宽 */
+/* 右侧 Agent 浮层：贴顶贴右，可收起；左侧拖拽调宽 */
 body.canvas-agent-panel--resizing {
   cursor: ew-resize !important;
   user-select: none;
@@ -64,7 +64,7 @@ body.canvas-agent-panel--resizing {
 
 .canvas-agent-float {
   position: absolute;
-  top: 52px;
+  top: 0;
   right: 16px;
   bottom: 16px;
   width: 360px;
@@ -388,6 +388,16 @@ body.canvas-agent-panel--resizing {
   padding: 10px 12px 12px;
   border-top: 1px solid var(--border-color);
 
+  .studio-composer-box__input {
+    padding: 8px 12px 6px;
+  }
+
+  .studio-composer-box__textarea {
+    min-height: 40px;
+    max-height: 96px;
+    line-height: 1.45;
+  }
+
   .studio-composer-box__footer {
     gap: 8px;
   }
@@ -400,6 +410,83 @@ body.canvas-agent-panel--resizing {
   .studio-composer-box__model {
     width: min(168px, 42vw);
     max-width: 168px;
+  }
+}
+
+.workflow-canvas-agent-panel__composer-ref-rail {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px 6px;
+  min-width: 0;
+
+  .workflow-image-prompt-ref-rail {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.workflow-canvas-agent-panel__composer-pick-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid #ccddff24;
+  border-radius: 8px;
+  background: #ccddff0d;
+  color: #e0f5ff99;
+  font-size: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    color: #e0f5ffcc;
+    background: #ccddff14;
+    border-color: #ccddff40;
+  }
+
+  &--active {
+    background: rgba(31, 162, 220, 0.22);
+    color: #7dd3fc;
+    border-color: rgba(125, 211, 252, 0.35);
+    box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.35);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.workflow-canvas-agent-panel__composer-ref-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #e0f5ff66;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover:not(:disabled) {
+    color: #e0f5ffcc;
+    background: #ccddff14;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
   }
 }
 
@@ -557,7 +644,7 @@ body.canvas-agent-panel--resizing {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  padding: 0 2px 6px;
+  padding: 0 12px 6px;
 }
 
 

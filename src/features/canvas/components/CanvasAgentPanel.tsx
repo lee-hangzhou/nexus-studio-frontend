@@ -18,11 +18,13 @@ import { UserMessageContent } from '../../skills/UserMessageContent';
 import type { SkillWriteOperation, ToolPendingState, TurnMaterialBlock } from '../../skills/types';
 import type { ToolPendingOperation } from '../../../api/toolPending';
 import { CanvasNodePendingCard } from './CanvasNodePendingCard';
-import { CanvasMaterialChipList } from './CanvasMaterialChipList';
+import { CanvasAgentComposerRefRail } from './CanvasAgentComposerRefRail';
 import type { CanvasSessionView } from '../api/canvasTypes';
 import { CANVAS_DEFAULT_SESSION_TITLE } from '../constants';
+import { useCanvasAgentPick } from '../context/CanvasAgentPickContext';
 import { useChatModelCatalog } from '../context/ChatModelCatalogContext';
 import type { CanvasFeedMessage } from '../hooks/useCanvasMessages';
+import type { CanvasFlowNode } from '../schema/canvasSchema';
 import { stripPseudoToolMarkup } from '../utils/stripPseudoToolMarkup';
 import { CanvasAgentSessionList } from './CanvasAgentSessionList';
 import {
@@ -73,6 +75,7 @@ export function CanvasAgentPanel({
   materials,
   materialPreviewUrls,
   onMaterialsChange,
+  canvasNodesById,
   onUploadFile,
   projectId,
   onSend,
@@ -107,6 +110,7 @@ export function CanvasAgentPanel({
   materials: TurnMaterialBlock[];
   materialPreviewUrls: ReadonlyMap<number, string>;
   onMaterialsChange: (materials: TurnMaterialBlock[]) => void;
+  canvasNodesById: Map<string, CanvasFlowNode>;
   onUploadFile: (file: File) => Promise<void>;
   projectId: number;
   onSend: () => void;
@@ -128,9 +132,37 @@ export function CanvasAgentPanel({
   const feedRef = useRef<HTMLDivElement>(null);
   const chatModels = useChatModelCatalog();
   const { width, onResizePointerDown } = useAgentPanelWidth();
+  const { pickedNodeIds, removePickedNode } =
+    useCanvasAgentPick();
   const [sessionListOpen, setSessionListOpen] = useState(false);
   const [sessionListEditing, setSessionListEditing] = useState(false);
   const [skillManageOpen, setSkillManageOpen] = useState(false);
+
+  const pickedNodeIdsRef = useRef(pickedNodeIds);
+  pickedNodeIdsRef.current = pickedNodeIds;
+  const removePickedNodeRef = useRef(removePickedNode);
+  removePickedNodeRef.current = removePickedNode;
+  const prevNodeKeySetRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentIds = new Set(canvasNodesById.keys());
+    const prevIds = prevNodeKeySetRef.current;
+    const removedIds = new Set<string>();
+    for (const id of prevIds) {
+      if (!currentIds.has(id)) {
+        removedIds.add(id);
+      }
+    }
+    prevNodeKeySetRef.current = currentIds;
+    if (removedIds.size === 0) {
+      return;
+    }
+    for (const id of pickedNodeIdsRef.current) {
+      if (removedIds.has(id)) {
+        removePickedNodeRef.current(id);
+      }
+    }
+  }, [canvasNodesById]);
 
   const sessionTitle = useMemo(() => {
     const active = sessions.find((s) => s.id === activeSessionId);
@@ -374,24 +406,30 @@ export function CanvasAgentPanel({
         <div className="workflow-canvas-agent-panel__composer">
           <ComposerShell
             top={
-              selectedSkillPaths.length > 0 || materials.length > 0 ? (
-                <div className="workflow-canvas-agent-panel__skill-chips">
-                  {selectedSkillPaths.map((path) => (
-                    <SkillPill
-                      key={path}
-                      path={path}
-                      onRemove={() =>
-                        onSelectedSkillPathsChange(selectedSkillPaths.filter((item) => item !== path))
-                      }
-                    />
-                  ))}
-                  <CanvasMaterialChipList
-                    materials={materials}
-                    previewUrlsByAssetId={materialPreviewUrls}
-                    onRemove={(index) => onMaterialsChange(materials.filter((_, i) => i !== index))}
-                  />
-                </div>
-              ) : null
+              <>
+                <CanvasAgentComposerRefRail
+                  disabled={busy}
+                  materials={materials}
+                  materialPreviewUrls={materialPreviewUrls}
+                  onMaterialsChange={onMaterialsChange}
+                  canvasNodesById={canvasNodesById}
+                />
+                {selectedSkillPaths.length > 0 ? (
+                  <div className="workflow-canvas-agent-panel__skill-chips">
+                    {selectedSkillPaths.map((path) => (
+                      <SkillPill
+                        key={path}
+                        path={path}
+                        onRemove={() =>
+                          onSelectedSkillPathsChange(
+                            selectedSkillPaths.filter((item) => item !== path),
+                          )
+                        }
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </>
             }
             input={
               <textarea
@@ -399,7 +437,7 @@ export function CanvasAgentPanel({
                 value={composer}
                 onChange={(e) => onComposerChange(e.target.value)}
                 placeholder="继续描述你想改的节点或镜头…"
-                rows={3}
+                rows={2}
                 disabled={busy}
                 aria-label="画布助手输入"
                 onKeyDown={(e) => {
